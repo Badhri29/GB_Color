@@ -50,9 +50,9 @@ FLUSH PRIVILEGES;
 SQL
 
 echo "=== 5. Opening Oracle Ubuntu Firewall Ports (80, 443, 3306) ==="
-sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT || true
-sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT || true
-sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 3306 -j ACCEPT || true
+sudo iptables -I INPUT 4 -m state --state NEW -p tcp --dport 80 -j ACCEPT || true
+sudo iptables -I INPUT 4 -m state --state NEW -p tcp --dport 443 -j ACCEPT || true
+sudo iptables -I INPUT 4 -m state --state NEW -p tcp --dport 3306 -j ACCEPT || true
 sudo netfilter-persistent save 2>/dev/null || true
 
 echo "=== 6. Preparing ${APP_DIR} & .env ==="
@@ -63,7 +63,7 @@ if [ ! -f "${APP_DIR}/.env" ]; then
 cat > "${APP_DIR}/.env" <<ENV
 PORT=7070
 APP_NAME=GB_Colors
-FRONTEND_ORIGIN=${GITHUB_PAGES_ORIGIN}
+FRONTEND_ORIGIN=${GITHUB_PAGES_ORIGIN},https://${DOMAIN}
 REQUIRE_MYSQL=true
 
 ADMIN_EMAIL=gbcolor.admin@gmail.com

@@ -5,3 +5,4 @@ data/
 *.key
 *.pem
 node_modules/
+.idea/
