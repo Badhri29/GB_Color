@@ -1,0 +1,116 @@
+package com.gbcolors.model;
+
+import jakarta.persistence.*;
+import java.math.BigDecimal;
+
+/**
+ * Single-row (id=1) platform financial totals, engine mode, and SMTP configuration.
+ */
+@Entity
+@Table(name = "platform_settings")
+public class PlatformSettingsEntity {
+
+    @Id
+    @Column(name = "id")
+    private Integer id = 1;
+
+    @Column(name = "admin_email", nullable = false, length = 191)
+    private String adminEmail;
+
+    @Column(name = "admin_password_hash", nullable = false, length = 255)
+    private String adminPasswordHash;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "outcome_mode", nullable = false, length = 32)
+    private GameEnums.OutcomeMode outcomeMode = GameEnums.OutcomeMode.SMART_PROFIT;
+
+    @Column(name = "total_house_profit", nullable = false, precision = 14, scale = 2)
+    private BigDecimal totalHouseProfit = BigDecimal.ZERO;
+
+    @Column(name = "total_bets_collected_real", nullable = false, precision = 14, scale = 2)
+    private BigDecimal totalBetsCollectedReal = BigDecimal.ZERO;
+
+    @Column(name = "total_payouts_paid_real", nullable = false, precision = 14, scale = 2)
+    private BigDecimal totalPayoutsPaidReal = BigDecimal.ZERO;
+
+    @Column(name = "total_demo_collected", nullable = false, precision = 14, scale = 2)
+    private BigDecimal totalDemoCollected = BigDecimal.ZERO;
+
+    @Column(name = "total_demo_payouts", nullable = false, precision = 14, scale = 2)
+    private BigDecimal totalDemoPayouts = BigDecimal.ZERO;
+
+    @Column(name = "total_recharges", nullable = false, precision = 14, scale = 2)
+    private BigDecimal totalRecharges = BigDecimal.ZERO;
+
+    @Column(name = "total_withdrawals_paid", nullable = false, precision = 14, scale = 2)
+    private BigDecimal totalWithdrawalsPaid = BigDecimal.ZERO;
+
+    @Column(name = "round_counter", nullable = false)
+    private int roundCounter = 26;
+
+    @Column(name = "smtp_host", nullable = false, length = 100)
+    private String smtpHost = "smtp.gmail.com";
+
+    @Column(name = "smtp_port", nullable = false)
+    private int smtpPort = 587;
+
+    @Column(name = "smtp_user", length = 191)
+    private String smtpUser;
+
+    @Column(name = "smtp_pass", length = 255)
+    private String smtpPass;
+
+    @Column(name = "smtp_from_name", nullable = false, length = 100)
+    private String smtpFromName = "GB_Colors";
+
+    public Integer getId() { return id; }
+    public void setId(Integer id) { this.id = id; }
+
+    public String getAdminEmail() { return adminEmail; }
+    public void setAdminEmail(String adminEmail) { this.adminEmail = adminEmail; }
+
+    public String getAdminPasswordHash() { return adminPasswordHash; }
+    public void setAdminPasswordHash(String adminPasswordHash) { this.adminPasswordHash = adminPasswordHash; }
+
+    public GameEnums.OutcomeMode getOutcomeMode() { return outcomeMode; }
+    public void setOutcomeMode(GameEnums.OutcomeMode outcomeMode) { this.outcomeMode = outcomeMode; }
+
+    public BigDecimal getTotalHouseProfit() { return totalHouseProfit; }
+    public void setTotalHouseProfit(BigDecimal totalHouseProfit) { this.totalHouseProfit = totalHouseProfit; }
+
+    public BigDecimal getTotalBetsCollectedReal() { return totalBetsCollectedReal; }
+    public void setTotalBetsCollectedReal(BigDecimal totalBetsCollectedReal) { this.totalBetsCollectedReal = totalBetsCollectedReal; }
+
+    public BigDecimal getTotalPayoutsPaidReal() { return totalPayoutsPaidReal; }
+    public void setTotalPayoutsPaidReal(BigDecimal totalPayoutsPaidReal) { this.totalPayoutsPaidReal = totalPayoutsPaidReal; }
+
+    public BigDecimal getTotalDemoCollected() { return totalDemoCollected; }
+    public void setTotalDemoCollected(BigDecimal totalDemoCollected) { this.totalDemoCollected = totalDemoCollected; }
+
+    public BigDecimal getTotalDemoPayouts() { return totalDemoPayouts; }
+    public void setTotalDemoPayouts(BigDecimal totalDemoPayouts) { this.totalDemoPayouts = totalDemoPayouts; }
+
+    public BigDecimal getTotalRecharges() { return totalRecharges; }
+    public void setTotalRecharges(BigDecimal totalRecharges) { this.totalRecharges = totalRecharges; }
+
+    public BigDecimal getTotalWithdrawalsPaid() { return totalWithdrawalsPaid; }
+    public void setTotalWithdrawalsPaid(BigDecimal totalWithdrawalsPaid) { this.totalWithdrawalsPaid = totalWithdrawalsPaid; }
+
+    public int getRoundCounter() { return roundCounter; }
+    public void setRoundCounter(int roundCounter) { this.roundCounter = roundCounter; }
+
+    public String getSmtpHost() { return smtpHost; }
+    public void setSmtpHost(String smtpHost) { this.smtpHost = smtpHost; }
+
+    public int getSmtpPort() { return smtpPort; }
+    public void setSmtpPort(int smtpPort) { this.smtpPort = smtpPort; }
+
+    public String getSmtpUser() { return smtpUser; }
+    public void setSmtpUser(String smtpUser) { this.smtpUser = smtpUser; }
+
+    public String getSmtpPass() { return smtpPass; }
+    public void setSmtpPass(String smtpPass) { this.smtpPass = smtpPass; }
+
+    public String getSmtpFromName() { return smtpFromName; }
+    public void setSmtpFromName(String smtpFromName) { this.smtpFromName = smtpFromName; }
+}

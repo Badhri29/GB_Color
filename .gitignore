@@ -1,0 +1,7 @@
+target/
+.env
+data/
+*.log
+*.key
+*.pem
+node_modules/

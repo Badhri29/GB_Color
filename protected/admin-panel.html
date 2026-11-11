@@ -1,0 +1,248 @@
+<div class="admin-dashboard-shell">
+    <!-- Top Admin Header -->
+    <header class="app-header admin-header">
+        <div class="header-left">
+            <div class="brand">
+                <span class="brand-badge admin-badge-tag">ADMIN</span>
+                <span class="brand-name">GB_<span class="text-accent">Colors</span> <small class="admin-sub-label">COMMAND CENTER</small></span>
+            </div>
+            <div class="admin-live-timer-pill">
+                <span>Period: <strong id="admPeriodNum">---</strong></span>
+                <span class="divider">|</span>
+                <span>Time: <strong id="admTimeLeft" class="text-yellow">00:30</strong></span>
+                <span id="admRoundStatus" class="status-chip">BETTING</span>
+                <span id="admDbStatus" class="status-chip chip-warn">DB: Checking...</span>
+            </div>
+        </div>
+        <div class="header-right">
+            <span class="admin-email-chip" id="admHeaderEmail">gbcolor.admin@gmail.com</span>
+            <button id="admLogoutBtn" class="pill-btn btn-danger-outline">Logout</button>
+        </div>
+    </header>
+
+    <!-- Main Admin Body -->
+    <div class="admin-main-content">
+        <!-- 4 KPI Net Worth Cards -->
+        <div class="kpi-grid">
+            <div class="kpi-card kpi-profit">
+                <span class="kpi-label">House Net Profit (Real)</span>
+                <h2 class="kpi-value" id="kpiNetProfit">₹0</h2>
+                <small class="kpi-sub" id="kpiProfitSub">Collected: ₹0 | Paid: ₹0</small>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-label">Total Recharges</span>
+                <h2 class="kpi-value text-green" id="kpiTotalRecharges">₹0</h2>
+                <small class="kpi-sub" id="kpiWithdrawPaidSub">Withdrawals Paid: ₹0</small>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-label">All Users Wallet Holding</span>
+                <h2 class="kpi-value text-yellow" id="kpiUsersHolding">₹0</h2>
+                <small class="kpi-sub">Total Active Real Balances</small>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-label">Registered Users</span>
+                <h2 class="kpi-value" id="kpiTotalUsers">0</h2>
+                <small class="kpi-sub text-danger" id="kpiPendingWithdrawTxt">Pending Withdraws: 0</small>
+            </div>
+        </div>
+
+        <!-- Admin Navigation Tabs -->
+        <div class="admin-nav-tabs">
+            <button class="adm-tab-btn active" data-admtab="admLiveTab">📊 Live Monitor & Profit Engine</button>
+            <button class="adm-tab-btn" data-admtab="admWithdrawTab">
+                💸 Withdraw Requests <span class="pending-badge-pill" id="admWithdrawBadge">0</span>
+            </button>
+            <button class="adm-tab-btn" data-admtab="admUsersTab">👥 Users Ledger</button>
+            <button class="adm-tab-btn" data-admtab="admSettingsTab">📧 Email (SMTP) & Security</button>
+        </div>
+
+        <!-- Tab 1: Live Monitor & Smart Profit Engine -->
+        <div class="adm-tab-panel active" id="admLiveTab">
+            <div class="adm-split-grid">
+                <!-- Left: Current Round Live Betting Pools -->
+                <div class="adm-card">
+                    <div class="adm-card-header">
+                        <h3>🔥 Live Current Round Bets</h3>
+                        <span class="badge-mode" id="admTargetModeBadge">Monitoring: DEMO / REAL</span>
+                    </div>
+
+                    <div class="pool-section-label">Colors Betting Pool</div>
+                    <div class="pool-3-grid">
+                        <div class="pool-box green-pool">
+                            <span>GREEN</span>
+                            <strong id="poolGreen">₹0</strong>
+                        </div>
+                        <div class="pool-box violet-pool">
+                            <span>VIOLET</span>
+                            <strong id="poolViolet">₹0</strong>
+                        </div>
+                        <div class="pool-box red-pool">
+                            <span>RED</span>
+                            <strong id="poolRed">₹0</strong>
+                        </div>
+                    </div>
+
+                    <div class="pool-section-label">Big / Small Betting Pool</div>
+                    <div class="pool-2-grid">
+                        <div class="pool-box neutral-pool">
+                            <span>BIG (5–9)</span>
+                            <strong id="poolBig">₹0</strong>
+                        </div>
+                        <div class="pool-box neutral-pool">
+                            <span>SMALL (0–4)</span>
+                            <strong id="poolSmall">₹0</strong>
+                        </div>
+                    </div>
+
+                    <div class="pool-section-label">Numbers (0–9) Betting Pool</div>
+                    <div class="pool-numbers-grid" id="poolNumbersGrid">
+                        <!-- Dynamically filled 0-9 -->
+                    </div>
+                </div>
+
+                <!-- Right: Smart Profit Engine & Candidate Projections -->
+                <div class="adm-card">
+                    <div class="adm-card-header">
+                        <h3>🧠 Outcome Profit Engine</h3>
+                        <span class="engine-status-pill" id="admEngineStatus">SMART PROFIT ACTIVE</span>
+                    </div>
+
+                    <div class="engine-mode-controls">
+                        <button class="engine-btn active" id="btnModeSmart" onclick="setOutcomeMode('SMART_PROFIT')">
+                            🧠 Smart Auto-Profit
+                        </button>
+                        <button class="engine-btn" id="btnModeRandom" onclick="setOutcomeMode('FAIR_RANDOM')">
+                            🎲 Fair Random
+                        </button>
+                    </div>
+
+                    <div class="manual-force-bar">
+                        <span>Force Next Number:</span>
+                        <div class="force-nums-row" id="forceNumsRow">
+                            <!-- 0..9 quick override buttons -->
+                        </div>
+                    </div>
+
+                    <div class="pool-section-label">Live Profit Projection per Candidate (0–9)</div>
+                    <div class="adm-table-scroll">
+                        <table class="adm-table">
+                            <thead>
+                                <tr>
+                                    <th>No.</th>
+                                    <th>Color</th>
+                                    <th>Payout Owed</th>
+                                    <th>House Profit</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admProjectionBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 2: Withdraw Requests Queue -->
+        <div class="adm-tab-panel" id="admWithdrawTab">
+            <div class="adm-split-grid">
+                <div class="adm-card">
+                    <div class="adm-card-header">
+                        <h3>⏳ Pending Withdraw Requests</h3>
+                        <span class="badge-danger" id="pendingQueueCount">0 Pending</span>
+                    </div>
+                    <div class="adm-list-scroll" id="admPendingWithdrawList">
+                        <div class="empty-state">No pending withdrawal requests.</div>
+                    </div>
+                </div>
+
+                <div class="adm-card">
+                    <div class="adm-card-header">
+                        <h3>✅ Completed / Done Requests</h3>
+                    </div>
+                    <div class="adm-list-scroll" id="admDoneWithdrawList">
+                        <div class="empty-state">No processed withdrawal requests yet.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: Users Ledger -->
+        <div class="adm-tab-panel" id="admUsersTab">
+            <div class="adm-card full-height-card">
+                <div class="adm-card-header">
+                    <h3>👥 Registered Users Financial Ledger</h3>
+                    <input type="text" id="admUserSearch" class="adm-search-input" placeholder="Search by Email or User ID...">
+                </div>
+                <div class="adm-table-scroll">
+                    <table class="adm-table">
+                        <thead>
+                            <tr>
+                                <th>User / Email</th>
+                                <th>Real Bal</th>
+                                <th>Demo Bal</th>
+                                <th>Total Won</th>
+                                <th>Total Lost</th>
+                                <th>Last Recharge</th>
+                                <th>Last Withdraw</th>
+                                <th>Quick Adjust</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admUsersTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 4: Email (SMTP) & Admin Security Settings -->
+        <div class="adm-tab-panel" id="admSettingsTab">
+            <div class="adm-split-grid">
+                <div class="adm-card">
+                    <div class="adm-card-header">
+                        <h3>📧 Admin Email & Real-Time OTP SMTP Setup</h3>
+                        <span id="smtpConfigStatusBadge" class="status-chip">Checking...</span>
+                    </div>
+                    <p class="adm-help-txt">
+                        Attach your Gmail / SMTP credentials here so registration OTPs are sent directly from your Admin email to new users. (For Gmail, use a 16-character <strong>App Password</strong>).
+                    </p>
+
+                    <label class="input-label">Admin Login Email ID</label>
+                    <input type="email" id="cfgAdminEmail" class="form-input" placeholder="gbcolor.admin@gmail.com">
+
+                    <div class="dual-btn-row">
+                        <div>
+                            <label class="input-label">SMTP Host</label>
+                            <input type="text" id="cfgSmtpHost" class="form-input" value="smtp.gmail.com">
+                        </div>
+                        <div>
+                            <label class="input-label">SMTP Port</label>
+                            <input type="number" id="cfgSmtpPort" class="form-input" value="587">
+                        </div>
+                    </div>
+
+                    <label class="input-label">Sender Gmail / SMTP Email</label>
+                    <input type="email" id="cfgSmtpUser" class="form-input" placeholder="yourgmail@gmail.com">
+
+                    <label class="input-label">SMTP / Gmail App Password</label>
+                    <input type="password" id="cfgSmtpPass" class="form-input" placeholder="Enter 16-digit App Password">
+
+                    <label class="input-label">Sender Display Name</label>
+                    <input type="text" id="cfgFromName" class="form-input" value="GB_Colors">
+
+                    <button class="btn-confirm-bet" id="saveSmtpBtn">Save Email & SMTP Settings</button>
+                </div>
+
+                <div class="adm-card">
+                    <div class="adm-card-header">
+                        <h3>🔐 Admin Account Security</h3>
+                    </div>
+                    <p class="adm-help-txt">Update your temporary Admin password to a strong custom password.</p>
+
+                    <label class="input-label">New Admin Password</label>
+                    <input type="password" id="cfgNewAdminPass" class="form-input" placeholder="Min 8 chars, Upper, Lower, Num, Symbol">
+
+                    <button class="btn-confirm-bet" id="changeAdminPassBtn">Update Admin Password</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

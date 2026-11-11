@@ -1,0 +1,49 @@
+name: Build & Deploy GB_Colors Java Backend to Oracle VM
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+          cache: 'maven'
+
+      - name: Build & Test Java Backend (Maven)
+        run: mvn -B package
+
+      - name: Check if Oracle SSH Secret is configured
+        id: check_secret
+        env:
+          ORACLE_KEY: ${{ secrets.ORACLE_SSH_KEY }}
+        run: |
+          if [ -z "$ORACLE_KEY" ]; then
+            echo "configured=false" >> $GITHUB_OUTPUT
+            echo "⚠️ ORACLE_SSH_KEY secret not added yet. JAR built cleanly; add ORACLE_SSH_KEY in GitHub Secrets to enable auto-deploy to 129.225.98.150."
+          else
+            echo "configured=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Deploy JAR to Oracle Cloud VM (129.225.98.150)
+        if: steps.check_secret.outputs.configured == 'true'
+        env:
+          ORACLE_HOST: ${{ secrets.ORACLE_HOST || '129.225.98.150' }}
+          ORACLE_USER: ${{ secrets.ORACLE_USER || 'ubuntu' }}
+          ORACLE_SSH_KEY: ${{ secrets.ORACLE_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$ORACLE_SSH_KEY" > ~/.ssh/oracle_key
+          chmod 600 ~/.ssh/oracle_key
+          ssh-keyscan -H "$ORACLE_HOST" >> ~/.ssh/known_hosts
+          scp -i ~/.ssh/oracle_key target/gb-colors.jar "${ORACLE_USER}@${ORACLE_HOST}:/opt/gb_colors/gb-colors.jar"
+          ssh -i ~/.ssh/oracle_key "${ORACLE_USER}@${ORACLE_HOST}" "sudo systemctl restart gb-colors && sudo systemctl status gb-colors --no-pager"

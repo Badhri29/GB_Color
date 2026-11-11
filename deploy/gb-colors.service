@@ -1,0 +1,16 @@
+[Unit]
+Description=GB_Colors Java Spring Boot Service
+After=network.target mysql.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/opt/gb_colors
+EnvironmentFile=/opt/gb_colors/.env
+ExecStart=/usr/bin/java -Xms128m -Xmx320m -XX:+UseSerialGC -jar /opt/gb_colors/gb-colors.jar
+Restart=always
+RestartSec=5
+SuccessExitStatus=143
+
+[Install]
+WantedBy=multi-user.target
