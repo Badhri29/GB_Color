@@ -408,17 +408,34 @@
   }
 
   function switchPaymentSubTab(tabName) {
+    let target = tabName;
+    if (target === 'status') {
+      const latestW = Number((((currentUser && currentUser.withdrawRequests) || [])[0] || {}).requestedAt || 0);
+      const latestD = Number((((currentUser && currentUser.depositRequests) || [])[0] || {}).requestedAt || 0);
+      target = latestW > latestD ? 'withdraw' : 'recharge';
+    }
+    target = target === 'withdraw' ? 'withdraw' : 'recharge';
     document.querySelectorAll('.pay-subtab-btn').forEach((btn) => {
-      btn.classList.toggle('active', btn.dataset.paytab === tabName);
+      btn.classList.toggle('active', btn.dataset.paytab === target);
     });
-    ['recharge', 'withdraw', 'status'].forEach((t) => {
+    ['recharge', 'withdraw'].forEach((t) => {
       const panel = $('payTab-' + t);
       if (panel) {
-        panel.style.display = (t === tabName) ? '' : 'none';
-        panel.classList.toggle('active', t === tabName);
+        panel.style.display = (t === target) ? '' : 'none';
+        panel.classList.toggle('active', t === target);
       }
     });
-    if (tabName === 'status') {
+    renderPaymentStatuses();
+  }
+
+  async function refreshCurrentUser() {
+    if (!authToken) return;
+    const res = await apiFetch('/api/auth/me', { method: 'GET' });
+    if (res.ok && res.data && res.data.user) {
+      const keepActiveBets = currentUser ? currentUser.activeBets : [];
+      currentUser = Object.assign({}, currentUser || {}, res.data.user);
+      if (!res.data.user.activeBets && keepActiveBets) currentUser.activeBets = keepActiveBets;
+      renderUserSummary();
       renderPaymentStatuses();
     }
   }
@@ -453,6 +470,7 @@
 
     if (target === 'payment') {
       loadPaymentConfig();
+      refreshCurrentUser();
       if (subOpt) switchPaymentSubTab(subOpt);
       renderPaymentStatuses();
     } else if (target === 'history') {
@@ -783,7 +801,8 @@
       }
       if ($('depositUtrInput')) $('depositUtrInput').value = '';
       showToast(res.data.message || 'UTR submitted for verification', 'success');
-      switchPaymentSubTab('status');
+      await refreshCurrentUser();
+      switchPaymentSubTab('recharge');
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = '✅ Submit UTR for Verification'; }
     }
@@ -836,7 +855,8 @@
           if (vRes.ok && vRes.data.success) {
             SoundEngine.win();
             showToast(vRes.data.message || 'Wallet credited instantly!', 'success');
-            switchPaymentSubTab('status');
+            await refreshCurrentUser();
+            switchPaymentSubTab('recharge');
           } else {
             showToast(vRes.data.message || vRes.data.error || 'Payment verification failed', 'error');
           }
@@ -916,7 +936,8 @@
       if ($('withdrawBankAccConfirmInput')) $('withdrawBankAccConfirmInput').value = '';
       SoundEngine.notify();
       showToast(res.data.message || 'Withdrawal requested!', 'success');
-      switchPaymentSubTab('status');
+      await refreshCurrentUser();
+      switchPaymentSubTab('withdraw');
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = '🏦 Submit Withdrawal Request'; }
     }
@@ -1113,50 +1134,170 @@
 
   function renderPaymentStatuses() {
     if (!currentUser) return;
-    const withdraws = currentUser.withdrawRequests || [];
-    const wEl = $('userWithdrawStatusList');
-    if (wEl) {
-      if (!withdraws.length) {
-        wEl.innerHTML = '<div class="empty-state-box">No withdrawal requests submitted yet.</div>';
+
+    const depositsRaw = Array.isArray(currentUser.depositRequests) ? currentUser.depositRequests : [];
+    const deposits = depositsRaw.slice().sort((a, b) => Number(b.requestedAt || 0) - Number(a.requestedAt || 0));
+    const pendingDeposit = deposits.find((d) => String(d.status || 'PENDING').toUpperCase() === 'PENDING');
+    const prevDeposit = pendingDeposit
+      ? deposits.find((d) => d.id !== pendingDeposit.id)
+      : deposits[0];
+
+    const rPill = $('rechargeStatusPill');
+    if (rPill) {
+      if (pendingDeposit) {
+        rPill.textContent = 'Recharge Requested';
+        rPill.className = 'status-pill amber';
+      } else if (deposits.length) {
+        rPill.textContent = deposits.length + (deposits.length === 1 ? ' Transaction' : ' Transactions');
+        rPill.className = 'status-pill good';
       } else {
-        wEl.innerHTML = withdraws.map((w) => {
-          const st = String(w.status || 'PENDING').toUpperCase();
-          const cls = st === 'PAID' ? 'paid' : (st === 'REJECTED' ? 'rejected' : 'pending');
-          const statusLabel = st === 'PAID' ? 'COMPLETED & PAID' : (st === 'REJECTED' ? 'REJECTED (REFUNDED)' : 'PROCESSING');
-          return `
-            <div class="status-card ${cls}">
-              <div class="sc-top">
-                <strong>${formatINR(w.amount)}</strong>
-                <span class="sc-badge ${cls}">${statusLabel}</span>
-              </div>
-              <div class="sc-row"><span>Destination:</span><span>${escapeHtml(w.upiOrBank)}</span></div>
-              ${w.payoutRef ? `<div class="sc-row"><span>Payout Ref:</span><span class="mono">${escapeHtml(w.payoutRef)}</span></div>` : ''}
-              ${w.adminRemark ? `<div class="sc-row"><span>Remark:</span><span>${escapeHtml(w.adminRemark)}</span></div>` : ''}
-              <div class="sc-time">Requested: ${escapeHtml(formatTime(w.requestedAt))}${w.processedAt ? ' • Settled: ' + escapeHtml(formatTime(w.processedAt)) : ''}</div>
-            </div>
-          `;
-        }).join('');
+        rPill.textContent = 'No Requests';
+        rPill.className = 'status-pill neutral';
       }
     }
 
-    const deposits = currentUser.depositRequests || [];
+    const rHighlight = $('rechargeActiveHighlight');
+    if (rHighlight) {
+      let hl = '';
+      if (pendingDeposit) {
+        const depRef = pendingDeposit.utrOrPaymentId || pendingDeposit.utr || pendingDeposit.orderId || '—';
+        hl += `
+          <div class="status-highlight-card pending">
+            <div class="sh-head">
+              <span class="sh-label">Recharge Requested</span>
+              <span class="sc-badge pending">PENDING VERIFICATION</span>
+            </div>
+            <div class="sh-amount">${formatINR(pendingDeposit.amount)} <small>(${escapeHtml(pendingDeposit.method || 'UPI')})</small></div>
+            <div class="sc-row"><span>UTR / Ref ID:</span><span class="mono">${escapeHtml(depRef)}</span></div>
+            <div class="sc-time">Requested: ${escapeHtml(formatTime(pendingDeposit.requestedAt))}</div>
+          </div>
+        `;
+      }
+      if (prevDeposit) {
+        const st = String(prevDeposit.status || 'PENDING').toUpperCase();
+        const cls = st === 'APPROVED' ? 'paid' : (st === 'REJECTED' ? 'rejected' : 'pending');
+        const depRef = prevDeposit.utrOrPaymentId || prevDeposit.utr || prevDeposit.orderId || '—';
+        hl += `
+          <div class="status-highlight-card ${cls}">
+            <div class="sh-head">
+              <span class="sh-label">Last Recharge Transaction</span>
+              <span class="sc-badge ${cls}">${escapeHtml(st)}</span>
+            </div>
+            <div class="sh-amount">${formatINR(prevDeposit.amount)} <small>(${escapeHtml(prevDeposit.method || 'UPI')})</small></div>
+            <div class="sc-row"><span>UTR / Ref ID:</span><span class="mono">${escapeHtml(depRef)}</span></div>
+            ${(prevDeposit.adminNote || prevDeposit.adminRemark) ? `<div class="sc-row"><span>Note:</span><span>${escapeHtml(prevDeposit.adminNote || prevDeposit.adminRemark)}</span></div>` : ''}
+            <div class="sc-time">Submitted: ${escapeHtml(formatTime(prevDeposit.requestedAt))}${prevDeposit.processedAt ? ' • Updated: ' + escapeHtml(formatTime(prevDeposit.processedAt)) : ''}</div>
+          </div>
+        `;
+      }
+      rHighlight.innerHTML = hl;
+    }
+
     const dEl = $('userDepositStatusList');
     if (dEl) {
       if (!deposits.length) {
-        dEl.innerHTML = '<div class="empty-state-box">No deposit requests submitted yet.</div>';
+        dEl.innerHTML = '<div class="empty-state-box">No recharge requests submitted yet.</div>';
       } else {
-        dEl.innerHTML = deposits.map((d) => {
+        dEl.innerHTML = `<div class="status-list-subhead">All Recharge Requests (${deposits.length})</div>` + deposits.map((d) => {
           const st = String(d.status || 'PENDING').toUpperCase();
           const cls = st === 'APPROVED' ? 'paid' : (st === 'REJECTED' ? 'rejected' : 'pending');
+          const depRef = d.utrOrPaymentId || d.utr || d.orderId || '—';
+          const note = d.adminNote || d.adminRemark || '';
           return `
             <div class="status-card ${cls}">
               <div class="sc-top">
                 <strong>${formatINR(d.amount)} <small>(${escapeHtml(d.method || 'UPI')})</small></strong>
                 <span class="sc-badge ${cls}">${escapeHtml(st)}</span>
               </div>
-              <div class="sc-row"><span>UTR / Ref:</span><span class="mono">${escapeHtml(d.utr)}</span></div>
-              ${d.adminRemark ? `<div class="sc-row"><span>Note:</span><span>${escapeHtml(d.adminRemark)}</span></div>` : ''}
+              <div class="sc-row"><span>UTR / Ref:</span><span class="mono">${escapeHtml(depRef)}</span></div>
+              ${note ? `<div class="sc-row"><span>Note:</span><span>${escapeHtml(note)}</span></div>` : ''}
               <div class="sc-time">Submitted: ${escapeHtml(formatTime(d.requestedAt))}</div>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    const withdrawsRaw = Array.isArray(currentUser.withdrawRequests) ? currentUser.withdrawRequests : [];
+    const withdraws = withdrawsRaw.slice().sort((a, b) => Number(b.requestedAt || 0) - Number(a.requestedAt || 0));
+    const pendingWithdraw = withdraws.find((w) => String(w.status || 'PENDING').toUpperCase() === 'PENDING');
+    const prevWithdraw = pendingWithdraw
+      ? withdraws.find((w) => w.id !== pendingWithdraw.id)
+      : withdraws[0];
+
+    const wPill = $('withdrawStatusPill');
+    if (wPill) {
+      if (pendingWithdraw) {
+        wPill.textContent = 'Requested';
+        wPill.className = 'status-pill amber';
+      } else if (withdraws.length) {
+        wPill.textContent = withdraws.length + (withdraws.length === 1 ? ' Request' : ' Requests');
+        wPill.className = 'status-pill good';
+      } else {
+        wPill.textContent = 'No Requests';
+        wPill.className = 'status-pill neutral';
+      }
+    }
+
+    const wHighlight = $('withdrawActiveHighlight');
+    if (wHighlight) {
+      let wl = '';
+      if (pendingWithdraw) {
+        const dest = pendingWithdraw.accountDetails || pendingWithdraw.upiId || pendingWithdraw.bankAccountNumber || pendingWithdraw.upiOrBank || '—';
+        wl += `
+          <div class="status-highlight-card pending">
+            <div class="sh-head">
+              <span class="sh-label">Requested</span>
+              <span class="sc-badge pending">PROCESSING</span>
+            </div>
+            <div class="sh-amount">${formatINR(pendingWithdraw.amount)} <small>(${escapeHtml(pendingWithdraw.withdrawMethod || 'UPI')})</small></div>
+            <div class="sc-row"><span>Destination:</span><span>${escapeHtml(dest)}</span></div>
+            <div class="sc-time">Requested: ${escapeHtml(formatTime(pendingWithdraw.requestedAt))}</div>
+          </div>
+        `;
+      }
+      if (prevWithdraw) {
+        const st = String(prevWithdraw.status || 'PENDING').toUpperCase();
+        const cls = st === 'PAID' ? 'paid' : (st === 'REJECTED' ? 'rejected' : 'pending');
+        const statusLabel = st === 'PAID' ? 'COMPLETED & PAID' : (st === 'REJECTED' ? 'REJECTED (REFUNDED)' : 'PROCESSING');
+        const dest = prevWithdraw.accountDetails || prevWithdraw.upiId || prevWithdraw.bankAccountNumber || prevWithdraw.upiOrBank || '—';
+        wl += `
+          <div class="status-highlight-card ${cls}">
+            <div class="sh-head">
+              <span class="sh-label">Last Requested</span>
+              <span class="sc-badge ${cls}">${statusLabel}</span>
+            </div>
+            <div class="sh-amount">${formatINR(prevWithdraw.amount)} <small>(${escapeHtml(prevWithdraw.withdrawMethod || 'UPI')})</small></div>
+            <div class="sc-row"><span>Destination:</span><span>${escapeHtml(dest)}</span></div>
+            ${prevWithdraw.payoutRef ? `<div class="sc-row"><span>Payout Ref:</span><span class="mono">${escapeHtml(prevWithdraw.payoutRef)}</span></div>` : ''}
+            ${prevWithdraw.adminRemark ? `<div class="sc-row"><span>Remark:</span><span>${escapeHtml(prevWithdraw.adminRemark)}</span></div>` : ''}
+            <div class="sc-time">Requested: ${escapeHtml(formatTime(prevWithdraw.requestedAt))}${prevWithdraw.processedAt ? ' • Settled: ' + escapeHtml(formatTime(prevWithdraw.processedAt)) : ''}</div>
+          </div>
+        `;
+      }
+      wHighlight.innerHTML = wl;
+    }
+
+    const wEl = $('userWithdrawStatusList');
+    if (wEl) {
+      if (!withdraws.length) {
+        wEl.innerHTML = '<div class="empty-state-box">No withdrawal requests submitted yet.</div>';
+      } else {
+        wEl.innerHTML = `<div class="status-list-subhead">All Withdrawal Requests (${withdraws.length})</div>` + withdraws.map((w) => {
+          const st = String(w.status || 'PENDING').toUpperCase();
+          const cls = st === 'PAID' ? 'paid' : (st === 'REJECTED' ? 'rejected' : 'pending');
+          const statusLabel = st === 'PAID' ? 'COMPLETED & PAID' : (st === 'REJECTED' ? 'REJECTED (REFUNDED)' : 'PROCESSING');
+          const dest = w.accountDetails || w.upiId || w.bankAccountNumber || w.upiOrBank || '—';
+          return `
+            <div class="status-card ${cls}">
+              <div class="sc-top">
+                <strong>${formatINR(w.amount)} <small>(${escapeHtml(w.withdrawMethod || 'UPI')})</small></strong>
+                <span class="sc-badge ${cls}">${statusLabel}</span>
+              </div>
+              <div class="sc-row"><span>Destination:</span><span>${escapeHtml(dest)}</span></div>
+              ${w.payoutRef ? `<div class="sc-row"><span>Payout Ref:</span><span class="mono">${escapeHtml(w.payoutRef)}</span></div>` : ''}
+              ${w.adminRemark ? `<div class="sc-row"><span>Remark:</span><span>${escapeHtml(w.adminRemark)}</span></div>` : ''}
+              <div class="sc-time">Requested: ${escapeHtml(formatTime(w.requestedAt))}${w.processedAt ? ' • Settled: ' + escapeHtml(formatTime(w.processedAt)) : ''}</div>
             </div>
           `;
         }).join('');

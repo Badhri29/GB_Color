@@ -413,233 +413,236 @@
           </div>
         </div>
 
-        <div class="pay-subtabs-bar" role="tablist" aria-label="Payment Sections">
-          <button type="button" class="pay-subtab-btn active" data-paytab="recharge">⚡ Recharge</button>
-          <button type="button" class="pay-subtab-btn" data-paytab="withdraw">🏦 Withdraw</button>
-          <button type="button" class="pay-subtab-btn" data-paytab="status">📋 Status</button>
+        <div class="pay-mode-toggle-row">
+          <div class="pay-mode-toggle" role="tablist" aria-label="Switch Recharge or Withdraw">
+            <button type="button" class="pay-subtab-btn active" data-paytab="recharge">⚡ Recharge</button>
+            <button type="button" class="pay-subtab-btn" data-paytab="withdraw">🏦 Withdraw</button>
+          </div>
         </div>
 
-        <!-- PAY SUB-TAB 1: RECHARGE -->
+        <!-- PAY SUB-TAB 1: RECHARGE (LEFT: FORM, RIGHT: STATUS) -->
         <div id="payTab-recharge" class="pay-tab-panel active">
-          <div class="payment-card single-col-card pay-flow-card">
-            <div class="pay-step-head">
-              <span class="pay-step-num">1</span>
-              <div>
-                <label for="rechargeAmountInput" class="pay-step-title">Choose Recharge Amount</label>
-                <small id="minDepositHint" class="pay-limit-hint">Limit: ₹100 – ₹50,000</small>
-              </div>
-            </div>
-
-            <div class="pay-input-prefix-wrap">
-              <span class="pay-currency-prefix">₹</span>
-              <input id="rechargeAmountInput" type="number" inputmode="numeric" min="100" max="50000" step="10" value="500" class="pay-amount-input big-touch-input" placeholder="Enter amount" />
-            </div>
-
-            <div id="rechargeQuickChips" class="quick-chips-row chips-4-grid">
-              <button type="button" class="chip-amt-btn" data-target="rechargeAmountInput" data-val="100">₹100</button>
-              <button type="button" class="chip-amt-btn active" data-target="rechargeAmountInput" data-val="500">₹500</button>
-              <button type="button" class="chip-amt-btn" data-target="rechargeAmountInput" data-val="1000">₹1,000</button>
-              <button type="button" class="chip-amt-btn" data-target="rechargeAmountInput" data-val="5000">₹5,000</button>
-            </div>
-
-            <div class="pay-step-head" style="margin-top:16px;">
-              <span class="pay-step-num">2</span>
-              <div>
-                <div class="pay-step-title">Select Payment Method</div>
-                <small class="pay-limit-hint">Tap UPI QR / App or Razorpay Checkout</small>
-              </div>
-            </div>
-
-            <div class="pay-method-switch">
-              <button type="button" id="methodBtnUpi" class="pay-method-btn active" data-paymethod="upi">
-                <span>📱 UPI QR / App</span>
-                <small class="status-pill info">LIVE QR</small>
-              </button>
-              <button type="button" id="methodBtnRazorpay" class="pay-method-btn" data-paymethod="razorpay">
-                <span>⚡ Razorpay</span>
-                <small id="rzpStatusBadge" class="status-pill neutral">Checking</small>
-              </button>
-            </div>
-
-            <!-- METHOD A: DIRECT UPI QR + UTR -->
-            <div id="payMethodPanel-upi" class="pay-method-panel active">
-              <div id="staticMerchantQrBox" class="upi-qr-box merchant-qr-card">
-                <div class="qr-img-wrap">
-                  <img id="merchantStaticQrImg" src="assets/merchant-upi-qr.jpg" alt="Scan to pay via UPI" class="merchant-qr-img" />
-                </div>
-                <div class="upi-details-col">
-                  <span class="status-pill good" style="align-self:flex-start;">SCAN &amp; PAY ANY UPI APP</span>
-                  <div class="upi-kv"><span>Payee:</span><strong id="staticUpiPayeeDisplay">Badhri Narayanan</strong></div>
-                  <div class="upi-kv">
-                    <span>UPI ID:</span>
-                    <strong id="staticUpiIdDisplay">badhrinarayanan79-3@okhdfcbank</strong>
-                    <button id="copyStaticUpiIdBtn" type="button" class="btn-copy-mini">Copy</button>
+          <div class="pay-split-grid">
+            <div class="pay-form-col">
+              <div class="payment-card pay-flow-card">
+                <div class="pay-step-head">
+                  <span class="pay-step-num">1</span>
+                  <div>
+                    <label for="rechargeAmountInput" class="pay-step-title">Choose Recharge Amount</label>
+                    <small id="minDepositHint" class="pay-limit-hint">Limit: ₹100 – ₹50,000</small>
                   </div>
-                  <a id="staticUpiAppLink" href="#" class="btn-upi-app touch-cta-btn">📲 Pay Now in GPay / PhonePe / Paytm</a>
                 </div>
-              </div>
 
-              <button id="generateUpiQrBtn" type="button" class="btn-accent-outline full-w touch-cta-btn" style="margin-top:10px;">🔄 Generate Amount-Locked QR for Entered ₹</button>
+                <div class="pay-input-prefix-wrap">
+                  <span class="pay-currency-prefix">₹</span>
+                  <input id="rechargeAmountInput" type="number" inputmode="numeric" min="100" max="50000" step="10" value="500" class="pay-amount-input big-touch-input" placeholder="Enter amount" />
+                </div>
 
-              <div id="upiQrPreviewBox" class="upi-qr-box" style="display:none;">
-                <div id="upiQrSvgWrap" class="qr-svg-wrap"></div>
-                <div class="upi-details-col">
-                  <div class="upi-kv"><span>Payee:</span><strong id="upiPayeeDisplay">—</strong></div>
-                  <div class="upi-kv">
-                    <span>UPI ID:</span>
-                    <strong id="upiIdDisplay">—</strong>
-                    <button id="copyUpiIdBtn" type="button" class="btn-copy-mini">Copy</button>
+                <div id="rechargeQuickChips" class="quick-chips-row chips-4-grid">
+                  <button type="button" class="chip-amt-btn" data-target="rechargeAmountInput" data-val="100">₹100</button>
+                  <button type="button" class="chip-amt-btn active" data-target="rechargeAmountInput" data-val="500">₹500</button>
+                  <button type="button" class="chip-amt-btn" data-target="rechargeAmountInput" data-val="1000">₹1,000</button>
+                  <button type="button" class="chip-amt-btn" data-target="rechargeAmountInput" data-val="5000">₹5,000</button>
+                </div>
+
+                <div class="pay-step-head" style="margin-top:16px;">
+                  <span class="pay-step-num">2</span>
+                  <div>
+                    <div class="pay-step-title">Select Payment Method</div>
+                    <small class="pay-limit-hint">Tap UPI QR / App or Razorpay Checkout</small>
                   </div>
-                  <a id="upiAppDeepLink" href="#" class="btn-upi-app touch-cta-btn">📲 Open Installed UPI App</a>
+                </div>
+
+                <div class="pay-method-switch">
+                  <button type="button" id="methodBtnUpi" class="pay-method-btn active" data-paymethod="upi">
+                    <span>📱 UPI QR / App</span>
+                    <small class="status-pill info">LIVE QR</small>
+                  </button>
+                  <button type="button" id="methodBtnRazorpay" class="pay-method-btn" data-paymethod="razorpay">
+                    <span>⚡ Razorpay</span>
+                    <small id="rzpStatusBadge" class="status-pill neutral">Checking</small>
+                  </button>
+                </div>
+
+                <!-- METHOD A: DIRECT UPI QR + UTR -->
+                <div id="payMethodPanel-upi" class="pay-method-panel active">
+                  <div id="staticMerchantQrBox" class="upi-qr-box merchant-qr-card">
+                    <div class="qr-img-wrap">
+                      <img id="merchantStaticQrImg" src="assets/merchant-upi-qr.jpg" alt="Scan to pay via UPI" class="merchant-qr-img" />
+                    </div>
+                    <div class="upi-details-col">
+                      <span class="status-pill good" style="align-self:flex-start;">SCAN &amp; PAY ANY UPI APP</span>
+                      <div class="upi-kv"><span>Payee:</span><strong id="staticUpiPayeeDisplay">Badhri Narayanan</strong></div>
+                      <div class="upi-kv">
+                        <span>UPI ID:</span>
+                        <strong id="staticUpiIdDisplay">badhrinarayanan79-3@okhdfcbank</strong>
+                        <button id="copyStaticUpiIdBtn" type="button" class="btn-copy-mini">Copy</button>
+                      </div>
+                      <a id="staticUpiAppLink" href="#" class="btn-upi-app touch-cta-btn">📲 Pay Now in GPay / PhonePe / Paytm</a>
+                    </div>
+                  </div>
+
+                  <button id="generateUpiQrBtn" type="button" class="btn-accent-outline full-w touch-cta-btn" style="margin-top:10px;">🔄 Generate Amount-Locked QR for Entered ₹</button>
+
+                  <div id="upiQrPreviewBox" class="upi-qr-box" style="display:none;">
+                    <div id="upiQrSvgWrap" class="qr-svg-wrap"></div>
+                    <div class="upi-details-col">
+                      <div class="upi-kv"><span>Payee:</span><strong id="upiPayeeDisplay">—</strong></div>
+                      <div class="upi-kv">
+                        <span>UPI ID:</span>
+                        <strong id="upiIdDisplay">—</strong>
+                        <button id="copyUpiIdBtn" type="button" class="btn-copy-mini">Copy</button>
+                      </div>
+                      <a id="upiAppDeepLink" href="#" class="btn-upi-app touch-cta-btn">📲 Open Installed UPI App</a>
+                    </div>
+                  </div>
+
+                  <div class="form-group" style="margin-top:12px;">
+                    <label for="depositUtrInput">Step 3: After Payment, Enter 12-Digit UPI UTR / Ref ID</label>
+                    <input id="depositUtrInput" type="text" inputmode="numeric" maxlength="32" class="big-touch-field" placeholder="e.g. 431209876543" />
+                  </div>
+                  <button id="submitDepositBtn" type="button" class="btn-primary-glow full-w touch-cta-btn">✅ Submit UTR for Verification</button>
+                </div>
+
+                <!-- METHOD B: RAZORPAY GATEWAY -->
+                <div id="payMethodPanel-razorpay" class="pay-method-panel" style="display:none;">
+                  <p class="pay-card-desc">Instant auto-credited checkout via GPay, PhonePe, Paytm, Cards &amp; NetBanking.</p>
+                  <div class="method-badges-row">
+                    <span>UPI</span><span>GPay</span><span>PhonePe</span><span>Cards</span><span>NetBanking</span>
+                  </div>
+                  <button id="rzpPayBtn" type="button" class="btn-primary-glow full-w touch-cta-btn">⚡ Pay Instantly via Razorpay</button>
+                  <small id="rzpFallbackNote" class="pay-card-note" style="display:none;">Razorpay keys are not configured by Admin yet. Switch to <strong>UPI QR / App</strong> above to recharge.</small>
                 </div>
               </div>
 
-              <div class="form-group" style="margin-top:12px;">
-                <label for="depositUtrInput">Step 3: After Payment, Enter 12-Digit UPI UTR / Ref ID</label>
-                <input id="depositUtrInput" type="text" inputmode="numeric" maxlength="32" class="big-touch-field" placeholder="e.g. 431209876543" />
+              <!-- PRACTICE DEMO RELOAD -->
+              <div class="demo-reload-strip">
+                <div>
+                  <strong>🎯 Practice Demo Coins Top-Up</strong>
+                  <small>Free play coins for learning rules (separate from Real Cash)</small>
+                </div>
+                <div class="demo-chip-actions">
+                  <button type="button" class="btn-demo-add" data-demoamt="1000">+₹1,000</button>
+                  <button type="button" class="btn-demo-add" data-demoamt="5000">+₹5,000</button>
+                  <button type="button" class="btn-demo-add" data-demoamt="10000">+₹10,000</button>
+                </div>
               </div>
-              <button id="submitDepositBtn" type="button" class="btn-primary-glow full-w touch-cta-btn">✅ Submit UTR for Verification</button>
             </div>
 
-            <!-- METHOD B: RAZORPAY GATEWAY -->
-            <div id="payMethodPanel-razorpay" class="pay-method-panel" style="display:none;">
-              <p class="pay-card-desc">Instant auto-credited checkout via GPay, PhonePe, Paytm, Cards &amp; NetBanking.</p>
-              <div class="method-badges-row">
-                <span>UPI</span><span>GPay</span><span>PhonePe</span><span>Cards</span><span>NetBanking</span>
+            <div class="pay-status-col">
+              <div class="payment-card pay-status-card">
+                <div class="pay-card-head">
+                  <h3>Status</h3>
+                  <span id="rechargeStatusPill" class="status-pill neutral">0 Requests</span>
+                </div>
+                <div id="rechargeActiveHighlight" class="pay-status-highlights"></div>
+                <div id="userDepositStatusList" class="status-cards-stack"></div>
               </div>
-              <button id="rzpPayBtn" type="button" class="btn-primary-glow full-w touch-cta-btn">⚡ Pay Instantly via Razorpay</button>
-              <small id="rzpFallbackNote" class="pay-card-note" style="display:none;">Razorpay keys are not configured by Admin yet. Switch to <strong>UPI QR / App</strong> above to recharge.</small>
-            </div>
-          </div>
-
-          <!-- PRACTICE DEMO RELOAD -->
-          <div class="demo-reload-strip single-col-card">
-            <div>
-              <strong>🎯 Practice Demo Coins Top-Up</strong>
-              <small>Free play coins for learning rules (separate from Real Cash)</small>
-            </div>
-            <div class="demo-chip-actions">
-              <button type="button" class="btn-demo-add" data-demoamt="1000">+₹1,000</button>
-              <button type="button" class="btn-demo-add" data-demoamt="5000">+₹5,000</button>
-              <button type="button" class="btn-demo-add" data-demoamt="10000">+₹10,000</button>
             </div>
           </div>
         </div>
 
-        <!-- PAY SUB-TAB 2: WITHDRAW -->
+        <!-- PAY SUB-TAB 2: WITHDRAW (LEFT: FORM, RIGHT: STATUS) -->
         <div id="payTab-withdraw" class="pay-tab-panel" style="display:none;">
-          <div class="payment-card single-col-card pay-flow-card">
-            <div class="withdraw-bal-banner">
-              <div>
-                <span>Available Real Winnings</span>
-                <strong id="withdrawAvailableBal">₹0.00</strong>
-              </div>
-              <span id="minWithdrawHint" class="status-pill good">Limit: ₹200 – ₹50,000</span>
-            </div>
-
-            <div class="form-group">
-              <label for="withdrawAmountInput">1. Withdrawal Amount (₹)</label>
-              <div class="pay-input-prefix-wrap">
-                <span class="pay-currency-prefix">₹</span>
-                <input id="withdrawAmountInput" type="number" inputmode="numeric" min="200" max="50000" step="10" class="pay-amount-input big-touch-input" placeholder="Enter amount" />
-              </div>
-            </div>
-
-            <div id="withdrawQuickChips" class="quick-chips-row chips-4-grid" style="margin-bottom:14px;">
-              <button type="button" class="chip-amt-btn" data-target="withdrawAmountInput" data-val="200">₹200</button>
-              <button type="button" class="chip-amt-btn" data-target="withdrawAmountInput" data-val="500">₹500</button>
-              <button type="button" class="chip-amt-btn" data-target="withdrawAmountInput" data-val="1000">₹1,000</button>
-              <button type="button" class="chip-amt-btn chip-max-btn" data-target="withdrawAmountInput" data-val="ALL">MAX</button>
-            </div>
-
-            <div class="form-group">
-              <label>2. Choose Withdrawal Method</label>
-              <div class="pay-method-switch">
-                <button type="button" id="wthMethodBtnUpi" class="wth-method-btn active" data-wthmethod="UPI">
-                  <span>📱 UPI ID</span>
-                  <small class="status-pill info">GPay / PhonePe / Paytm</small>
-                </button>
-                <button type="button" id="wthMethodBtnBank" class="wth-method-btn" data-wthmethod="BANK">
-                  <span>🏦 Bank Account</span>
-                  <small class="status-pill neutral">IMPS / NEFT</small>
-                </button>
-              </div>
-            </div>
-
-            <!-- WITHDRAW METHOD A: UPI -->
-            <div id="wthMethodPanel-upi" class="wth-method-panel active">
-              <div class="upi-app-pills" id="wthUpiAppPills">
-                <button type="button" class="chip-amt-btn active" data-upiapp="Any UPI">Any UPI</button>
-                <button type="button" class="chip-amt-btn" data-upiapp="Google Pay">GPay</button>
-                <button type="button" class="chip-amt-btn" data-upiapp="PhonePe">PhonePe</button>
-                <button type="button" class="chip-amt-btn" data-upiapp="Paytm">Paytm</button>
-              </div>
-              <div class="form-group" style="margin-top:10px;">
-                <label for="withdrawUpiIdInput">UPI ID *</label>
-                <input id="withdrawUpiIdInput" type="text" class="big-touch-field" placeholder="e.g. yourname@okhdfcbank / 98xxxx@ybl" />
-              </div>
-              <div class="form-group">
-                <label for="withdrawUpiHolderInput">Account Holder Name (Recommended)</label>
-                <input id="withdrawUpiHolderInput" type="text" class="big-touch-field" placeholder="Name registered on UPI" />
-              </div>
-            </div>
-
-            <!-- WITHDRAW METHOD B: BANK ACCOUNT -->
-            <div id="wthMethodPanel-bank" class="wth-method-panel" style="display:none;">
-              <div class="form-group">
-                <label for="withdrawBankHolderInput">Account Holder Name *</label>
-                <input id="withdrawBankHolderInput" type="text" class="big-touch-field" placeholder="Exact name as per bank passbook" />
-              </div>
-              <div class="form-group">
-                <label for="withdrawBankAccNoInput">Bank Account Number *</label>
-                <input id="withdrawBankAccNoInput" type="text" inputmode="numeric" maxlength="20" class="big-touch-field" placeholder="Enter 9–18 digit account number" />
-              </div>
-              <div class="form-group">
-                <label for="withdrawBankAccConfirmInput">Confirm Bank Account Number *</label>
-                <input id="withdrawBankAccConfirmInput" type="text" inputmode="numeric" maxlength="20" class="big-touch-field" placeholder="Re-enter account number" />
-              </div>
-              <div class="bank-dual-grid">
-                <div class="form-group">
-                  <label for="withdrawBankIfscInput">IFSC Code *</label>
-                  <input id="withdrawBankIfscInput" type="text" maxlength="11" class="big-touch-field uppercase-input" placeholder="e.g. HDFC0001234" />
+          <div class="pay-split-grid">
+            <div class="pay-form-col">
+              <div class="payment-card pay-flow-card">
+                <div class="withdraw-bal-banner">
+                  <div>
+                    <span>Available Real Winnings</span>
+                    <strong id="withdrawAvailableBal">₹0.00</strong>
+                  </div>
+                  <span id="minWithdrawHint" class="status-pill good">Limit: ₹200 – ₹50,000</span>
                 </div>
+
                 <div class="form-group">
-                  <label for="withdrawBankNameInput">Bank Name (Optional)</label>
-                  <input id="withdrawBankNameInput" type="text" class="big-touch-field" placeholder="e.g. HDFC / SBI / ICICI" />
+                  <label for="withdrawAmountInput">1. Withdrawal Amount (₹)</label>
+                  <div class="pay-input-prefix-wrap">
+                    <span class="pay-currency-prefix">₹</span>
+                    <input id="withdrawAmountInput" type="number" inputmode="numeric" min="200" max="50000" step="10" class="pay-amount-input big-touch-input" placeholder="Enter amount" />
+                  </div>
                 </div>
+
+                <div id="withdrawQuickChips" class="quick-chips-row chips-4-grid" style="margin-bottom:14px;">
+                  <button type="button" class="chip-amt-btn" data-target="withdrawAmountInput" data-val="200">₹200</button>
+                  <button type="button" class="chip-amt-btn" data-target="withdrawAmountInput" data-val="500">₹500</button>
+                  <button type="button" class="chip-amt-btn" data-target="withdrawAmountInput" data-val="1000">₹1,000</button>
+                  <button type="button" class="chip-amt-btn chip-max-btn" data-target="withdrawAmountInput" data-val="ALL">MAX</button>
+                </div>
+
+                <div class="form-group">
+                  <label>2. Choose Withdrawal Method</label>
+                  <div class="pay-method-switch">
+                    <button type="button" id="wthMethodBtnUpi" class="wth-method-btn active" data-wthmethod="UPI">
+                      <span>📱 UPI ID</span>
+                      <small class="status-pill info">GPay / PhonePe / Paytm</small>
+                    </button>
+                    <button type="button" id="wthMethodBtnBank" class="wth-method-btn" data-wthmethod="BANK">
+                      <span>🏦 Bank Account</span>
+                      <small class="status-pill neutral">IMPS / NEFT</small>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- WITHDRAW METHOD A: UPI -->
+                <div id="wthMethodPanel-upi" class="wth-method-panel active">
+                  <div class="upi-app-pills" id="wthUpiAppPills">
+                    <button type="button" class="chip-amt-btn active" data-upiapp="Any UPI">Any UPI</button>
+                    <button type="button" class="chip-amt-btn" data-upiapp="Google Pay">GPay</button>
+                    <button type="button" class="chip-amt-btn" data-upiapp="PhonePe">PhonePe</button>
+                    <button type="button" class="chip-amt-btn" data-upiapp="Paytm">Paytm</button>
+                  </div>
+                  <div class="form-group" style="margin-top:10px;">
+                    <label for="withdrawUpiIdInput">UPI ID *</label>
+                    <input id="withdrawUpiIdInput" type="text" class="big-touch-field" placeholder="e.g. yourname@okhdfcbank / 98xxxx@ybl" />
+                  </div>
+                  <div class="form-group">
+                    <label for="withdrawUpiHolderInput">Account Holder Name (Recommended)</label>
+                    <input id="withdrawUpiHolderInput" type="text" class="big-touch-field" placeholder="Name registered on UPI" />
+                  </div>
+                </div>
+
+                <!-- WITHDRAW METHOD B: BANK ACCOUNT -->
+                <div id="wthMethodPanel-bank" class="wth-method-panel" style="display:none;">
+                  <div class="form-group">
+                    <label for="withdrawBankHolderInput">Account Holder Name *</label>
+                    <input id="withdrawBankHolderInput" type="text" class="big-touch-field" placeholder="Exact name as per bank passbook" />
+                  </div>
+                  <div class="form-group">
+                    <label for="withdrawBankAccNoInput">Bank Account Number *</label>
+                    <input id="withdrawBankAccNoInput" type="text" inputmode="numeric" maxlength="20" class="big-touch-field" placeholder="Enter 9–18 digit account number" />
+                  </div>
+                  <div class="form-group">
+                    <label for="withdrawBankAccConfirmInput">Confirm Bank Account Number *</label>
+                    <input id="withdrawBankAccConfirmInput" type="text" inputmode="numeric" maxlength="20" class="big-touch-field" placeholder="Re-enter account number" />
+                  </div>
+                  <div class="bank-dual-grid">
+                    <div class="form-group">
+                      <label for="withdrawBankIfscInput">IFSC Code *</label>
+                      <input id="withdrawBankIfscInput" type="text" maxlength="11" class="big-touch-field uppercase-input" placeholder="e.g. HDFC0001234" />
+                    </div>
+                    <div class="form-group">
+                      <label for="withdrawBankNameInput">Bank Name (Optional)</label>
+                      <input id="withdrawBankNameInput" type="text" class="big-touch-field" placeholder="e.g. HDFC / SBI / ICICI" />
+                    </div>
+                  </div>
+                </div>
+
+                <button id="submitWithdrawBtn" type="button" class="btn-primary-glow full-w touch-cta-btn" style="margin-top:8px;">🏦 Submit Withdrawal Request</button>
+                <small class="pay-card-note" style="color:#94a3b8;">You will get a live Bell 🔔 notification when Admin approves or rejects your withdrawal.</small>
               </div>
             </div>
 
-            <button id="submitWithdrawBtn" type="button" class="btn-primary-glow full-w touch-cta-btn" style="margin-top:8px;">🏦 Submit Withdrawal Request</button>
-            <small class="pay-card-note" style="color:#94a3b8;">You will get a live Bell 🔔 notification when Admin approves or rejects your withdrawal.</small>
-          </div>
-        </div>
-
-        <!-- PAY SUB-TAB 3: PAYMENT STATUS & HISTORY -->
-        <div id="payTab-status" class="pay-tab-panel" style="display:none;">
-          <div class="payment-grid">
-            <div class="payment-card">
-              <div class="pay-card-head">
-                <h3>🏦 My Withdrawal Statuses</h3>
-                <span class="status-pill info">LIVE TRACKER</span>
+            <div class="pay-status-col">
+              <div class="payment-card pay-status-card">
+                <div class="pay-card-head">
+                  <h3>Status</h3>
+                  <span id="withdrawStatusPill" class="status-pill neutral">0 Requests</span>
+                </div>
+                <div id="withdrawActiveHighlight" class="pay-status-highlights"></div>
+                <div id="userWithdrawStatusList" class="status-cards-stack"></div>
               </div>
-              <div id="userWithdrawStatusList" class="status-cards-stack"></div>
             </div>
-
-            <div class="payment-card">
-              <div class="pay-card-head">
-                <h3>💳 My Recharge Requests</h3>
-                <span class="status-pill neutral">UTR &amp; RAZORPAY</span>
-              </div>
-              <div id="userDepositStatusList" class="status-cards-stack"></div>
-            </div>
-          </div>
-
-          <div class="payment-card" style="margin-top:16px;">
-            <div class="pay-card-head">
-              <h3>📒 Wallet Transaction Ledger</h3>
-            </div>
-            <div id="paymentPageTxList" class="cards-feed-list"></div>
           </div>
         </div>
       </section>
