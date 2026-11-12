@@ -103,6 +103,26 @@ public class WebSocketHub {
         } catch (IOException ignored) {}
     }
 
+    public void disconnectUser(String email, String reason) {
+        Set<WebSocketSession> targets = userSessions.remove(email);
+        if (targets == null || targets.isEmpty()) {
+            return;
+        }
+        for (WebSocketSession s : targets) {
+            allSessions.remove(s);
+            try {
+                if (s.isOpen()) {
+                    s.close(new CloseStatus(4003, reason != null ? reason : "ACCOUNT_BLOCKED"));
+                }
+            } catch (IOException ignored) {}
+        }
+    }
+
+    public boolean isUserOnline(String email) {
+        Set<WebSocketSession> targets = userSessions.get(email);
+        return targets != null && targets.stream().anyMatch(WebSocketSession::isOpen);
+    }
+
     private void sendJson(WebSocketSession session, Object body) {
         String json = serialize(body);
         if (json != null) {

@@ -31,6 +31,10 @@ CREATE TABLE IF NOT EXISTS `users` (
   `last_recharge_amt` DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
   `last_withdraw_at` DATETIME NULL,
   `last_withdraw_amt` DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+  `block_type` VARCHAR(16) NULL DEFAULT 'NONE',
+  `blocked_until` DATETIME NULL,
+  `block_reason` VARCHAR(255) NULL,
+  `blocked_at` DATETIME NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
@@ -49,6 +53,9 @@ CREATE TABLE IF NOT EXISTS `game_rounds` (
   `winning_number` TINYINT NOT NULL,
   `colors` VARCHAR(64) NOT NULL,
   `size` ENUM('big', 'small') NOT NULL,
+  `total_collected` DECIMAL(14, 2) NULL DEFAULT 0.00,
+  `total_payout` DECIMAL(14, 2) NULL DEFAULT 0.00,
+  `house_profit` DECIMAL(14, 2) NULL DEFAULT 0.00,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
@@ -113,5 +120,44 @@ CREATE TABLE IF NOT EXISTS `platform_settings` (
   `smtp_port` INT NOT NULL DEFAULT 587,
   `smtp_user` VARCHAR(191) NULL,
   `smtp_pass` VARCHAR(255) NULL,
-  `smtp_from_name` VARCHAR(100) NOT NULL DEFAULT 'GB_Colors'
+  `smtp_from_name` VARCHAR(100) NOT NULL DEFAULT 'GB_Colors',
+  `cycle_duration_seconds` INT NULL DEFAULT 30,
+  `bet_close_seconds` INT NULL DEFAULT 5,
+  `admin_min_profit_percent` INT NULL DEFAULT 15,
+  `upi_id` VARCHAR(120) NULL DEFAULT 'gbcolors.pay@upi',
+  `upi_payee_name` VARCHAR(120) NULL DEFAULT 'GB_Colors',
+  `razorpay_key_id` VARCHAR(128) NULL,
+  `razorpay_key_secret` VARCHAR(255) NULL
+) ENGINE=InnoDB;
+
+-- 8. Deposit Requests (UPI UTR Queue & Razorpay Orders)
+CREATE TABLE IF NOT EXISTS `deposit_requests` (
+  `id` VARCHAR(64) PRIMARY KEY,
+  `email` VARCHAR(191) NOT NULL,
+  `user_id` VARCHAR(24) NOT NULL,
+  `username` VARCHAR(100) NOT NULL,
+  `amount` DECIMAL(12, 2) NOT NULL,
+  `method` VARCHAR(32) NOT NULL DEFAULT 'UPI',
+  `utr_or_payment_id` VARCHAR(191) NULL,
+  `order_id` VARCHAR(128) NULL,
+  `status` ENUM('PENDING', 'APPROVED', 'REJECTED') NOT NULL DEFAULT 'PENDING',
+  `admin_note` VARCHAR(255) NULL,
+  `requested_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `processed_at` DATETIME NULL,
+  INDEX `idx_dep_status` (`status`),
+  INDEX `idx_dep_email` (`email`)
+) ENGINE=InnoDB;
+
+-- 9. Persistent User Notifications
+CREATE TABLE IF NOT EXISTS `user_notifications` (
+  `id` VARCHAR(64) PRIMARY KEY,
+  `email` VARCHAR(191) NOT NULL,
+  `type` VARCHAR(32) NOT NULL DEFAULT 'INFO',
+  `title` VARCHAR(160) NOT NULL,
+  `message` VARCHAR(500) NOT NULL,
+  `amount` DECIMAL(12, 2) NULL,
+  `reference_id` VARCHAR(64) NULL,
+  `is_read` BOOLEAN NOT NULL DEFAULT FALSE,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_ntf_email_read` (`email`, `is_read`)
 ) ENGINE=InnoDB;

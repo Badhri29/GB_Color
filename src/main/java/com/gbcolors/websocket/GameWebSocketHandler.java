@@ -68,8 +68,21 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
-        if (!userRepo.existsByEmail(sess.getEmail())) {
+        com.gbcolors.model.UserEntity userEntity = userRepo.findByEmail(sess.getEmail()).orElse(null);
+        if (userEntity == null) {
             wsHub.closeUnauthorized(session);
+            return;
+        }
+        String blockErr = gameLoopService.getBlockMessageIfActive(userEntity);
+        if (blockErr != null) {
+            wsHub.emitToSession(session, "account_blocked", Map.of(
+                    "blockType", userEntity.getBlockType().name(),
+                    "reason", userEntity.getBlockReason() != null ? userEntity.getBlockReason() : "",
+                    "message", blockErr
+            ));
+            try {
+                session.close(new CloseStatus(4003, "ACCOUNT_BLOCKED"));
+            } catch (Exception ignored) {}
             return;
         }
 
@@ -153,6 +166,16 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                         );
                         wsHub.sendAck(session, reqId, res);
                     }
+                }
+                case "mark_notifications_read" -> {
+                    java.util.List<String> ids = new java.util.ArrayList<>();
+                    if (dataObj instanceof java.util.Collection<?> list) {
+                        for (Object o : list) {
+                            if (o != null) ids.add(String.valueOf(o));
+                        }
+                    }
+                    gameLoopService.markNotificationsRead(email, ids);
+                    wsHub.sendAck(session, reqId, Map.of("success", true));
                 }
                 default -> {}
             }

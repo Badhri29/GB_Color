@@ -1,645 +1,812 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GB_Colors - Real-Time Color Prediction Gaming Platform</title>
-    <link rel="stylesheet" href="style.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GB Colors — Live Color Prediction &amp; Instant Rewards</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
 
-    <!-- ===================================================
-         1. AUTH SCREEN (Sign In & Sign Up with Real-Time OTP)
-         =================================================== -->
-    <div id="authScreen" class="auth-screen-wrapper">
-        <div class="auth-card">
-            <div class="auth-brand-header">
-                <span class="brand-badge">PRO</span>
-                <span class="brand-name">GB_<span class="text-accent">Colors</span></span>
-                <p class="auth-tagline">Official Real-Time Color Prediction Arena</p>
-            </div>
+  <!-- =========================
+       AUTHENTICATION GATEWAY
+  ========================== -->
+  <div id="authScreen" class="auth-screen-wrapper">
+    <div class="auth-card">
+      <div class="auth-brand">
+        <div class="logo-mark">
+          <span class="dot dot-g"></span>
+          <span class="dot dot-v"></span>
+          <span class="dot dot-r"></span>
+        </div>
+        <h1>GB COLORS</h1>
+        <p class="auth-subtitle">Instant 30s Win Go • Real &amp; Practice Modes</p>
+      </div>
 
-            <div class="auth-tabs">
-                <button id="showSignInTab" class="auth-tab-btn active">Sign In</button>
-                <button id="showSignUpTab" class="auth-tab-btn">Sign Up</button>
-            </div>
+      <div class="auth-tabs">
+        <button id="showSignInTab" class="auth-tab-btn active" type="button">Sign In</button>
+        <button id="showSignUpTab" class="auth-tab-btn" type="button">Create Account</button>
+      </div>
 
-            <!-- Sign In Form -->
-            <form id="signInForm" class="auth-form">
-                <label class="input-label">Email ID</label>
-                <input type="email" id="loginEmail" class="form-input" placeholder="Enter your email address" required>
+      <!-- SIGN IN FORM -->
+      <form id="signInForm" class="auth-form" autocomplete="on">
+        <div class="form-group">
+          <label for="loginEmail">Email Address</label>
+          <input id="loginEmail" type="email" placeholder="you@example.com" required autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label for="loginPassword">Password</label>
+          <div class="password-input-wrap">
+            <input id="loginPassword" type="password" placeholder="Enter your password" required autocomplete="current-password" />
+            <button type="button" class="toggle-pass-btn" onclick="togglePassVis('loginPassword', this)" aria-label="Toggle password">👁</button>
+          </div>
+        </div>
+        <div id="loginErrorMsg" class="auth-error-box" style="display:none;"></div>
+        <button id="signInSubmitBtn" type="submit" class="btn-primary-glow full-w">Sign In to Arena</button>
+      </form>
 
-                <label class="input-label">Password</label>
-                <div class="password-field-wrap">
-                    <input type="password" id="loginPassword" class="form-input" placeholder="Enter your password" required>
-                    <button type="button" class="toggle-eye-btn" onclick="togglePassVis('loginPassword', this)">👁️</button>
+      <!-- SIGN UP FORM -->
+      <form id="signUpForm" class="auth-form" style="display:none;" autocomplete="off">
+        <div class="form-group">
+          <label for="regEmail">Email Address</label>
+          <div class="otp-row">
+            <input id="regEmail" type="email" placeholder="you@example.com" required />
+            <button id="sendOtpBtn" type="button" class="btn-accent-outline">Send OTP</button>
+          </div>
+        </div>
+
+        <div id="otpNoticeBox" class="auth-notice-box" style="display:none;"></div>
+
+        <div class="form-group">
+          <label for="regOtp">Email Verification Code (OTP)</label>
+          <input id="regOtp" type="text" maxlength="6" placeholder="Enter 6-digit OTP" required />
+        </div>
+
+        <div class="form-group">
+          <label for="regPassword">Create Password</label>
+          <div class="password-input-wrap">
+            <input id="regPassword" type="password" placeholder="Create strong password" required />
+            <button type="button" class="toggle-pass-btn" onclick="togglePassVis('regPassword', this)" aria-label="Toggle password">👁</button>
+          </div>
+          <div id="passRulesBox" class="pass-rules-grid">
+            <span id="ruleLen" class="pass-rule">• 8+ chars</span>
+            <span id="ruleUpper" class="pass-rule">• 1 Uppercase</span>
+            <span id="ruleLower" class="pass-rule">• 1 Lowercase</span>
+            <span id="ruleNum" class="pass-rule">• 1 Number</span>
+            <span id="ruleSym" class="pass-rule">• 1 Symbol</span>
+            <span id="ruleNoSpace" class="pass-rule">• No spaces</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="regConfirmPassword">Confirm Password</label>
+          <div class="password-input-wrap">
+            <input id="regConfirmPassword" type="password" placeholder="Re-enter password" required />
+            <button type="button" class="toggle-pass-btn" onclick="togglePassVis('regConfirmPassword', this)" aria-label="Toggle password">👁</button>
+          </div>
+        </div>
+
+        <div id="signupErrorMsg" class="auth-error-box" style="display:none;"></div>
+        <button id="signUpSubmitBtn" type="submit" class="btn-primary-glow full-w">Verify &amp; Create Account</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- =========================
+       ADMIN PORTAL CONTAINER (Dynamic Load)
+  ========================== -->
+  <div id="adminPortalRoot" class="admin-dashboard-shell" style="display:none;"></div>
+
+  <!-- =========================
+       USER GAME & PAYMENT PORTAL
+  ========================== -->
+  <div id="gameAppRoot" class="site-wrapper" style="display:none;">
+
+    <!-- LIVE SCROLLING TICKER (Real Wins + Non-Repeating Fallback) -->
+    <div class="ticker-bar">
+      <div class="ticker-label">🏆 LIVE WINS</div>
+      <div class="ticker-track-container">
+        <div class="ticker-track" id="liveTickerTrack"></div>
+      </div>
+    </div>
+
+    <!-- HEADER BAR -->
+    <header class="app-header">
+      <div class="header-left-group">
+        <button id="userMenuBtn" class="menu-hamburger-btn" type="button" aria-label="Open Navigation Menu" title="Open Menu">☰</button>
+        <div class="brand-compact" id="brandHomeBtn" role="button" tabindex="0">
+          <span class="brand-dot-trio">
+            <i class="b-g"></i><i class="b-v"></i><i class="b-r"></i>
+          </span>
+          <span class="brand-title">GB COLORS</span>
+        </div>
+      </div>
+
+      <div class="header-right-group">
+        <div class="mode-switch-pill" role="group" aria-label="Wallet Mode">
+          <button id="modeDemoBtn" class="mode-btn active" type="button">DEMO</button>
+          <button id="modeRealBtn" class="mode-btn" type="button">REAL</button>
+        </div>
+
+        <div class="wallet-pill">
+          <div class="wallet-meta">
+            <span class="wallet-mode-cap" id="headerWalletLabel">DEMO WALLET</span>
+            <strong id="activeBalanceDisplay" class="wallet-amount">₹0.00</strong>
+          </div>
+          <button id="headerRechargeBtn" class="wallet-plus-btn" type="button" title="Recharge / Payments">+</button>
+        </div>
+
+        <button id="paymentNavBtn" class="header-action-pill" type="button" title="Payments Page">💳 <span>Payments</span></button>
+
+        <button id="notifBellBtn" class="header-icon-btn" type="button" aria-label="Notifications" title="Notifications">
+          🔔<span id="notifBellBadge" class="notif-badge-dot" style="display:none;">0</span>
+        </button>
+
+        <button id="soundToggleBtn" class="header-icon-btn" type="button" aria-label="Toggle Sound" title="Toggle Sound">🔊</button>
+      </div>
+    </header>
+
+    <!-- SLIDE-OUT SIDE NAVIGATION DRAWER (PC & MOBILE) -->
+    <div id="userDrawerBackdrop" class="drawer-backdrop"></div>
+    <aside id="userSideDrawer" class="side-drawer" aria-hidden="true">
+      <div class="drawer-header">
+        <div class="brand-compact">
+          <span class="brand-dot-trio"><i class="b-g"></i><i class="b-v"></i><i class="b-r"></i></span>
+          <span class="brand-title">GB MENU</span>
+        </div>
+        <button id="closeUserDrawerBtn" class="drawer-close-btn" type="button" aria-label="Close Menu">✕</button>
+      </div>
+
+      <div class="drawer-user-summary">
+        <div class="drawer-avatar" id="drawerAvatar">U</div>
+        <div class="drawer-user-meta">
+          <strong id="drawerUsername">Player</strong>
+          <small id="drawerEmail">user@example.com</small>
+          <span class="drawer-uid-tag" id="drawerUserId">UID: —</span>
+        </div>
+      </div>
+
+      <div class="drawer-wallet-strip">
+        <div class="dw-box real">
+          <span>Real Cash</span>
+          <strong id="drawerRealBal">₹0.00</strong>
+        </div>
+        <div class="dw-box demo">
+          <span>Demo Coins</span>
+          <strong id="drawerDemoBal">₹0.00</strong>
+        </div>
+      </div>
+
+      <nav class="drawer-nav-list">
+        <button type="button" class="drawer-nav-item active" data-view="game"><span>🎮</span> Game Arena</button>
+        <button type="button" class="drawer-nav-item" data-view="payment"><span>💳</span> Payment (Recharge &amp; Withdraw)</button>
+        <button type="button" class="drawer-nav-item" data-view="history"><span>📜</span> Bet History &amp; Results</button>
+        <button type="button" class="drawer-nav-item" data-view="profile"><span>👤</span> My Profile</button>
+        <button type="button" class="drawer-nav-item" data-view="rules"><span>📘</span> Rules &amp; Payouts</button>
+        <button type="button" class="drawer-nav-item" data-view="settings"><span>⚙️</span> Settings</button>
+        <button type="button" class="drawer-nav-item" id="drawerNotifBtn">
+          <span>🔔</span> Notifications
+          <em id="drawerNotifBadge" class="drawer-pill-badge" style="display:none;">0</em>
+        </button>
+      </nav>
+
+      <div class="drawer-footer">
+        <button type="button" id="drawerLogoutBtn" class="btn-danger-outline full-w">🚪 Sign Out</button>
+      </div>
+    </aside>
+
+    <!-- MULTI-PAGE VIEWS CONTAINER -->
+    <main class="app-views-root">
+
+      <!-- ========= VIEW 1: GAME ARENA ========= -->
+      <section id="view-game" class="page-view active">
+        <div class="dashboard-grid">
+
+          <!-- LEFT: LIVE ARENA -->
+          <div class="game-arena-column">
+            <div class="period-timer-card">
+              <div class="period-left">
+                <div class="game-tag" id="modeTagDisplay">WIN GO • 30S</div>
+                <div class="period-label">Active Period</div>
+                <div id="periodNumber" class="period-code">--------</div>
+              </div>
+              <div class="timer-right">
+                <div class="timer-caption">Time Remaining</div>
+                <div id="countdownClock" class="countdown-digits">
+                  <span id="timerMin" class="clock-digit">00</span>
+                  <span class="clock-colon">:</span>
+                  <span id="timerSec" class="clock-digit">30</span>
                 </div>
+              </div>
+            </div>
 
-                <div id="loginErrorMsg" class="form-error-msg"></div>
+            <div class="recent-strip-card">
+              <span class="recent-cap">Recent:</span>
+              <div id="recentDotsList" class="recent-dots-row"></div>
+            </div>
 
-                <button type="submit" class="btn-confirm-bet" id="signInSubmitBtn">
-                    Sign In to Arena
+            <!-- BETTING CONSOLE -->
+            <div id="bettingSection" class="betting-section">
+              <div id="lockOverlay" class="lock-overlay" style="display:none;">
+                <div class="lock-badge">
+                  <span>⏳ BETTING CLOSED</span>
+                  <small id="lockOverlayHint">Calculating round result...</small>
+                </div>
+              </div>
+
+              <div class="color-buttons-grid">
+                <button type="button" class="bet-btn color-green" data-type="COLOR" data-choice="GREEN">
+                  <span class="bet-label">Green</span>
+                  <span class="bet-mult">2x</span>
+                  <span id="badge-GREEN" class="bet-badge" style="display:none;">₹0</span>
                 </button>
-            </form>
-
-            <!-- Sign Up Form -->
-            <form id="signUpForm" class="auth-form" style="display: none;">
-                <label class="input-label">Email ID (OTP will be sent here)</label>
-                <div class="email-otp-row">
-                    <input type="email" id="regEmail" class="form-input" placeholder="you@example.com" required>
-                    <button type="button" id="sendOtpBtn" class="btn-send-otp">Send OTP</button>
-                </div>
-
-                <div id="otpNoticeBox" class="otp-notice-box" style="display: none;"></div>
-
-                <label class="input-label">6-Digit Email OTP</label>
-                <input type="text" id="regOtp" class="form-input otp-input-field" placeholder="Enter 6-digit OTP" maxlength="6" required>
-
-                <label class="input-label">Create Strong Password</label>
-                <div class="password-field-wrap">
-                    <input type="password" id="regPassword" class="form-input" placeholder="Create valid password" required>
-                    <button type="button" class="toggle-eye-btn" onclick="togglePassVis('regPassword', this)">👁️</button>
-                </div>
-
-                <!-- Live Password Character Validation Checklist -->
-                <div class="pass-rules-box" id="passRulesBox">
-                    <span class="rule-item" id="ruleLen">○ 8–32 characters</span>
-                    <span class="rule-item" id="ruleUpper">○ Uppercase (A-Z)</span>
-                    <span class="rule-item" id="ruleLower">○ Lowercase (a-z)</span>
-                    <span class="rule-item" id="ruleNum">○ Number (0-9)</span>
-                    <span class="rule-item" id="ruleSym">○ Special (@#$!...)</span>
-                    <span class="rule-item" id="ruleNoSpace">○ Valid chars / No spaces</span>
-                </div>
-
-                <label class="input-label">Confirm Password</label>
-                <input type="password" id="regConfirmPassword" class="form-input" placeholder="Re-enter password" required>
-
-                <div id="signupErrorMsg" class="form-error-msg"></div>
-
-                <button type="submit" class="btn-confirm-bet" id="signUpSubmitBtn">
-                    Verify OTP & Create Account
+                <button type="button" class="bet-btn color-violet" data-type="COLOR" data-choice="VIOLET">
+                  <span class="bet-label">Violet</span>
+                  <span class="bet-mult">4.5x</span>
+                  <span id="badge-VIOLET" class="bet-badge" style="display:none;">₹0</span>
                 </button>
-            </form>
-        </div>
-    </div>
-
-    <!-- ===================================================
-         2. USER GAME ARENA (Visible only after User Login)
-         =================================================== -->
-    <div id="gameAppRoot" class="site-wrapper" style="display: none;">
-        <!-- Top Running Water Marquee Ticker -->
-        <div class="live-ticker-marquee">
-            <div class="ticker-label">
-                <span class="ticker-pulse"></span>
-                <span>LIVE WINS</span>
-            </div>
-            <div class="ticker-track-container">
-                <div class="ticker-track">
-                    <span class="ticker-item">🎉 arjun***@gmail.com won ₹1,800 on GREEN</span>
-                    <span class="ticker-item">💎 priya***@gmail.com won ₹4,500 on VIOLET</span>
-                    <span class="ticker-item">🏆 karthik***@yahoo.com won ₹4,500 on Number 7</span>
-                    <span class="ticker-item">💰 suresh***@gmail.com withdrew ₹12,000 via UPI</span>
-                    <span class="ticker-item">⚡ divya***@gmail.com won ₹900 on RED</span>
-                    <span class="ticker-item">👑 rahul***@outlook.com won ₹2,400 on BIG</span>
-                    <span class="ticker-item">🎉 meena***@gmail.com won ₹3,600 on GREEN</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Main Header -->
-        <header class="app-header">
-            <div class="header-left">
-                <div class="brand">
-                    <span class="brand-badge">PRO</span>
-                    <span class="brand-name">GB_<span class="text-accent">Colors</span></span>
-                </div>
-
-                <!-- Mode Switcher (Demo vs Real) -->
-                <div class="mode-switcher-pill">
-                    <button id="modeDemoBtn" class="mode-btn active" title="Switch to Demo Practice Mode">
-                        <span class="dot green-dot"></span> Demo
-                    </button>
-                    <button id="modeRealBtn" class="mode-btn" title="Switch to Real Money Mode">
-                        <span class="dot gold-dot"></span> Real ₹
-                    </button>
-                </div>
-            </div>
-
-            <div class="header-right">
-                <!-- Wallet Display -->
-                <div class="wallet-badge" id="walletBadge">
-                    <span class="wallet-currency">₹</span>
-                    <span id="activeBalanceDisplay" class="wallet-amount">1,000</span>
-                    <button id="walletActionBtn" class="wallet-action-btn" title="Deposit / Add Money">+</button>
-                </div>
-
-                <!-- User Profile Button -->
-                <button id="userProfileBtn" class="pill-btn user-btn">
-                    <span class="btn-icon">👤</span>
-                    <span id="userStatusText">Account</span>
+                <button type="button" class="bet-btn color-red" data-type="COLOR" data-choice="RED">
+                  <span class="bet-label">Red</span>
+                  <span class="bet-mult">2x</span>
+                  <span id="badge-RED" class="bet-badge" style="display:none;">₹0</span>
                 </button>
+              </div>
 
-                <!-- Withdraw Button -->
-                <button id="withdrawNavBtn" class="pill-btn withdraw-btn" title="Withdraw Funds">
-                    <span class="btn-icon">💳</span>
-                    <span class="btn-text">Withdraw</span>
+              <div class="numbers-grid">
+                <button type="button" class="bet-btn num-btn n0" data-type="NUMBER" data-choice="0">
+                  <span>0</span><span id="badge-0" class="bet-badge" style="display:none;">₹0</span>
                 </button>
-
-                <!-- Settings Button -->
-                <button id="settingsBtn" class="icon-btn" title="Settings">⚙️</button>
-                <!-- Sound Toggle -->
-                <button id="soundToggleBtn" class="icon-btn" title="Toggle Sound">
-                    <span id="soundIcon">🔊</span>
+                <button type="button" class="bet-btn num-btn n1" data-type="NUMBER" data-choice="1">
+                  <span>1</span><span id="badge-1" class="bet-badge" style="display:none;">₹0</span>
                 </button>
+                <button type="button" class="bet-btn num-btn n2" data-type="NUMBER" data-choice="2">
+                  <span>2</span><span id="badge-2" class="bet-badge" style="display:none;">₹0</span>
+                </button>
+                <button type="button" class="bet-btn num-btn n3" data-type="NUMBER" data-choice="3">
+                  <span>3</span><span id="badge-3" class="bet-badge" style="display:none;">₹0</span>
+                </button>
+                <button type="button" class="bet-btn num-btn n4" data-type="NUMBER" data-choice="4">
+                  <span>4</span><span id="badge-4" class="bet-badge" style="display:none;">₹0</span>
+                </button>
+                <button type="button" class="bet-btn num-btn n5" data-type="NUMBER" data-choice="5">
+                  <span>5</span><span id="badge-5" class="bet-badge" style="display:none;">₹0</span>
+                </button>
+                <button type="button" class="bet-btn num-btn n6" data-type="NUMBER" data-choice="6">
+                  <span>6</span><span id="badge-6" class="bet-badge" style="display:none;">₹0</span>
+                </button>
+                <button type="button" class="bet-btn num-btn n7" data-type="NUMBER" data-choice="7">
+                  <span>7</span><span id="badge-7" class="bet-badge" style="display:none;">₹0</span>
+                </button>
+                <button type="button" class="bet-btn num-btn n8" data-type="NUMBER" data-choice="8">
+                  <span>8</span><span id="badge-8" class="bet-badge" style="display:none;">₹0</span>
+                </button>
+                <button type="button" class="bet-btn num-btn n9" data-type="NUMBER" data-choice="9">
+                  <span>9</span><span id="badge-9" class="bet-badge" style="display:none;">₹0</span>
+                </button>
+              </div>
+
+              <div class="size-buttons-grid">
+                <button type="button" class="bet-btn size-big" data-type="SIZE" data-choice="BIG">
+                  <span class="bet-label">BIG (5–9)</span>
+                  <span class="bet-mult">2x</span>
+                  <span id="badge-BIG" class="bet-badge" style="display:none;">₹0</span>
+                </button>
+                <button type="button" class="bet-btn size-small" data-type="SIZE" data-choice="SMALL">
+                  <span class="bet-label">SMALL (0–4)</span>
+                  <span class="bet-mult">2x</span>
+                  <span id="badge-SMALL" class="bet-badge" style="display:none;">₹0</span>
+                </button>
+              </div>
             </div>
-        </header>
+          </div>
 
-        <!-- Main Layout (Full-Width PC Grid / Mobile Stack) -->
-        <main class="dashboard-grid">
-            <!-- Left Column: Game Arena -->
-            <section class="game-arena-column">
-                <div class="game-timer-card">
-                    <div class="game-mode-banner">
-                        <div class="mode-info">
-                            <span class="mode-tag">⚡ FAST 30s WIN-GO</span>
-                            <div class="period-info">
-                                <span class="period-label">Current Period Issue</span>
-                                <span id="periodNumber" class="period-number">202611110001</span>
-                            </div>
-                        </div>
-                        <div class="countdown-wrapper">
-                            <span class="timer-label">Time Remaining</span>
-                            <div class="countdown-clock" id="countdownClock">
-                                <span id="timerMin" class="clock-digit">00</span>
-                                <span class="clock-colon">:</span>
-                                <span id="timerSec" class="clock-digit">30</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="recent-results-bar">
-                        <span class="recent-label">Recent Trend:</span>
-                        <div class="recent-dots" id="recentDotsList"></div>
-                    </div>
-                </div>
-
-                <!-- Betting Matrix Container -->
-                <div class="betting-section" id="bettingSection">
-                    <div class="lock-overlay" id="lockOverlay">
-                        <div class="lock-content">
-                            <div class="spinner"></div>
-                            <p class="lock-title">ROUND LOCKED</p>
-                            <p class="lock-subtitle">Calculating Results & Distributing Payouts...</p>
-                        </div>
-                    </div>
-
-                    <!-- Color Selection -->
-                    <div class="section-title-row">
-                        <span class="section-title">Select Color</span>
-                        <span class="section-hint">High Win Probability</span>
-                    </div>
-                    <div class="color-buttons-grid">
-                        <button class="bet-btn color-btn btn-green" data-type="COLOR" data-choice="GREEN">
-                            <div class="bet-placed-badge" id="badge-GREEN">₹0</div>
-                            <div class="btn-top">
-                                <span class="color-dot green-dot"></span>
-                                <span class="btn-name">GREEN</span>
-                            </div>
-                            <span class="payout-badge">2x</span>
-                        </button>
-                        <button class="bet-btn color-btn btn-violet" data-type="COLOR" data-choice="VIOLET">
-                            <div class="bet-placed-badge" id="badge-VIOLET">₹0</div>
-                            <div class="btn-top">
-                                <span class="color-dot violet-dot"></span>
-                                <span class="btn-name">VIOLET</span>
-                            </div>
-                            <span class="payout-badge">4.5x</span>
-                        </button>
-                        <button class="bet-btn color-btn btn-red" data-type="COLOR" data-choice="RED">
-                            <div class="bet-placed-badge" id="badge-RED">₹0</div>
-                            <div class="btn-top">
-                                <span class="color-dot red-dot"></span>
-                                <span class="btn-name">RED</span>
-                            </div>
-                            <span class="payout-badge">2x</span>
-                        </button>
-                    </div>
-
-                    <!-- Number Grid (0 to 9) -->
-                    <div class="section-title-row">
-                        <span class="section-title">Select Number</span>
-                        <span class="section-hint">Massive 9x Payout</span>
-                    </div>
-                    <div class="numbers-grid">
-                        <button class="bet-btn num-btn num-0" data-type="NUMBER" data-choice="0">
-                            <div class="bet-placed-badge" id="badge-0">₹0</div>
-                            <span class="num-text">0</span>
-                            <div class="num-split-colors">
-                                <span class="c-half red"></span>
-                                <span class="c-half violet"></span>
-                            </div>
-                        </button>
-                        <button class="bet-btn num-btn green-theme" data-type="NUMBER" data-choice="1">
-                            <div class="bet-placed-badge" id="badge-1">₹0</div>
-                            <span class="num-text">1</span>
-                        </button>
-                        <button class="bet-btn num-btn red-theme" data-type="NUMBER" data-choice="2">
-                            <div class="bet-placed-badge" id="badge-2">₹0</div>
-                            <span class="num-text">2</span>
-                        </button>
-                        <button class="bet-btn num-btn green-theme" data-type="NUMBER" data-choice="3">
-                            <div class="bet-placed-badge" id="badge-3">₹0</div>
-                            <span class="num-text">3</span>
-                        </button>
-                        <button class="bet-btn num-btn red-theme" data-type="NUMBER" data-choice="4">
-                            <div class="bet-placed-badge" id="badge-4">₹0</div>
-                            <span class="num-text">4</span>
-                        </button>
-                        <button class="bet-btn num-btn num-5" data-type="NUMBER" data-choice="5">
-                            <div class="bet-placed-badge" id="badge-5">₹0</div>
-                            <span class="num-text">5</span>
-                            <div class="num-split-colors">
-                                <span class="c-half green"></span>
-                                <span class="c-half violet"></span>
-                            </div>
-                        </button>
-                        <button class="bet-btn num-btn red-theme" data-type="NUMBER" data-choice="6">
-                            <div class="bet-placed-badge" id="badge-6">₹0</div>
-                            <span class="num-text">6</span>
-                        </button>
-                        <button class="bet-btn num-btn green-theme" data-type="NUMBER" data-choice="7">
-                            <div class="bet-placed-badge" id="badge-7">₹0</div>
-                            <span class="num-text">7</span>
-                        </button>
-                        <button class="bet-btn num-btn red-theme" data-type="NUMBER" data-choice="8">
-                            <div class="bet-placed-badge" id="badge-8">₹0</div>
-                            <span class="num-text">8</span>
-                        </button>
-                        <button class="bet-btn num-btn green-theme" data-type="NUMBER" data-choice="9">
-                            <div class="bet-placed-badge" id="badge-9">₹0</div>
-                            <span class="num-text">9</span>
-                        </button>
-                    </div>
-
-                    <!-- Big / Small -->
-                    <div class="size-buttons-grid">
-                        <button class="bet-btn size-btn btn-big" data-type="SIZE" data-choice="BIG">
-                            <div class="bet-placed-badge" id="badge-BIG">₹0</div>
-                            <div class="size-content">
-                                <span class="size-title">BIG</span>
-                                <span class="size-range">5, 6, 7, 8, 9</span>
-                            </div>
-                            <span class="payout-badge">2x</span>
-                        </button>
-                        <button class="bet-btn size-btn btn-small" data-type="SIZE" data-choice="SMALL">
-                            <div class="bet-placed-badge" id="badge-SMALL">₹0</div>
-                            <div class="size-content">
-                                <span class="size-title">SMALL</span>
-                                <span class="size-range">0, 1, 2, 3, 4</span>
-                            </div>
-                            <span class="payout-badge">2x</span>
-                        </button>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Right Column: Scrollable Records, Active Bets, History & Transactions (NO Admin tab!) -->
-            <section class="side-panel-column">
-                <div class="records-card">
-                    <div class="tab-headers">
-                        <button class="tab-btn active" data-tab="gameHistoryTab">Game Record</button>
-                        <button class="tab-btn" data-tab="activeBetsTab">Active (<span id="activeBetsCountBadge">0</span>)</button>
-                        <button class="tab-btn" data-tab="myBetsTab">My Bets (<span id="myBetsCount">0</span>)</button>
-                        <button class="tab-btn" data-tab="transactionsTab">Transactions</button>
-                    </div>
-
-                    <!-- Tab 1: Game History -->
-                    <div class="tab-content active" id="gameHistoryTab">
-                        <div class="table-scroll-wrapper">
-                            <table class="history-table">
-                                <thead>
-                                    <tr>
-                                        <th>Period</th>
-                                        <th>Number</th>
-                                        <th>Size</th>
-                                        <th>Color</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="historyTableBody"></tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <!-- Tab 2: Active Bets (Strict Cancel Flow) -->
-                    <div class="tab-content" id="activeBetsTab">
-                        <div class="scroll-container" id="activeBetsList">
-                            <div class="empty-state">No active bets in the current round.</div>
-                        </div>
-                    </div>
-
-                    <!-- Tab 3: Completed Bets History -->
-                    <div class="tab-content" id="myBetsTab">
-                        <div class="scroll-container" id="myBetsList">
-                            <div class="empty-state">No bets recorded yet.</div>
-                        </div>
-                    </div>
-
-                    <!-- Tab 4: Deposit & Withdrawal Transactions -->
-                    <div class="tab-content" id="transactionsTab">
-                        <div class="scroll-container" id="transactionsList">
-                            <div class="empty-state">No deposits or withdrawals yet.</div>
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </main>
-    </div>
-
-    <!-- ===================================================
-         3. SECRET ADMIN PORTAL ROOT (Mounted dynamically ONLY for Admin)
-         =================================================== -->
-    <div id="adminPortalRoot" style="display: none;"></div>
-
-    <!-- ===================================================
-         MODALS (Shared UI Modals)
-         =================================================== -->
-
-    <!-- Place Bet Modal -->
-    <div class="modal-backdrop" id="betModal">
-        <div class="modal-sheet">
-            <div class="modal-header">
-                <div class="modal-title-group">
-                    <span class="modal-sub">Fast 1-Tap Bet</span>
-                    <h3 class="modal-title" id="modalBetTarget">GREEN</h3>
-                </div>
-                <button class="modal-close-btn" id="closeBetModal">&times;</button>
+          <!-- RIGHT: QUICK ACTIONS + RECORDS -->
+          <div class="side-panel-column">
+            <div class="quick-pay-bar">
+              <button type="button" class="btn-pay-shortcut deposit" data-nav="payment" data-paytab="recharge">💳 Recharge Cash</button>
+              <button type="button" class="btn-pay-shortcut withdraw" data-nav="payment" data-paytab="withdraw">🏦 Withdraw</button>
             </div>
-            <div class="modal-body">
-                <label class="input-label">Select Bet Amount (₹)</label>
-                <div class="chips-row">
-                    <button class="chip-btn active" data-amount="10">₹10</button>
-                    <button class="chip-btn" data-amount="50">₹50</button>
-                    <button class="chip-btn" data-amount="100">₹100</button>
-                    <button class="chip-btn" data-amount="500">₹500</button>
-                    <button class="chip-btn" data-amount="1000">₹1,000</button>
-                </div>
 
-                <label class="input-label">Multiplier</label>
-                <div class="multiplier-row">
-                    <button class="mult-btn active" data-mult="1">X1</button>
-                    <button class="mult-btn" data-mult="2">X2</button>
-                    <button class="mult-btn" data-mult="5">X5</button>
-                    <button class="mult-btn" data-mult="10">X10</button>
-                    <button class="mult-btn" data-mult="20">X20</button>
-                </div>
+            <div class="records-card">
+              <div class="records-tabs">
+                <button type="button" class="rec-tab-btn active" data-rectab="history">Game History</button>
+                <button type="button" class="rec-tab-btn" data-rectab="active">Active Bets <span id="activeBetsCountBadge" class="mini-count">0</span></button>
+                <button type="button" class="rec-tab-btn" data-rectab="mybets">My Bets <span id="myBetsCount" class="mini-count">0</span></button>
+                <button type="button" class="rec-tab-btn" data-rectab="txs">Transactions</button>
+              </div>
 
-                <div class="bet-summary-box">
-                    <div class="summary-line">
-                        <span>Total Investment:</span>
-                        <span class="summary-val text-yellow" id="summaryTotalAmt">₹10</span>
-                    </div>
-                    <div class="summary-line">
-                        <span>Estimated Return:</span>
-                        <span class="summary-val text-green" id="summaryEstPayout">₹20</span>
-                    </div>
+              <div id="recPanel-history" class="rec-panel active">
+                <div class="table-scroll-wrapper">
+                  <table class="records-table">
+                    <thead>
+                      <tr>
+                        <th>Period</th>
+                        <th>Number</th>
+                        <th>Size</th>
+                        <th>Color</th>
+                      </tr>
+                    </thead>
+                    <tbody id="historyTableBody"></tbody>
+                  </table>
                 </div>
+              </div>
 
-                <button class="btn-confirm-bet" id="confirmBetBtn">Confirm & Place Bet (₹10)</button>
+              <div id="recPanel-active" class="rec-panel">
+                <div id="activeBetsList" class="cards-feed-list"></div>
+              </div>
+
+              <div id="recPanel-mybets" class="rec-panel">
+                <div id="myBetsList" class="cards-feed-list"></div>
+              </div>
+
+              <div id="recPanel-txs" class="rec-panel">
+                <div id="transactionsList" class="cards-feed-list"></div>
+              </div>
             </div>
+          </div>
+
         </div>
-    </div>
+      </section>
 
-    <!-- Strict Cancel Bet Confirmation Modal -->
-    <div class="modal-backdrop" id="cancelConfirmModal">
-        <div class="modal-sheet modal-danger">
-            <div class="modal-header">
-                <div class="modal-title-group">
-                    <span class="modal-sub text-danger">⚠️ Strict Action</span>
-                    <h3 class="modal-title">Confirm Bet Cancellation</h3>
-                </div>
-                <button class="modal-close-btn" id="closeCancelModal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p class="cancel-warning-txt">
-                    Are you sure you want to cancel this bet?<br>
-                    <strong>Target: <span id="cancelTargetName">GREEN</span></strong> | <strong>Amount: <span id="cancelAmountTxt">₹100</span></strong>
-                </p>
-                <p class="cancel-rules-txt">
-                    ℹ️ Note: Bets can only be cancelled before the 5-second round lock. Once confirmed, your money is refunded immediately.
-                </p>
-                <div class="dual-btn-row">
-                    <button class="btn-secondary" id="abortCancelBtn">Keep Bet</button>
-                    <button class="btn-danger-confirm" id="executeCancelBtn">Yes, Cancel & Refund</button>
-                </div>
-            </div>
+      <!-- ========= VIEW 2: DEDICATED PAYMENT PAGE ========= -->
+      <section id="view-payment" class="page-view" style="display:none;">
+        <div class="page-header-bar">
+          <div>
+            <h2>💳 Payment Center</h2>
+            <p class="page-subtitle">Real-time Razorpay checkout, live UPI QR deposits, and withdrawal status tracking</p>
+          </div>
+          <button type="button" class="btn-secondary-nav" data-nav="game">← Back to Game</button>
         </div>
-    </div>
 
-    <!-- Deposit Modal -->
-    <div class="modal-backdrop" id="depositModal">
-        <div class="modal-sheet">
-            <div class="modal-header">
-                <div class="modal-title-group">
-                    <span class="modal-sub">Wallet Management</span>
-                    <h3 class="modal-title">Add Funds</h3>
-                </div>
-                <button class="modal-close-btn" id="closeDepositModal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="subtab-row">
-                    <button class="subtab-btn active" id="tabDemoReload">Demo Cash (Free)</button>
-                    <button class="subtab-btn" id="tabRealDeposit">UPI / Real Deposit</button>
-                </div>
-
-                <div id="sectionDemoReload">
-                    <p class="recharge-desc">Reload free sandbox points for Demo Mode practice:</p>
-                    <div class="recharge-options">
-                        <button class="recharge-btn" onclick="addDemoBalance(500)">+ ₹500</button>
-                        <button class="recharge-btn" onclick="addDemoBalance(1000)">+ ₹1,000</button>
-                        <button class="recharge-btn" onclick="addDemoBalance(2000)">+ ₹2,000</button>
-                        <button class="recharge-btn" onclick="addDemoBalance(5000)">+ ₹5,000</button>
-                    </div>
-                </div>
-
-                <div id="sectionRealDeposit" style="display: none;">
-                    <div class="upi-deposit-card">
-                        <div class="qr-mockup">
-                            <div class="qr-box">
-                                <span class="qr-text">📷 SCAN UPI QR</span>
-                                <small>GPay / PhonePe / Paytm</small>
-                            </div>
-                            <div class="upi-id-pill">
-                                <span>UPI ID: <strong>gbcolors.pay@upi</strong></span>
-                            </div>
-                        </div>
-
-                        <label class="input-label">Select Deposit Amount (₹)</label>
-                        <div class="chips-row" id="depAmtChips">
-                            <button class="chip-btn active" onclick="setDepositAmt(100, this)">₹100</button>
-                            <button class="chip-btn" onclick="setDepositAmt(500, this)">₹500</button>
-                            <button class="chip-btn" onclick="setDepositAmt(1000, this)">₹1,000</button>
-                            <button class="chip-btn" onclick="setDepositAmt(5000, this)">₹5,000</button>
-                        </div>
-
-                        <label class="input-label">12-Digit UTR / Transaction Ref No.</label>
-                        <input type="text" id="depositUtrInput" class="form-input" placeholder="e.g. 431289123456" maxlength="16">
-
-                        <button class="btn-confirm-bet" id="submitDepositBtn">
-                            Submit Deposit (Credit Real Balance)
-                        </button>
-                    </div>
-                </div>
-            </div>
+        <div class="pay-wallet-summary-grid">
+          <div class="pw-stat-card accent-green">
+            <span>Real Wallet</span>
+            <strong id="payRealBal">₹0.00</strong>
+          </div>
+          <div class="pw-stat-card accent-amber">
+            <span>Demo Wallet</span>
+            <strong id="payDemoBal">₹0.00</strong>
+          </div>
+          <div class="pw-stat-card accent-blue">
+            <span>Total Recharged</span>
+            <strong id="payTotalRecharged">₹0.00</strong>
+          </div>
+          <div class="pw-stat-card accent-violet">
+            <span>Total Withdrawn</span>
+            <strong id="payTotalWithdrawn">₹0.00</strong>
+          </div>
         </div>
-    </div>
 
-    <!-- Withdrawal Modal -->
-    <div class="modal-backdrop" id="withdrawModal">
-        <div class="modal-sheet">
-            <div class="modal-header">
-                <div class="modal-title-group">
-                    <span class="modal-sub">Cashout Request</span>
-                    <h3 class="modal-title">Withdraw Real Balance</h3>
-                </div>
-                <button class="modal-close-btn" id="closeWithdrawModal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="withdraw-balance-box">
-                    <span>Available Real Balance:</span>
-                    <strong class="text-green" id="withdrawAvailableBal">₹0</strong>
-                </div>
-
-                <label class="input-label">Withdrawal Amount (₹)</label>
-                <input type="number" id="withdrawAmountInput" class="form-input" placeholder="Min. ₹200" min="200">
-
-                <label class="input-label">Bank Account / UPI ID</label>
-                <input type="text" id="withdrawAccountInput" class="form-input" placeholder="e.g. yourname@okaxis or A/C + IFSC">
-
-                <div class="fee-notice">
-                    <span>Sent directly to Admin Payout Queue for fast settlement.</span>
-                </div>
-
-                <button class="btn-confirm-bet" id="submitWithdrawBtn">Submit Withdrawal Request</button>
-            </div>
+        <div class="pay-subtabs-bar">
+          <button type="button" class="pay-subtab-btn active" data-paytab="recharge">⚡ Recharge Wallet</button>
+          <button type="button" class="pay-subtab-btn" data-paytab="withdraw">🏦 Withdraw Winnings</button>
+          <button type="button" class="pay-subtab-btn" data-paytab="status">📋 Payment Status &amp; History</button>
         </div>
-    </div>
 
-    <!-- User Profile Modal -->
-    <div class="modal-backdrop" id="profileModal">
-        <div class="modal-sheet">
-            <div class="modal-header">
-                <div class="modal-title-group">
-                    <span class="modal-sub">Member Account</span>
-                    <h3 class="modal-title">My Profile</h3>
-                </div>
-                <button class="modal-close-btn" id="closeProfileModal">&times;</button>
+        <!-- PAY SUB-TAB 1: RECHARGE -->
+        <div id="payTab-recharge" class="pay-tab-panel active">
+          <div class="payment-amount-card">
+            <div class="pac-top">
+              <div>
+                <label for="rechargeAmountInput">Enter Recharge Amount (₹)</label>
+                <small id="minDepositHint">Minimum deposit: ₹100</small>
+              </div>
+              <div class="quick-chips-row">
+                <button type="button" class="chip-amt-btn" data-target="rechargeAmountInput" data-val="100">₹100</button>
+                <button type="button" class="chip-amt-btn" data-target="rechargeAmountInput" data-val="500">₹500</button>
+                <button type="button" class="chip-amt-btn" data-target="rechargeAmountInput" data-val="1000">₹1000</button>
+                <button type="button" class="chip-amt-btn" data-target="rechargeAmountInput" data-val="5000">₹5000</button>
+              </div>
             </div>
-            <div class="modal-body">
-                <div class="profile-card">
-                    <div class="profile-avatar">👑</div>
-                    <h4 id="profUsername" class="prof-name">Player</h4>
-                    <p id="profEmail" class="prof-phone">user@example.com</p>
-                    <div class="vip-badge" id="profVipBadge">UID000000</div>
+            <input id="rechargeAmountInput" type="number" min="100" step="10" value="500" class="pay-amount-input" />
+          </div>
 
-                    <div class="profile-balances">
-                        <div class="bal-box">
-                            <span>Demo Balance</span>
-                            <strong id="profDemoBal">₹1,000</strong>
-                        </div>
-                        <div class="bal-box">
-                            <span>Real Balance</span>
-                            <strong id="profRealBal" class="text-green">₹0</strong>
-                        </div>
-                    </div>
-
-                    <button class="btn-danger-confirm" id="userLogoutBtn" style="width:100%; margin-top: 16px;">Sign Out</button>
-                </div>
+          <div class="payment-grid">
+            <!-- RAZORPAY GATEWAY -->
+            <div class="payment-card">
+              <div class="pay-card-head">
+                <h3>⚡ Instant Checkout (Razorpay)</h3>
+                <span id="rzpStatusBadge" class="status-pill neutral">Checking...</span>
+              </div>
+              <p class="pay-card-desc">Instant automated wallet credit via UPI Apps, Credit/Debit Cards, NetBanking &amp; Wallets.</p>
+              <div class="method-badges-row">
+                <span>UPI</span><span>GPay</span><span>PhonePe</span><span>Cards</span><span>NetBanking</span>
+              </div>
+              <button id="rzpPayBtn" type="button" class="btn-primary-glow full-w">Pay Instantly via Razorpay</button>
+              <small id="rzpFallbackNote" class="pay-card-note" style="display:none;">Razorpay keys are not configured by Admin yet. Use Direct UPI QR &amp; UTR on the right.</small>
             </div>
+
+            <!-- DYNAMIC UPI QR + UTR -->
+            <div class="payment-card">
+              <div class="pay-card-head">
+                <h3>📱 Direct UPI QR &amp; App Pay</h3>
+                <span class="status-pill info">LIVE QR</span>
+              </div>
+              <p class="pay-card-desc">Generate a live amount-locked UPI QR code, pay in your UPI app, then submit the 12-digit UTR for verification.</p>
+
+              <button id="generateUpiQrBtn" type="button" class="btn-accent-outline full-w">Generate Live UPI QR for Amount</button>
+
+              <div id="upiQrPreviewBox" class="upi-qr-box" style="display:none;">
+                <div id="upiQrSvgWrap" class="qr-svg-wrap"></div>
+                <div class="upi-details-col">
+                  <div class="upi-kv"><span>Payee:</span><strong id="upiPayeeDisplay">—</strong></div>
+                  <div class="upi-kv">
+                    <span>UPI ID:</span>
+                    <strong id="upiIdDisplay">—</strong>
+                    <button id="copyUpiIdBtn" type="button" class="btn-copy-mini">Copy</button>
+                  </div>
+                  <a id="upiAppDeepLink" href="#" class="btn-upi-app">📲 Pay via Installed UPI App</a>
+                </div>
+              </div>
+
+              <div class="form-group" style="margin-top:12px;">
+                <label for="depositUtrInput">12-Digit UPI UTR / Transaction Reference ID</label>
+                <input id="depositUtrInput" type="text" maxlength="32" placeholder="e.g. 431209876543" />
+              </div>
+              <button id="submitDepositBtn" type="button" class="btn-primary-glow full-w">✅ Submit UTR for Admin Verification</button>
+            </div>
+          </div>
+
+          <!-- PRACTICE DEMO RELOAD -->
+          <div class="demo-reload-strip">
+            <div>
+              <strong>🎯 Practice Demo Coins Top-Up</strong>
+              <small>Free play money for learning the game rules (separate from Real Cash)</small>
+            </div>
+            <div class="demo-chip-actions">
+              <button type="button" class="btn-demo-add" data-demoamt="1000">+₹1,000</button>
+              <button type="button" class="btn-demo-add" data-demoamt="5000">+₹5,000</button>
+              <button type="button" class="btn-demo-add" data-demoamt="10000">+₹10,000</button>
+            </div>
+          </div>
         </div>
-    </div>
 
-    <!-- Settings Modal -->
-    <div class="modal-backdrop" id="settingsModal">
-        <div class="modal-sheet">
-            <div class="modal-header">
-                <div class="modal-title-group">
-                    <span class="modal-sub">Preferences</span>
-                    <h3 class="modal-title">Game Settings</h3>
-                </div>
-                <button class="modal-close-btn" id="closeSettingsModal">&times;</button>
+        <!-- PAY SUB-TAB 2: WITHDRAW -->
+        <div id="payTab-withdraw" class="pay-tab-panel" style="display:none;">
+          <div class="payment-card single-col-card">
+            <div class="pay-card-head">
+              <h3>🏦 Withdraw Real Winnings</h3>
+              <span class="status-pill good">Available: <strong id="withdrawAvailableBal">₹0.00</strong></span>
             </div>
-            <div class="modal-body">
-                <div class="setting-item">
-                    <div class="setting-text">
-                        <strong>Sound Effects (SFX)</strong>
-                        <small>Countdown tick, chip tap, win chimes</small>
-                    </div>
-                    <input type="checkbox" id="settingSfx" class="switch" checked>
-                </div>
+            <p class="pay-card-desc">Withdrawals are transferred directly to your verified UPI ID or Bank Account. You will receive an instant notification as soon as Admin settles your payout.</p>
 
-                <div class="setting-item">
-                    <div class="setting-text">
-                        <strong>Casino Ambient Music</strong>
-                        <small>Atmospheric background rhythm</small>
-                    </div>
-                    <input type="checkbox" id="settingBgm" class="switch">
-                </div>
-
-                <div class="setting-item">
-                    <div class="setting-text">
-                        <strong>Auto-Close Win Popups</strong>
-                        <small>Dismiss outcome popups after 4 seconds</small>
-                    </div>
-                    <input type="checkbox" id="settingAutoClose" class="switch" checked>
-                </div>
-
-                <div class="setting-item">
-                    <div class="setting-text">
-                        <strong>Haptic Vibration</strong>
-                        <small>Vibrate on bet placement</small>
-                    </div>
-                    <input type="checkbox" id="settingVibrate" class="switch" checked>
-                </div>
-
-                <div class="how-to-play-box">
-                    <h4>📖 Rules & Payout Multipliers</h4>
-                    <ul>
-                        <li><strong>Colors:</strong> Green (2x/1.5x) | Violet (4.5x) | Red (2x/1.5x)</li>
-                        <li><strong>Numbers:</strong> Exact Number Match = <strong>9x</strong> Payout</li>
-                        <li><strong>Split Numbers:</strong> 0 (Red + Violet) | 5 (Green + Violet)</li>
-                        <li><strong>Big/Small:</strong> Big (5-9) 2x | Small (0-4) 2x</li>
-                        <li><strong>Bet Cancellation:</strong> Permitted until final 5 seconds.</li>
-                    </ul>
-                </div>
+            <div class="quick-chips-row" style="margin-bottom:10px;">
+              <button type="button" class="chip-amt-btn" data-target="withdrawAmountInput" data-val="100">₹100</button>
+              <button type="button" class="chip-amt-btn" data-target="withdrawAmountInput" data-val="500">₹500</button>
+              <button type="button" class="chip-amt-btn" data-target="withdrawAmountInput" data-val="1000">₹1000</button>
+              <button type="button" class="chip-amt-btn" data-target="withdrawAmountInput" data-val="2000">₹2000</button>
             </div>
+
+            <div class="form-group">
+              <label for="withdrawAmountInput">Withdrawal Amount (₹) — <span id="minWithdrawHint">Min ₹100</span></label>
+              <input id="withdrawAmountInput" type="number" min="100" step="10" placeholder="Enter amount to withdraw" />
+            </div>
+
+            <div class="form-group">
+              <label for="withdrawAccountInput">Destination UPI ID or Bank Account + IFSC</label>
+              <input id="withdrawAccountInput" type="text" placeholder="e.g. yourname@okicici or A/C 1234567890 IFSC SBIN0001234" />
+            </div>
+
+            <button id="submitWithdrawBtn" type="button" class="btn-primary-glow full-w">Submit Withdrawal Request</button>
+          </div>
         </div>
-    </div>
 
-    <!-- Round Outcome Popup -->
-    <div class="result-backdrop" id="resultPopup">
-        <div class="result-card" id="resultCard">
-            <div class="result-icon-container" id="resultIcon">🎉</div>
-            <h2 class="result-heading" id="resultHeading">Congratulations!</h2>
-            <div class="result-details">
-                <div class="result-ball" id="resultNumberBall">7</div>
-                <p class="result-period-txt" id="resultPeriodTxt">Period: 202611110001</p>
-                <div class="result-payout-box" id="resultPayoutBox">
-                    <span id="resultPayoutLabel">Won Profit:</span>
-                    <span class="result-payout-amt" id="resultProfitAmt">+₹180</span>
-                </div>
+        <!-- PAY SUB-TAB 3: PAYMENT STATUS & HISTORY -->
+        <div id="payTab-status" class="pay-tab-panel" style="display:none;">
+          <div class="payment-grid">
+            <div class="payment-card">
+              <div class="pay-card-head">
+                <h3>🏦 My Withdrawal Statuses</h3>
+                <span class="status-pill info">LIVE TRACKER</span>
+              </div>
+              <div id="userWithdrawStatusList" class="status-cards-stack"></div>
             </div>
-            <button class="btn-result-close" id="closeResultBtn">Continue Playing</button>
+
+            <div class="payment-card">
+              <div class="pay-card-head">
+                <h3>💳 My Recharge / Deposit Requests</h3>
+                <span class="status-pill neutral">UTR &amp; RAZORPAY</span>
+              </div>
+              <div id="userDepositStatusList" class="status-cards-stack"></div>
+            </div>
+          </div>
+
+          <div class="payment-card" style="margin-top:16px;">
+            <div class="pay-card-head">
+              <h3>📒 Wallet Transaction Ledger</h3>
+            </div>
+            <div id="paymentPageTxList" class="cards-feed-list"></div>
+          </div>
         </div>
+      </section>
+
+      <!-- ========= VIEW 3: HISTORY & RECORDS ========= -->
+      <section id="view-history" class="page-view" style="display:none;">
+        <div class="page-header-bar">
+          <div>
+            <h2>📜 Bet History &amp; Round Results</h2>
+            <p class="page-subtitle">Full personal wager breakdown and recent official round outcomes</p>
+          </div>
+          <button type="button" class="btn-secondary-nav" data-nav="game">← Back to Game</button>
+        </div>
+
+        <div class="pay-wallet-summary-grid">
+          <div class="pw-stat-card"><span>Total Settled Bets</span><strong id="histTotalBets">0</strong></div>
+          <div class="pw-stat-card accent-green"><span>Total Won</span><strong id="histTotalWon">₹0.00</strong></div>
+          <div class="pw-stat-card accent-red"><span>Total Lost</span><strong id="histTotalLost">₹0.00</strong></div>
+          <div class="pw-stat-card accent-blue"><span>Win Rate</span><strong id="histWinRate">0%</strong></div>
+        </div>
+
+        <div class="payment-grid">
+          <div class="payment-card">
+            <div class="pay-card-head"><h3>🎯 Official Round Results</h3></div>
+            <div class="table-scroll-wrapper">
+              <table class="records-table">
+                <thead><tr><th>Period</th><th>Number</th><th>Size</th><th>Color</th></tr></thead>
+                <tbody id="fullHistoryTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="payment-card">
+            <div class="pay-card-head"><h3>🧾 My Wager Records</h3></div>
+            <div id="fullMyBetsList" class="cards-feed-list"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========= VIEW 4: MY PROFILE ========= -->
+      <section id="view-profile" class="page-view" style="display:none;">
+        <div class="page-header-bar">
+          <div>
+            <h2>👤 My Profile</h2>
+            <p class="page-subtitle">Account details, lifetime performance, and security overview</p>
+          </div>
+          <button type="button" class="btn-secondary-nav" data-nav="game">← Back to Game</button>
+        </div>
+
+        <div class="payment-card profile-hero-card">
+          <div class="profile-hero-left">
+            <div class="profile-avatar-lg" id="profAvatarLg">U</div>
+            <div>
+              <h3 id="profUsername">Player</h3>
+              <p id="profEmail">user@example.com</p>
+              <div class="profile-badges-row">
+                <span class="status-pill info" id="profUserId">UID: —</span>
+                <span class="status-pill amber" id="profVipBadge">VIP 1</span>
+                <span class="status-pill good" id="profStatusBadge">ACTIVE</span>
+              </div>
+            </div>
+          </div>
+          <div class="profile-hero-actions">
+            <button type="button" class="btn-accent-outline" data-nav="payment">💳 Open Payments</button>
+            <button type="button" id="profLogoutBtn" class="btn-danger-outline">🚪 Sign Out</button>
+          </div>
+        </div>
+
+        <div class="pay-wallet-summary-grid" style="margin-top:16px;">
+          <div class="pw-stat-card accent-green"><span>Real Balance</span><strong id="profRealBal">₹0.00</strong></div>
+          <div class="pw-stat-card accent-amber"><span>Demo Balance</span><strong id="profDemoBal">₹0.00</strong></div>
+          <div class="pw-stat-card accent-green"><span>Total Won</span><strong id="profTotalWon">₹0.00</strong></div>
+          <div class="pw-stat-card accent-red"><span>Total Lost</span><strong id="profTotalLost">₹0.00</strong></div>
+          <div class="pw-stat-card accent-blue"><span>Total Recharged</span><strong id="profTotalRecharged">₹0.00</strong></div>
+          <div class="pw-stat-card accent-violet"><span>Total Withdrawn</span><strong id="profTotalWithdrawn">₹0.00</strong></div>
+        </div>
+      </section>
+
+      <!-- ========= VIEW 5: RULES & PAYOUTS ========= -->
+      <section id="view-rules" class="page-view" style="display:none;">
+        <div class="page-header-bar">
+          <div>
+            <h2>📘 Game Rules &amp; Payouts</h2>
+            <p class="page-subtitle">Transparent payout rules for Color, Number, and Size predictions</p>
+          </div>
+          <button type="button" class="btn-secondary-nav" data-nav="game">← Back to Game</button>
+        </div>
+
+        <div class="payment-grid">
+          <div class="payment-card">
+            <h3>🎨 Color Predictions</h3>
+            <ul class="rules-list">
+              <li><strong>Green (1, 3, 7, 9):</strong> Pays <strong>2x</strong> your stake. If outcome is <strong>5</strong> (Green+Violet), pays <strong>1.5x</strong>.</li>
+              <li><strong>Red (2, 4, 6, 8):</strong> Pays <strong>2x</strong> your stake. If outcome is <strong>0</strong> (Red+Violet), pays <strong>1.5x</strong>.</li>
+              <li><strong>Violet (0, 5):</strong> Pays <strong>4.5x</strong> your stake whenever 0 or 5 lands.</li>
+            </ul>
+          </div>
+          <div class="payment-card">
+            <h3>🔢 Number &amp; Size Predictions</h3>
+            <ul class="rules-list">
+              <li><strong>Exact Number (0–9):</strong> Pays <strong>9x</strong> your stake on exact match.</li>
+              <li><strong>Big (5, 6, 7, 8, 9):</strong> Pays <strong>2x</strong> your stake.</li>
+              <li><strong>Small (0, 1, 2, 3, 4):</strong> Pays <strong>2x</strong> your stake.</li>
+              <li><strong>Round Timing:</strong> Cycle runs every <strong id="rulesCycleSecondsTxt">30s</strong>; betting closes <strong id="rulesLockSecondsTxt">5s</strong> before reveal.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========= VIEW 6: SETTINGS ========= -->
+      <section id="view-settings" class="page-view" style="display:none;">
+        <div class="page-header-bar">
+          <div>
+            <h2>⚙️ Preferences &amp; Settings</h2>
+            <p class="page-subtitle">Audio cues, alerts, and user interface controls</p>
+          </div>
+          <button type="button" class="btn-secondary-nav" data-nav="game">← Back to Game</button>
+        </div>
+
+        <div class="payment-card single-col-card">
+          <div class="setting-toggle-row">
+            <div>
+              <strong>🔊 Sound Effects (Clicks, Countdown, Wins)</strong>
+              <small>Play synthesized audio cues during betting and round reveals</small>
+            </div>
+            <label class="switch-toggle"><input type="checkbox" id="settingSfx" checked /><span class="slider-round"></span></label>
+          </div>
+
+          <div class="setting-toggle-row">
+            <div>
+              <strong>🎵 Ambient Background Music</strong>
+              <small>Subtle low-volume loop while arena is active</small>
+            </div>
+            <label class="switch-toggle"><input type="checkbox" id="settingBgm" /><span class="slider-round"></span></label>
+          </div>
+
+          <div class="setting-toggle-row">
+            <div>
+              <strong>⏱ Auto-Close Result Popup (4s)</strong>
+              <small>Automatically dismiss the round outcome popup after 4 seconds</small>
+            </div>
+            <label class="switch-toggle"><input type="checkbox" id="settingAutoClose" checked /><span class="slider-round"></span></label>
+          </div>
+
+          <div class="setting-toggle-row">
+            <div>
+              <strong>📳 Haptic Vibration (Mobile)</strong>
+              <small>Gentle vibration feedback when placing bets or winning</small>
+            </div>
+            <label class="switch-toggle"><input type="checkbox" id="settingVibrate" checked /><span class="slider-round"></span></label>
+          </div>
+
+          <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+            <button type="button" id="testAudioBtn" class="btn-accent-outline">🔊 Test Win Sound</button>
+            <button type="button" id="settingsLogoutBtn" class="btn-danger-outline">🚪 Sign Out</button>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- =========================
+       BET PLACEMENT MODAL
+  ========================== -->
+  <div id="betModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>Confirm Bet — <span id="modalBetTarget">GREEN</span></h3>
+        <button id="closeBetModal" type="button" class="modal-close-x">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="bet-section-lbl">Select Base Unit (₹)</div>
+        <div class="unit-chips-row">
+          <button type="button" class="unit-chip active" data-unit="10">₹10</button>
+          <button type="button" class="unit-chip" data-unit="50">₹50</button>
+          <button type="button" class="unit-chip" data-unit="100">₹100</button>
+          <button type="button" class="unit-chip" data-unit="500">₹500</button>
+        </div>
+
+        <div class="bet-section-lbl">Multiplier</div>
+        <div class="unit-chips-row">
+          <button type="button" class="mult-chip active" data-mult="1">x1</button>
+          <button type="button" class="mult-chip" data-mult="2">x2</button>
+          <button type="button" class="mult-chip" data-mult="5">x5</button>
+          <button type="button" class="mult-chip" data-mult="10">x10</button>
+        </div>
+
+        <div class="form-group" style="margin-top:10px;">
+          <label for="betCustomAmountInput">Or Custom Amount (₹)</label>
+          <input id="betCustomAmountInput" type="number" min="1" step="1" value="10" />
+        </div>
+
+        <div class="bet-summary-box">
+          <div><span>Total Wager:</span><strong id="summaryTotalAmt">₹10</strong></div>
+          <div><span>Est. Payout:</span><strong id="summaryEstPayout" class="text-green">₹20</strong></div>
+        </div>
+
+        <button id="confirmBetBtn" type="button" class="btn-primary-glow full-w">Place Bet Now</button>
+      </div>
     </div>
+  </div>
 
-    <!-- Floating Toast -->
-    <div class="toast-notification" id="toast"></div>
+  <!-- =========================
+       CANCEL BET MODAL
+  ========================== -->
+  <div id="cancelConfirmModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box small-modal">
+      <div class="modal-head">
+        <h3>Cancel Bet?</h3>
+        <button id="closeCancelModal" type="button" class="modal-close-x">✕</button>
+      </div>
+      <div class="modal-body">
+        <p>Cancel active bet on <strong id="cancelTargetName">GREEN</strong> for <strong id="cancelAmountTxt">₹10</strong>? Full stake returns immediately.</p>
+        <div class="modal-actions-row">
+          <button id="abortCancelBtn" type="button" class="btn-secondary-nav">Keep Bet</button>
+          <button id="executeCancelBtn" type="button" class="btn-danger-solid">Yes, Cancel &amp; Refund</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
-    <script src="vendor/gb-ws.js"></script>
-    <script src="config.js"></script>
-    <script src="app.js"></script>
+  <!-- =========================
+       ROUND OUTCOME POPUP
+  ========================== -->
+  <div id="resultPopup" class="modal-overlay" style="display:none;">
+    <div id="resultCard" class="result-popup-card">
+      <div id="resultIcon" class="result-emoji">🎉</div>
+      <h2 id="resultHeading">ROUND SETTLED</h2>
+      <div id="resultNumberBall" class="result-ball">0</div>
+      <p id="resultPeriodTxt">Period #----</p>
+      <div id="resultProfitAmt" class="result-profit">+₹0</div>
+      <button id="closeResultBtn" type="button" class="btn-primary-glow full-w">Continue</button>
+    </div>
+  </div>
+
+  <!-- =========================
+       PRIORITY NOTIFICATION ALERT MODAL
+       (Shown immediately on live payout OR first on next login)
+  ========================== -->
+  <div id="notificationAlertModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box notif-priority-card">
+      <div class="notif-priority-icon" id="notifModalIcon">💸</div>
+      <h3 id="notifModalTitle">Withdrawal Completed!</h3>
+      <p id="notifModalMessage" class="notif-priority-msg"></p>
+      <div id="notifModalMeta" class="notif-priority-meta"></div>
+      <div class="modal-actions-row" style="margin-top:16px;">
+        <button id="notifModalViewStatusBtn" type="button" class="btn-accent-outline">View Payment Status</button>
+        <button id="notifModalAckBtn" type="button" class="btn-primary-glow">Got It</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================
+       NOTIFICATIONS INBOX MODAL
+  ========================== -->
+  <div id="notificationsHistoryModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box">
+      <div class="modal-head">
+        <h3>🔔 Notifications</h3>
+        <button id="closeNotifsHistoryModal" type="button" class="modal-close-x">✕</button>
+      </div>
+      <div class="modal-body">
+        <div id="notificationsHistoryList" class="status-cards-stack"></div>
+        <button id="markAllNotifsReadBtn" type="button" class="btn-accent-outline full-w" style="margin-top:12px;">Mark All Read</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================
+       ACCOUNT BLOCKED NOTICE MODAL
+  ========================== -->
+  <div id="blockedAlertModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box small-modal blocked-card">
+      <div class="notif-priority-icon">🚫</div>
+      <h3 id="blockedModalTitle">Account Restricted</h3>
+      <p id="blockedModalReason" class="notif-priority-msg"></p>
+      <p id="blockedModalUntil" class="notif-priority-meta"></p>
+      <button id="blockedModalAckBtn" type="button" class="btn-danger-solid full-w" style="margin-top:14px;">Return to Sign In</button>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast" class="toast-banner"></div>
+
+  <script src="vendor/gb-ws.js"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>

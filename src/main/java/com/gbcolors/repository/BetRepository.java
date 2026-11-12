@@ -9,4 +9,5 @@ import java.util.List;
 public interface BetRepository extends JpaRepository<BetEntity, String> {
     List<BetEntity> findTop60ByEmailAndStatusNotOrderByCreatedAtDesc(String email, GameEnums.BetStatus excludedStatus);
     List<BetEntity> findByStatus(GameEnums.BetStatus status);
+    List<BetEntity> findTop30ByStatusOrderByCreatedAtDesc(GameEnums.BetStatus status);
 }

@@ -28,7 +28,8 @@ public class GameRuleEngine {
             String size,
             long totalCollected,
             long totalPayout,
-            long houseProfit
+            long houseProfit,
+            boolean meetsMargin
     ) {}
 
     public record ProjectionSummary(
@@ -36,7 +37,9 @@ public class GameRuleEngine {
             List<NumberProjection> bestCandidates,
             long maxProfit,
             long totalCollected,
-            String targetMode
+            String targetMode,
+            int minProfitPercent,
+            long requiredMinProfit
     ) {}
 
     public OutcomeProps getOutcomeProps(int num) {
@@ -112,10 +115,22 @@ public class GameRuleEngine {
     }
 
     public ProjectionSummary computeRoundProjections(List<BetEntity> allCurrentBets) {
+        return computeRoundProjections(allCurrentBets, 100);
+    }
+
+    /**
+     * Two-priority Smart Profit projection:
+     * 1st priority: Ensure Admin achieves at least {@code minProfitPercent}% house profit when possible
+     * (or maximum available house profit if no outcome meets the target margin).
+     * 2nd priority: Among qualifying outcomes that meet Admin's margin, maximize user payout so players
+     * receive fair winning payouts (e.g., 2x colors) rather than forcing 1.5x Violet or zero-payout wipeouts.
+     */
+    public ProjectionSummary computeRoundProjections(List<BetEntity> allCurrentBets, int minProfitPercent) {
         List<BetEntity> realBets = allCurrentBets.stream()
                 .filter(b -> b.getMode() == GameEnums.ActiveMode.REAL)
                 .toList();
 
+        boolean hasAny = !allCurrentBets.isEmpty();
         boolean hasReal = !realBets.isEmpty();
         List<BetEntity> targetBets = hasReal ? realBets : allCurrentBets;
 
@@ -123,6 +138,15 @@ public class GameRuleEngine {
                 .map(BetEntity::getAmount)
                 .mapToLong(BigDecimal::longValue)
                 .sum();
+
+        int clampedMargin = Math.max(0, Math.min(100, minProfitPercent));
+        long requiredMinProfit = 0L;
+        if (totalCollected > 0 && clampedMargin > 0) {
+            requiredMinProfit = (long) Math.ceil(totalCollected * (clampedMargin / 100.0));
+            if (requiredMinProfit <= 0) {
+                requiredMinProfit = 1L;
+            }
+        }
 
         List<NumberProjection> projections = new ArrayList<>(10);
         long maxProfit = Long.MIN_VALUE;
@@ -136,6 +160,7 @@ public class GameRuleEngine {
             if (houseProfit > maxProfit) {
                 maxProfit = houseProfit;
             }
+            boolean meetsMargin = totalCollected == 0 || houseProfit >= requiredMinProfit;
             OutcomeProps props = getOutcomeProps(num);
             projections.add(new NumberProjection(
                     num,
@@ -143,21 +168,50 @@ public class GameRuleEngine {
                     props.size(),
                     totalCollected,
                     totalPayout,
-                    houseProfit
+                    houseProfit,
+                    meetsMargin
             ));
         }
 
         final long finalMax = maxProfit == Long.MIN_VALUE ? 0L : maxProfit;
-        List<NumberProjection> bestCandidates = projections.stream()
-                .filter(p -> p.houseProfit() == finalMax)
-                .toList();
+        List<NumberProjection> bestCandidates;
+        if (!hasAny || totalCollected == 0) {
+            bestCandidates = List.copyOf(projections);
+        } else {
+            List<NumberProjection> qualifying = projections.stream()
+                    .filter(NumberProjection::meetsMargin)
+                    .toList();
+            if (!qualifying.isEmpty()) {
+                long maxUserPayout = qualifying.stream()
+                        .mapToLong(NumberProjection::totalPayout)
+                        .max()
+                        .orElse(0L);
+                bestCandidates = qualifying.stream()
+                        .filter(p -> p.totalPayout() == maxUserPayout)
+                        .toList();
+            } else {
+                List<NumberProjection> highestProfit = projections.stream()
+                        .filter(p -> p.houseProfit() == finalMax)
+                        .toList();
+                long maxTiePayout = highestProfit.stream()
+                        .mapToLong(NumberProjection::totalPayout)
+                        .max()
+                        .orElse(0L);
+                bestCandidates = highestProfit.stream()
+                        .filter(p -> p.totalPayout() == maxTiePayout)
+                        .toList();
+            }
+        }
 
+        String targetMode = !hasAny ? "NONE" : (hasReal ? "REAL" : "DEMO");
         return new ProjectionSummary(
                 projections,
                 bestCandidates,
                 finalMax,
                 totalCollected,
-                hasReal ? "REAL" : "DEMO"
+                targetMode,
+                clampedMargin,
+                requiredMinProfit
         );
     }
 }

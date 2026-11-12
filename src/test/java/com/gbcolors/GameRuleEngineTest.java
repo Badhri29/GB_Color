@@ -74,4 +74,41 @@ class GameRuleEngineTest {
                 .toList();
         assertEquals(List.of(1, 3), bestNums);
     }
+
+    @Test
+    void targetMarginPrioritizesAdminProfitFirstThenUserProfit() {
+        BetEntity userARed = new BetEntity();
+        userARed.setBetType(GameEnums.BetType.COLOR);
+        userARed.setChoice("RED");
+        userARed.setAmount(BigDecimal.valueOf(10));
+        userARed.setMode(GameEnums.ActiveMode.REAL);
+
+        BetEntity userBGreen = new BetEntity();
+        userBGreen.setBetType(GameEnums.BetType.COLOR);
+        userBGreen.setChoice("GREEN");
+        userBGreen.setAmount(BigDecimal.valueOf(20));
+        userBGreen.setMode(GameEnums.ActiveMode.REAL);
+
+        var summary = engine.computeRoundProjections(List.of(userARed, userBGreen), 15);
+        assertEquals("REAL", summary.targetMode());
+        assertEquals(30L, summary.totalCollected());
+        assertEquals(5L, summary.requiredMinProfit());
+
+        // Pure RED (2, 4, 6, 8) yields +₹10 house profit (33.3% >= 15%) AND pays User A full 2x (₹20)
+        List<Integer> bestNums = summary.bestCandidates().stream()
+                .map(GameRuleEngine.NumberProjection::number)
+                .toList();
+        assertEquals(List.of(2, 4, 6, 8), bestNums);
+
+        // Solo bettor on RED ₹10 -> Admin must never lose, so GREEN numbers win (+₹10 profit)
+        var soloSummary = engine.computeRoundProjections(List.of(userARed), 15);
+        List<Integer> soloBest = soloSummary.bestCandidates().stream()
+                .map(GameRuleEngine.NumberProjection::number)
+                .toList();
+        assertEquals(List.of(1, 3, 5, 7, 9), soloBest);
+
+        // Empty round reports targetMode NONE
+        var emptySummary = engine.computeRoundProjections(List.of(), 15);
+        assertEquals("NONE", emptySummary.targetMode());
+    }
 }

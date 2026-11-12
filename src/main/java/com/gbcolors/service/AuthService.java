@@ -156,6 +156,15 @@ public class AuthService {
             ));
         }
 
+        String blockErr = gameLoopService.getBlockMessageIfActive(user);
+        if (blockErr != null) {
+            return new AuthResult(403, Map.of(
+                    "success", false,
+                    "blocked", true,
+                    "message", blockErr
+            ));
+        }
+
         String token = generateSessionToken();
         saveSession(token, email, GameEnums.SessionRole.USER);
         Map<String, Object> sanitizedUser = gameLoopService.getSanitizedUserPayload(email);
@@ -181,6 +190,14 @@ public class AuthService {
                     "role", "ADMIN",
                     "admin", Map.of("email", settings.getAdminEmail())
             ));
+        }
+        UserEntity userEntity = userRepo.findByEmail(sess.getEmail()).orElse(null);
+        if (userEntity == null) {
+            return new AuthResult(401, Map.of("success", false, "message", "User not found."));
+        }
+        String blockErr = gameLoopService.getBlockMessageIfActive(userEntity);
+        if (blockErr != null) {
+            return new AuthResult(403, Map.of("success", false, "blocked", true, "message", blockErr));
         }
         Map<String, Object> user = gameLoopService.getSanitizedUserPayload(sess.getEmail());
         if (user == null) {

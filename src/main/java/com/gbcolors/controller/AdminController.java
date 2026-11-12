@@ -146,6 +146,93 @@ public class AdminController {
         return ResponseEntity.status(status).body(res);
     }
 
+    @PostMapping("/game-config")
+    public ResponseEntity<Map<String, Object>> saveGameConfig(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody Map<String, Object> body
+    ) {
+        if (authService.resolveAdminSession(authHeader).isEmpty()) {
+            return ResponseEntity.status(403).body(FORBIDDEN_BODY);
+        }
+        Integer cycleSeconds = parseInt(body == null ? null : body.get("cycleDurationSeconds"));
+        Integer closeSeconds = parseInt(body == null ? null : body.get("betCloseSeconds"));
+        Integer minProfitPct = parseInt(body == null ? null : body.get("adminMinProfitPercent"));
+        Map<String, Object> res = gameLoopService.updateGameConfig(cycleSeconds, closeSeconds, minProfitPct);
+        int status = Boolean.TRUE.equals(res.get("success")) ? 200 : 400;
+        return ResponseEntity.status(status).body(res);
+    }
+
+    @PostMapping("/payment-config")
+    public ResponseEntity<Map<String, Object>> savePaymentConfig(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody Map<String, Object> body
+    ) {
+        if (authService.resolveAdminSession(authHeader).isEmpty()) {
+            return ResponseEntity.status(403).body(FORBIDDEN_BODY);
+        }
+        String upiId = str(body, "upiId");
+        String payeeName = str(body, "upiPayeeName");
+        String rzpKeyId = str(body, "razorpayKeyId");
+        String rzpKeySecret = str(body, "razorpayKeySecret");
+        Map<String, Object> res = gameLoopService.updatePaymentConfig(upiId, payeeName, rzpKeyId, rzpKeySecret);
+        return ResponseEntity.ok(res);
+    }
+
+    @PostMapping("/deposit/action")
+    public ResponseEntity<Map<String, Object>> depositAction(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody Map<String, Object> body
+    ) {
+        if (authService.resolveAdminSession(authHeader).isEmpty()) {
+            return ResponseEntity.status(403).body(FORBIDDEN_BODY);
+        }
+        String requestId = str(body, "requestId");
+        String action = str(body, "action");
+        Map<String, Object> res = gameLoopService.processDepositAction(requestId, action);
+        int status = Boolean.TRUE.equals(res.get("success")) ? 200 : 400;
+        if ("Deposit request not found.".equals(res.get("message"))) {
+            status = 404;
+        }
+        return ResponseEntity.status(status).body(res);
+    }
+
+    @PostMapping("/user/block")
+    public ResponseEntity<Map<String, Object>> blockUser(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody Map<String, Object> body
+    ) {
+        if (authService.resolveAdminSession(authHeader).isEmpty()) {
+            return ResponseEntity.status(403).body(FORBIDDEN_BODY);
+        }
+        String email = str(body, "email").toLowerCase();
+        String blockType = str(body, "blockType");
+        Integer durationHours = parseInt(body == null ? null : body.get("durationHours"));
+        String reason = str(body, "reason");
+        if (email.isEmpty()) {
+            return ResponseEntity.status(400).body(Map.of("success", false, "message", "User email is required."));
+        }
+        Map<String, Object> res = gameLoopService.blockUser(email, blockType, durationHours, reason);
+        int status = Boolean.TRUE.equals(res.get("success")) ? 200 : 400;
+        return ResponseEntity.status(status).body(res);
+    }
+
+    @PostMapping("/user/unblock")
+    public ResponseEntity<Map<String, Object>> unblockUser(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody Map<String, Object> body
+    ) {
+        if (authService.resolveAdminSession(authHeader).isEmpty()) {
+            return ResponseEntity.status(403).body(FORBIDDEN_BODY);
+        }
+        String email = str(body, "email").toLowerCase();
+        if (email.isEmpty()) {
+            return ResponseEntity.status(400).body(Map.of("success", false, "message", "User email is required."));
+        }
+        Map<String, Object> res = gameLoopService.unblockUser(email);
+        int status = Boolean.TRUE.equals(res.get("success")) ? 200 : 400;
+        return ResponseEntity.status(status).body(res);
+    }
+
     private String readProtectedFile(String filename) {
         Path fsPath = Path.of("protected", filename);
         if (Files.exists(fsPath)) {

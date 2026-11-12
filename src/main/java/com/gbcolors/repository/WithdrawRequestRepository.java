@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface WithdrawRequestRepository extends JpaRepository<WithdrawRequestEntity, String> {
     List<WithdrawRequestEntity> findAllByOrderByRequestedAtDesc();
+    List<WithdrawRequestEntity> findTop50ByEmailOrderByRequestedAtDesc(String email);
 }

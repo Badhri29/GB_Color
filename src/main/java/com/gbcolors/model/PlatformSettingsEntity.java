@@ -63,6 +63,27 @@ public class PlatformSettingsEntity {
     @Column(name = "smtp_from_name", nullable = false, length = 100)
     private String smtpFromName = "GB_Colors";
 
+    @Column(name = "cycle_duration_seconds")
+    private Integer cycleDurationSeconds = 30;
+
+    @Column(name = "bet_close_seconds")
+    private Integer betCloseSeconds = 5;
+
+    @Column(name = "admin_min_profit_percent")
+    private Integer adminMinProfitPercent = 15;
+
+    @Column(name = "upi_id", length = 120)
+    private String upiId = "gbcolors.pay@upi";
+
+    @Column(name = "upi_payee_name", length = 120)
+    private String upiPayeeName = "GB_Colors";
+
+    @Column(name = "razorpay_key_id", length = 128)
+    private String razorpayKeyId;
+
+    @Column(name = "razorpay_key_secret", length = 255)
+    private String razorpayKeySecret;
+
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
 
@@ -113,4 +134,40 @@ public class PlatformSettingsEntity {
 
     public String getSmtpFromName() { return smtpFromName; }
     public void setSmtpFromName(String smtpFromName) { this.smtpFromName = smtpFromName; }
+
+    public int getCycleDurationSeconds() {
+        return cycleDurationSeconds != null && cycleDurationSeconds >= 15 ? cycleDurationSeconds : 30;
+    }
+    public void setCycleDurationSeconds(Integer cycleDurationSeconds) {
+        this.cycleDurationSeconds = cycleDurationSeconds != null ? cycleDurationSeconds : 30;
+    }
+
+    public int getBetCloseSeconds() {
+        int cycle = getCycleDurationSeconds();
+        int close = betCloseSeconds != null && betCloseSeconds >= 2 ? betCloseSeconds : 5;
+        return Math.min(close, Math.max(2, cycle - 1));
+    }
+    public void setBetCloseSeconds(Integer betCloseSeconds) {
+        this.betCloseSeconds = betCloseSeconds != null ? betCloseSeconds : 5;
+    }
+
+    public int getAdminMinProfitPercent() {
+        if (adminMinProfitPercent == null) return 15;
+        return Math.max(0, Math.min(100, adminMinProfitPercent));
+    }
+    public void setAdminMinProfitPercent(Integer adminMinProfitPercent) {
+        this.adminMinProfitPercent = adminMinProfitPercent != null ? Math.max(0, Math.min(100, adminMinProfitPercent)) : 15;
+    }
+
+    public String getUpiId() { return upiId != null && !upiId.isBlank() ? upiId : "gbcolors.pay@upi"; }
+    public void setUpiId(String upiId) { this.upiId = upiId; }
+
+    public String getUpiPayeeName() { return upiPayeeName != null && !upiPayeeName.isBlank() ? upiPayeeName : "GB_Colors"; }
+    public void setUpiPayeeName(String upiPayeeName) { this.upiPayeeName = upiPayeeName; }
+
+    public String getRazorpayKeyId() { return razorpayKeyId; }
+    public void setRazorpayKeyId(String razorpayKeyId) { this.razorpayKeyId = razorpayKeyId; }
+
+    public String getRazorpayKeySecret() { return razorpayKeySecret; }
+    public void setRazorpayKeySecret(String razorpayKeySecret) { this.razorpayKeySecret = razorpayKeySecret; }
 }

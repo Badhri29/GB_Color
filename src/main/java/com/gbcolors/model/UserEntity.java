@@ -64,6 +64,19 @@ public class UserEntity {
     @Column(name = "last_withdraw_amt", nullable = false, precision = 12, scale = 2)
     private BigDecimal lastWithdrawAmt = BigDecimal.ZERO;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "block_type", length = 16)
+    private GameEnums.BlockType blockType = GameEnums.BlockType.NONE;
+
+    @Column(name = "blocked_until")
+    private Instant blockedUntil;
+
+    @Column(name = "block_reason", length = 255)
+    private String blockReason;
+
+    @Column(name = "blocked_at")
+    private Instant blockedAt;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
 
@@ -117,6 +130,18 @@ public class UserEntity {
 
     public BigDecimal getLastWithdrawAmt() { return lastWithdrawAmt; }
     public void setLastWithdrawAmt(BigDecimal lastWithdrawAmt) { this.lastWithdrawAmt = lastWithdrawAmt; }
+
+    public GameEnums.BlockType getBlockType() { return blockType != null ? blockType : GameEnums.BlockType.NONE; }
+    public void setBlockType(GameEnums.BlockType blockType) { this.blockType = blockType != null ? blockType : GameEnums.BlockType.NONE; }
+
+    public Instant getBlockedUntil() { return blockedUntil; }
+    public void setBlockedUntil(Instant blockedUntil) { this.blockedUntil = blockedUntil; }
+
+    public String getBlockReason() { return blockReason; }
+    public void setBlockReason(String blockReason) { this.blockReason = blockReason; }
+
+    public Instant getBlockedAt() { return blockedAt; }
+    public void setBlockedAt(Instant blockedAt) { this.blockedAt = blockedAt; }
 
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }

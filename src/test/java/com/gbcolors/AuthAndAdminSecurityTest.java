@@ -101,5 +101,39 @@ class AuthAndAdminSecurityTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.role").value("USER"));
+
+        // Admin blocks user temporarily, verify signin returns 403 blocked, then unblock and allow
+        MvcResult adminLogin = mockMvc.perform(post("/api/auth/signin")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"gbcolor.admin@gmail.com\",\"password\":\"Admin@123\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        String adminToken = adminLogin.getResponse().getContentAsString().replaceAll(".*\"token\":\"([^\"]+)\".*", "$1");
+
+        mockMvc.perform(post("/api/admin/user/block")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + testEmail + "\",\"blockType\":\"TEMPORARY\",\"durationHours\":24,\"reason\":\"Test block\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(post("/api/auth/signin")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + testEmail + "\",\"password\":\"Player@2026\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.blocked").value(true));
+
+        mockMvc.perform(post("/api/admin/user/unblock")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + testEmail + "\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(post("/api/auth/signin")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"" + testEmail + "\",\"password\":\"Player@2026\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
     }
 }

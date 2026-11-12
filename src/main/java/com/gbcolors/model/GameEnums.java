@@ -34,4 +34,16 @@ public final class GameEnums {
     public enum OutcomeMode {
         SMART_PROFIT, FAIR_RANDOM, MANUAL
     }
+
+    public enum BlockType {
+        NONE, TEMPORARY, PERMANENT
+    }
+
+    public enum DepositStatus {
+        PENDING, APPROVED, REJECTED
+    }
+
+    public enum NotificationType {
+        WITHDRAW_PAID, WITHDRAW_REJECTED, DEPOSIT_APPROVED, DEPOSIT_REJECTED, INFO
+    }
 }

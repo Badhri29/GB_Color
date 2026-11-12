@@ -111,22 +111,61 @@ class WebSocketAndBetFlowTest {
         JsonNode userAfterCancel = waitForEvent(messages, buffered, "user_updated");
         assertEquals(1000L, userAfterCancel.get("data").get("demoBalance").asLong());
 
-        // 4. Deposit & Withdrawal roundtrip
+        // 4. Deposit request -> Admin approval -> Withdrawal -> Offline Paid -> Next Login Notification
         ws.sendText(objectMapper.writeValueAsString(Map.of(
                 "event", "submit_deposit",
                 "reqId", "req_3",
                 "data", Map.of("amount", 500, "utr", "998877665544", "method", "UPI")
         )), true).get(3, TimeUnit.SECONDS);
-        assertTrue(waitForAck(messages, buffered, "req_3").get("payload").get("success").asBoolean());
+        JsonNode depAck = waitForAck(messages, buffered, "req_3");
+        assertTrue(depAck.get("payload").get("success").asBoolean());
+        String depositId = depAck.get("payload").get("depositId").asText();
+
+        Map<String, Object> approveRes = gameLoopService.processDepositAction(depositId, "APPROVED");
+        assertTrue(Boolean.TRUE.equals(approveRes.get("success")));
+
+        JsonNode depNotif = waitForEvent(messages, buffered, "notification");
+        assertEquals("DEPOSIT_APPROVED", depNotif.get("data").get("type").asText());
 
         ws.sendText(objectMapper.writeValueAsString(Map.of(
                 "event", "submit_withdrawal",
                 "reqId", "req_4",
                 "data", Map.of("amount", 200, "upiOrBank", "player@upi")
         )), true).get(3, TimeUnit.SECONDS);
-        assertTrue(waitForAck(messages, buffered, "req_4").get("payload").get("success").asBoolean());
+        JsonNode wthAck = waitForAck(messages, buffered, "req_4");
+        assertTrue(wthAck.get("payload").get("success").asBoolean());
+        String withdrawId = wthAck.get("payload").get("requestId").asText();
 
-        ws.sendClose(WebSocket.NORMAL_CLOSURE, "done").get(3, TimeUnit.SECONDS);
+        // Simulate user logging out / disconnecting before admin completes payout
+        ws.sendClose(WebSocket.NORMAL_CLOSURE, "logout").get(3, TimeUnit.SECONDS);
+        Map<String, Object> paidRes = gameLoopService.processWithdrawAction(withdrawId, "PAID");
+        assertTrue(Boolean.TRUE.equals(paidRes.get("success")));
+
+        // Reconnect and verify unread withdrawal notification arrives first on login
+        BlockingQueue<String> messages2 = new LinkedBlockingQueue<>();
+        List<JsonNode> buffered2 = new ArrayList<>();
+        StringBuilder partial2 = new StringBuilder();
+        WebSocket ws2 = HttpClient.newHttpClient()
+                .newWebSocketBuilder()
+                .buildAsync(URI.create("ws://localhost:" + port + "/ws?token=" + token), new WebSocket.Listener() {
+                    @Override
+                    public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
+                        partial2.append(data);
+                        if (last) {
+                            messages2.offer(partial2.toString());
+                            partial2.setLength(0);
+                        }
+                        return WebSocket.Listener.super.onText(webSocket, data, last);
+                    }
+                })
+                .get(5, TimeUnit.SECONDS);
+
+        JsonNode initAfterPaid = waitForEvent(messages2, buffered2, "init_state");
+        JsonNode unreadNotifs = initAfterPaid.get("data").get("user").get("unreadNotifications");
+        assertTrue(unreadNotifs.isArray() && unreadNotifs.size() >= 1);
+        assertEquals("WITHDRAW_PAID", unreadNotifs.get(unreadNotifs.size() - 1).get("type").asText());
+
+        ws2.sendClose(WebSocket.NORMAL_CLOSURE, "done").get(3, TimeUnit.SECONDS);
         assertNotNull(gameLoopService.getSanitizedUserPayload(email));
     }
 

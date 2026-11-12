@@ -1,930 +1,1746 @@
-let socket = null;
-let authToken = localStorage.getItem('gbcolors_token') || null;
+/* =========================================================
+   GB COLORS — CLIENT APPLICATION CONTROLLER
+   Auth, Live Arena, Payment Center, Notifications & Drawer
+   ========================================================= */
 
-// User State
-let user = {
-    userId: '',
-    email: '',
-    username: '',
-    vipLevel: 1,
-    demoBalance: 1000,
-    realBalance: 0,
-    mode: 'DEMO',
-    betHistory: [],
-    transactions: []
-};
+(function () {
+  'use strict';
 
-let activeBets = [];
-let currentPeriod = '';
-let currentSelectedBet = {
-    type: 'COLOR',
-    choice: 'GREEN',
-    baseAmount: 10,
-    multiplier: 1,
-    payoutRate: 2
-};
-let betPendingCancelId = null;
-let selectedDepositAmt = 100;
+  const AUTH_TOKEN_KEY = 'gb_auth_token';
+  const SETTINGS_KEY = 'gb_user_settings_v1';
 
-// Settings
-let settings = {
-    sfx: true,
-    bgm: false,
-    autoClose: true,
-    vibrate: true
-};
+  // State
+  let authToken = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+  let currentUser = null;
+  let socket = null;
+  let paymentConfig = {
+    razorpayEnabled: false,
+    razorpayKeyId: '',
+    upiId: '',
+    upiPayeeName: 'GB Colors',
+    minDeposit: 100,
+    minWithdraw: 100
+  };
+  let gameState = {
+    period: '--------',
+    timeLeft: 30,
+    status: 'BETTING',
+    cycleDurationSeconds: 30,
+    betCloseSeconds: 5,
+    history: []
+  };
+  let pendingBet = { type: null, choice: null, unit: 10, mult: 1 };
+  let pendingCancelBetId = null;
+  let resultAutoCloseTimer = null;
 
-// Web Audio API
-let audioCtx = null;
-let bgmOsc = null;
+  // Settings
+  let userSettings = loadSettings();
 
-function getAudioContext() {
-    if (!audioCtx) {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        if (AudioContext) audioCtx = new AudioContext();
-    }
-    if (audioCtx && audioCtx.state === 'suspended') {
-        audioCtx.resume();
-    }
-    return audioCtx;
-}
-
-function playTone(freq, type, duration, delay = 0) {
-    if (!settings.sfx) return;
+  function loadSettings() {
     try {
-        const ctx = getAudioContext();
-        if (!ctx) return;
-        setTimeout(() => {
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            osc.type = type;
-            osc.frequency.setValueAtTime(freq, ctx.currentTime);
-            gain.gain.setValueAtTime(0.12, ctx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-            osc.start();
-            osc.stop(ctx.currentTime + duration);
-        }, delay);
-    } catch (e) {}
-}
-
-function playTickSound() { playTone(800, 'sine', 0.08); }
-function playBetSound() {
-    playTone(520, 'triangle', 0.1);
-    playTone(780, 'sine', 0.15, 60);
-    triggerVibrate([40, 30, 40]);
-}
-function playWinSound() {
-    playTone(523.25, 'triangle', 0.15, 0);
-    playTone(659.25, 'triangle', 0.15, 120);
-    playTone(783.99, 'triangle', 0.15, 240);
-    playTone(1046.50, 'sine', 0.35, 360);
-    triggerVibrate([80, 50, 80, 50, 150]);
-}
-function playLoseSound() {
-    playTone(350, 'sawtooth', 0.2, 0);
-    playTone(250, 'sawtooth', 0.3, 150);
-}
-function triggerVibrate(pattern) {
-    if (settings.vibrate && navigator.vibrate) {
-        try { navigator.vibrate(pattern); } catch (e) {}
+      const raw = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+      return {
+        sfx: raw.sfx !== false,
+        bgm: Boolean(raw.bgm),
+        autoClose: raw.autoClose !== false,
+        vibrate: raw.vibrate !== false
+      };
+    } catch {
+      return { sfx: true, bgm: false, autoClose: true, vibrate: true };
     }
-}
+  }
 
-function toggleBgm(enable) {
-    settings.bgm = enable;
-    const ctx = getAudioContext();
-    if (!ctx) return;
-    if (enable) {
-        if (!bgmOsc) {
-            bgmOsc = ctx.createOscillator();
-            const gain = ctx.createGain();
-            bgmOsc.type = 'sine';
-            bgmOsc.frequency.setValueAtTime(110, ctx.currentTime);
-            gain.gain.setValueAtTime(0.02, ctx.currentTime);
-            bgmOsc.connect(gain);
-            gain.connect(ctx.destination);
-            bgmOsc.start();
-        }
-    } else if (bgmOsc) {
-        try { bgmOsc.stop(); } catch (e) {}
-        bgmOsc = null;
+  function saveSettings() {
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(userSettings));
+  }
+
+  // Utilities
+  function $(id) {
+    return document.getElementById(id);
+  }
+
+  function escapeHtml(str) {
+    return String(str == null ? '' : str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function formatINR(val) {
+    const num = Number(val || 0);
+    return '₹' + num.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function formatShortINR(val) {
+    const num = Number(val || 0);
+    return Number.isInteger(num)
+      ? '₹' + num.toLocaleString('en-IN')
+      : formatINR(num);
+  }
+
+  function formatTime(iso) {
+    if (!iso) return '—';
+    try {
+      const d = new Date(iso);
+      return d.toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return String(iso);
     }
-}
+  }
 
-// Toast Helper (global so Admin script can use it too)
-const toastEl = document.getElementById('toast');
-window.showToast = function (message, duration = 2600) {
-    toastEl.textContent = message;
-    toastEl.classList.add('show');
-    setTimeout(() => { toastEl.classList.remove('show'); }, duration);
-};
+  function getApiUrl(path) {
+    return typeof window.apiUrl === 'function' ? window.apiUrl(path) : path;
+  }
 
-function formatCurrency(amount) {
-    return Number(amount || 0).toLocaleString('en-IN');
-}
+  function getWsBaseUrl() {
+    return typeof window.getSocketUrl === 'function' ? window.getSocketUrl() : window.location.origin;
+  }
 
-function togglePassVis(inputId, btn) {
-    const el = document.getElementById(inputId);
+  function authHeaders(extra) {
+    const h = { 'Content-Type': 'application/json' };
+    if (authToken) h.Authorization = 'Bearer ' + authToken;
+    return Object.assign(h, extra || {});
+  }
+
+  async function apiFetch(path, options) {
+    const opts = Object.assign({ headers: authHeaders() }, options || {});
+    if (options && options.headers) {
+      opts.headers = Object.assign(authHeaders(), options.headers);
+    }
+    const res = await fetch(getApiUrl(path), opts);
+    let data = {};
+    try {
+      data = await res.json();
+    } catch {
+      data = {};
+    }
+    return { ok: res.ok, status: res.status, data };
+  }
+
+  // Toast
+  let toastTimer = null;
+  function showToast(msg, type) {
+    const el = $('toast');
     if (!el) return;
-    if (el.type === 'password') {
-        el.type = 'text';
-        btn.textContent = '🙈';
+    el.textContent = msg;
+    el.className = 'toast-banner show ' + (type || 'info');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      el.classList.remove('show');
+    }, 3400);
+  }
+  window.showToast = showToast;
+
+  // Global Password Toggle (called by inline onclick in index.html)
+  window.togglePassVis = function (inputId, btn) {
+    const input = $(inputId);
+    if (!input) return;
+    const isPass = input.type === 'password';
+    input.type = isPass ? 'text' : 'password';
+    if (btn) btn.textContent = isPass ? '🙈' : '👁';
+  };
+
+  // =========================================================
+  // SOUND ENGINE (Web Audio API)
+  // =========================================================
+  const SoundEngine = {
+    ctx: null,
+    bgmOsc: null,
+    bgmGain: null,
+    ensureCtx() {
+      if (!this.ctx) {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (Ctx) this.ctx = new Ctx();
+      }
+      if (this.ctx && this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(() => {});
+      }
+      return this.ctx;
+    },
+    tone(freq, dur, type, vol) {
+      if (!userSettings.sfx) return;
+      const ctx = this.ensureCtx();
+      if (!ctx) return;
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = type || 'sine';
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(vol || 0.06, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+      o.connect(g);
+      g.connect(ctx.destination);
+      o.start();
+      o.stop(ctx.currentTime + dur);
+    },
+    click() {
+      this.tone(620, 0.05, 'triangle', 0.04);
+      vibrate(15);
+    },
+    tick() {
+      this.tone(880, 0.06, 'sine', 0.035);
+    },
+    win() {
+      if (!userSettings.sfx) return;
+      [523, 659, 784, 1046].forEach((f, idx) => {
+        setTimeout(() => this.tone(f, 0.16, 'triangle', 0.07), idx * 75);
+      });
+      vibrate([40, 30, 60]);
+    },
+    notify() {
+      if (!userSettings.sfx) return;
+      this.tone(740, 0.11, 'sine', 0.06);
+      setTimeout(() => this.tone(987, 0.18, 'sine', 0.07), 110);
+      vibrate([30, 25, 40]);
+    },
+    loss() {
+      this.tone(240, 0.22, 'sawtooth', 0.04);
+    },
+    syncBgm() {
+      if (!userSettings.bgm) {
+        if (this.bgmGain) {
+          this.bgmGain.gain.value = 0;
+        }
+        return;
+      }
+      const ctx = this.ensureCtx();
+      if (!ctx) return;
+      if (!this.bgmOsc) {
+        this.bgmOsc = ctx.createOscillator();
+        this.bgmGain = ctx.createGain();
+        this.bgmOsc.type = 'sine';
+        this.bgmOsc.frequency.value = 146.83;
+        this.bgmGain.gain.value = 0.012;
+        this.bgmOsc.connect(this.bgmGain);
+        this.bgmGain.connect(ctx.destination);
+        this.bgmOsc.start();
+      } else {
+        this.bgmGain.gain.value = 0.012;
+      }
+    }
+  };
+
+  function vibrate(pattern) {
+    if (userSettings.vibrate && navigator.vibrate) {
+      try { navigator.vibrate(pattern); } catch {}
+    }
+  }
+
+  // =========================================================
+  // LIVE NON-REPEATING TICKER ENGINE
+  // =========================================================
+  const LiveTickerEngine = (function () {
+    const DUMMY_NAMES = [
+      'Aarav_91', 'Karthik_K', 'Neha_Sharma', 'VikramR', 'Divya_M', 'Rohan_24',
+      'SnehaP', 'Arjun_VIP', 'PriyaNair', 'RahulDev', 'Manish_77', 'AnanyaS',
+      'Surya_TN', 'Meera_V', 'Deepak08', 'Kavya_R', 'HarishB', 'Nithya_K',
+      'Kiran_G', 'PoojaM', 'Siddharth', 'Riya_99', 'Vivek_C', 'Lakshmi_S',
+      'Varun_X', 'SwathiJ', 'Gokul_P', 'ShrutiD', 'Ajay_Star', 'Bhavana_T'
+    ];
+    const DUMMY_TARGETS = ['GREEN', 'RED', 'VIOLET', 'BIG', 'SMALL', 'Number 7', 'Number 0', 'Number 5', 'Number 9'];
+    const DUMMY_AMOUNTS = [180, 200, 360, 450, 500, 720, 900, 1000, 1450, 1800, 2250, 3600, 4500, 9000];
+
+    let realEvents = [];
+    let realBag = [];
+    let dummyBag = [];
+    const recentTexts = [];
+    let rotationTimer = null;
+
+    function shuffle(arr) {
+      const copy = arr.slice();
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const tmp = copy[i];
+        copy[i] = copy[j];
+        copy[j] = tmp;
+      }
+      return copy;
+    }
+
+    function buildDummyDeck() {
+      const items = [];
+      const names = shuffle(DUMMY_NAMES);
+      const targets = shuffle(DUMMY_TARGETS);
+      const amts = shuffle(DUMMY_AMOUNTS);
+      for (let i = 0; i < names.length; i++) {
+        const name = names[i];
+        const amt = amts[(i * 3 + Math.floor(Math.random() * amts.length)) % amts.length];
+        const target = targets[(i * 5 + Math.floor(Math.random() * targets.length)) % targets.length];
+        const text = (i % 5 === 0)
+          ? `💸 ${name} withdrew ${formatShortINR(amt * 2)} to UPI (Verified)`
+          : `🏆 ${name} won ${formatShortINR(amt)} on ${target}`;
+        items.push({ id: 'dummy_' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 6), text, isReal: false });
+      }
+      return shuffle(items);
+    }
+
+    function rememberText(text) {
+      recentTexts.push(text);
+      if (recentTexts.length > 22) recentTexts.shift();
+    }
+
+    function drawBatch(count) {
+      const batch = [];
+      const chosenThisBatch = new Set();
+
+      // Priority 1: Pick unseen random REAL wins/withdrawals first
+      if (realEvents.length > 0 && realBag.length === 0) {
+        realBag = shuffle(realEvents);
+      }
+      let guard = 0;
+      while (batch.length < count && realBag.length > 0 && guard < 30) {
+        guard++;
+        const item = realBag.pop();
+        if (!item || !item.text) continue;
+        if (chosenThisBatch.has(item.text)) continue;
+        if (recentTexts.includes(item.text) && realEvents.length > 4) continue;
+        chosenThisBatch.add(item.text);
+        rememberText(item.text);
+        batch.push(item);
+      }
+
+      // Priority 2: Fill remainder with non-repeating random DUMMY wins
+      let dGuard = 0;
+      while (batch.length < count && dGuard < 80) {
+        dGuard++;
+        if (dummyBag.length === 0) {
+          dummyBag = buildDummyDeck();
+        }
+        const item = dummyBag.pop();
+        if (!item || chosenThisBatch.has(item.text) || recentTexts.includes(item.text)) {
+          continue;
+        }
+        chosenThisBatch.add(item.text);
+        rememberText(item.text);
+        batch.push(item);
+      }
+
+      return shuffle(batch);
+    }
+
+    function renderBatch() {
+      const track = $('liveTickerTrack');
+      if (!track) return;
+      const batch = drawBatch(8);
+      track.innerHTML = batch.map((ev) => {
+        const cls = ev.isReal ? 'ticker-item real-win' : 'ticker-item';
+        return `<span class="${cls}">${escapeHtml(ev.text)}</span>`;
+      }).join('');
+
+      // Restart smooth right-to-left sweep animation with fresh batch each cycle
+      track.style.animation = 'none';
+      void track.offsetWidth;
+      track.style.animation = 'gbTickerSweep 28s linear 1 forwards';
+    }
+
+    function addEvents(events) {
+      if (!Array.isArray(events) || !events.length) return;
+      const seenIds = new Set(realEvents.map((e) => e.id || e.text));
+      events.forEach((ev) => {
+        if (!ev || !ev.text) return;
+        const key = ev.id || ev.text;
+        if (!seenIds.has(key)) {
+          seenIds.add(key);
+          const item = { id: key, text: ev.text, isReal: true };
+          realEvents.push(item);
+          realBag.push(item);
+        }
+      });
+      if (realEvents.length > 40) {
+        realEvents = realEvents.slice(-40);
+      }
+      realBag = shuffle(realBag);
+    }
+
+    function start() {
+      const track = $('liveTickerTrack');
+      if (track && !track.dataset.boundAnim) {
+        track.dataset.boundAnim = '1';
+        track.addEventListener('animationend', () => {
+          renderBatch();
+        });
+      }
+      renderBatch();
+      if (rotationTimer) clearInterval(rotationTimer);
+      rotationTimer = setInterval(() => {
+        if (!document.hidden && $('gameAppRoot') && $('gameAppRoot').style.display !== 'none') {
+          renderBatch();
+        }
+      }, 28500);
+    }
+
+    function stop() {
+      if (rotationTimer) {
+        clearInterval(rotationTimer);
+        rotationTimer = null;
+      }
+    }
+
+    return { addEvents, start, stop, refresh: renderBatch };
+  })();
+
+  // =========================================================
+  // SIDE DRAWER & MULTI-PAGE NAVIGATION (PC & MOBILE)
+  // =========================================================
+  function openUserDrawer() {
+    const drawer = $('userSideDrawer');
+    const backdrop = $('userDrawerBackdrop');
+    if (drawer) {
+      drawer.classList.add('open');
+      drawer.setAttribute('aria-hidden', 'false');
+    }
+    if (backdrop) backdrop.classList.add('active');
+  }
+
+  function closeUserDrawer() {
+    const drawer = $('userSideDrawer');
+    const backdrop = $('userDrawerBackdrop');
+    if (drawer) {
+      drawer.classList.remove('open');
+      drawer.setAttribute('aria-hidden', 'true');
+    }
+    if (backdrop) backdrop.classList.remove('active');
+  }
+
+  function switchPaymentSubTab(tabName) {
+    document.querySelectorAll('.pay-subtab-btn').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.paytab === tabName);
+    });
+    ['recharge', 'withdraw', 'status'].forEach((t) => {
+      const panel = $('payTab-' + t);
+      if (panel) {
+        panel.style.display = (t === tabName) ? '' : 'none';
+        panel.classList.toggle('active', t === tabName);
+      }
+    });
+    if (tabName === 'status') {
+      renderPaymentStatuses();
+    }
+  }
+
+  function navigateToView(viewName, subOpt) {
+    const views = ['game', 'payment', 'history', 'profile', 'rules', 'settings'];
+    const target = views.includes(viewName) ? viewName : 'game';
+    views.forEach((v) => {
+      const el = $('view-' + v);
+      if (el) {
+        el.style.display = (v === target) ? '' : 'none';
+        el.classList.toggle('active', v === target);
+      }
+    });
+    document.querySelectorAll('#userSideDrawer .drawer-nav-item[data-view]').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.view === target);
+    });
+    closeUserDrawer();
+
+    if (target === 'payment') {
+      loadPaymentConfig();
+      if (subOpt) switchPaymentSubTab(subOpt);
+      renderPaymentStatuses();
+    } else if (target === 'history') {
+      renderHistoryView();
+    } else if (target === 'profile') {
+      renderProfileView();
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  // =========================================================
+  // NOTIFICATIONS (LIVE + LOGIN-FIRST QUEUE)
+  // =========================================================
+  let sessionNotifications = [];
+  let popupQueue = [];
+  let activePopupNotif = null;
+
+  function prioritizeNotifications(list) {
+    const weight = { WITHDRAW_PAID: 1, WITHDRAW_REJECTED: 2, DEPOSIT_APPROVED: 3, DEPOSIT_REJECTED: 4, INFO: 5 };
+    return (list || []).slice().sort((a, b) => {
+      const wa = weight[a.type] || 9;
+      const wb = weight[b.type] || 9;
+      if (wa !== wb) return wa - wb;
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
+  }
+
+  function updateNotificationBadges() {
+    const unreadCount = sessionNotifications.filter((n) => !n.isRead).length;
+    [$('notifBellBadge'), $('drawerNotifBadge')].forEach((badge) => {
+      if (!badge) return;
+      badge.textContent = String(unreadCount);
+      badge.style.display = unreadCount > 0 ? '' : 'none';
+    });
+    renderNotificationsInbox();
+  }
+
+  function renderNotificationsInbox() {
+    const container = $('notificationsHistoryList');
+    if (!container) return;
+    if (!sessionNotifications.length) {
+      container.innerHTML = '<div class="empty-state-box">No notifications yet. Deposit and withdrawal updates appear here.</div>';
+      return;
+    }
+    container.innerHTML = sessionNotifications.map((n) => {
+      const isUnread = !n.isRead;
+      return `
+        <div class="status-card ${isUnread ? 'notif-unread' : ''}">
+          <div class="sc-top">
+            <strong>${escapeHtml(n.title || n.type)}</strong>
+            <span class="sc-time">${escapeHtml(formatTime(n.createdAt))}</span>
+          </div>
+          <p class="sc-msg">${escapeHtml(n.message || '')}</p>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function showNextQueuedPopup() {
+    if (activePopupNotif || popupQueue.length === 0) return;
+    const notif = popupQueue.shift();
+    activePopupNotif = notif;
+
+    const iconMap = {
+      WITHDRAW_PAID: '💸',
+      WITHDRAW_REJECTED: '⚠️',
+      DEPOSIT_APPROVED: '💳',
+      DEPOSIT_REJECTED: '❌',
+      INFO: '🔔'
+    };
+
+    if ($('notifModalIcon')) $('notifModalIcon').textContent = iconMap[notif.type] || '🔔';
+    if ($('notifModalTitle')) $('notifModalTitle').textContent = notif.title || 'Account Update';
+    if ($('notifModalMessage')) $('notifModalMessage').textContent = notif.message || '';
+    if ($('notifModalMeta')) {
+      const amt = notif.amount != null ? `Amount: ${formatINR(notif.amount)} • ` : '';
+      $('notifModalMeta').textContent = `${amt}${formatTime(notif.createdAt)}`;
+    }
+    if ($('notificationAlertModal')) $('notificationAlertModal').style.display = 'flex';
+    SoundEngine.notify();
+  }
+
+  async function acknowledgeActivePopup(openStatusPage) {
+    const current = activePopupNotif;
+    activePopupNotif = null;
+    if ($('notificationAlertModal')) $('notificationAlertModal').style.display = 'none';
+    if (current && current.id) {
+      await markNotificationsAsRead([current.id]);
+    }
+    if (openStatusPage) {
+      popupQueue = [];
+      navigateToView('payment', 'status');
+      return;
+    }
+    if (popupQueue.length > 0) {
+      setTimeout(showNextQueuedPopup, 180);
+    }
+  }
+
+  async function markNotificationsAsRead(ids) {
+    if (!Array.isArray(ids) || !ids.length) return;
+    sessionNotifications.forEach((n) => {
+      if (ids.includes(n.id)) n.isRead = true;
+    });
+    updateNotificationBadges();
+    if (socket && socket.connected) {
+      socket.emit('mark_notifications_read', ids);
+    }
+    try {
+      await apiFetch('/api/notifications/read', {
+        method: 'POST',
+        body: JSON.stringify({ ids })
+      });
+    } catch {}
+  }
+
+  function ingestUnreadNotifications(list, isInitialLogin) {
+    if (!Array.isArray(list) || !list.length) return;
+    const existingIds = new Set(sessionNotifications.map((n) => n.id));
+    const ordered = prioritizeNotifications(list);
+    ordered.forEach((n) => {
+      if (!existingIds.has(n.id)) {
+        sessionNotifications.unshift(n);
+        if (!n.isRead && !popupQueue.some((q) => q.id === n.id) && (!activePopupNotif || activePopupNotif.id !== n.id)) {
+          popupQueue.push(n);
+        }
+      }
+    });
+    sessionNotifications = prioritizeNotifications(sessionNotifications);
+    updateNotificationBadges();
+
+    if (popupQueue.length > 0) {
+      // On login, show unread withdrawal-completed notification IMMEDIATELY first!
+      if (isInitialLogin) {
+        popupQueue = prioritizeNotifications(popupQueue);
+      }
+      showNextQueuedPopup();
+    }
+  }
+
+  // =========================================================
+  // PAYMENT CENTER (RAZORPAY + LIVE UPI QR + WITHDRAW)
+  // =========================================================
+  async function loadPaymentConfig() {
+    const res = await apiFetch('/api/payment/config', { method: 'GET' });
+    if (!res.ok || !res.data.success) return;
+    paymentConfig = Object.assign(paymentConfig, res.data);
+
+    if ($('minDepositHint')) $('minDepositHint').textContent = `Minimum deposit: ₹${paymentConfig.minDeposit || 100}`;
+    if ($('minWithdrawHint')) $('minWithdrawHint').textContent = `Min ₹${paymentConfig.minWithdraw || 100}`;
+    if ($('rechargeAmountInput')) $('rechargeAmountInput').min = String(paymentConfig.minDeposit || 100);
+    if ($('withdrawAmountInput')) $('withdrawAmountInput').min = String(paymentConfig.minWithdraw || 100);
+
+    const badge = $('rzpStatusBadge');
+    const note = $('rzpFallbackNote');
+    const rzpBtn = $('rzpPayBtn');
+    if (paymentConfig.razorpayEnabled) {
+      if (badge) { badge.textContent = 'LIVE GATEWAY'; badge.className = 'status-pill good'; }
+      if (note) note.style.display = 'none';
+      if (rzpBtn) rzpBtn.disabled = false;
     } else {
-        el.type = 'password';
-        btn.textContent = '👁️';
+      if (badge) { badge.textContent = 'UPI QR MODE'; badge.className = 'status-pill amber'; }
+      if (note) note.style.display = '';
+      if (rzpBtn) rzpBtn.disabled = false; // show clear guidance toast if clicked
     }
-}
+  }
 
-// ====================================================
-// 1. AUTHENTICATION & STARTUP SESSION CHECK
-// ====================================================
-const authScreen = document.getElementById('authScreen');
-const gameAppRoot = document.getElementById('gameAppRoot');
-const adminPortalRoot = document.getElementById('adminPortalRoot');
-
-const showSignInTab = document.getElementById('showSignInTab');
-const showSignUpTab = document.getElementById('showSignUpTab');
-const signInForm = document.getElementById('signInForm');
-const signUpForm = document.getElementById('signUpForm');
-
-showSignInTab.addEventListener('click', () => {
-    showSignInTab.classList.add('active');
-    showSignUpTab.classList.remove('active');
-    signInForm.style.display = 'block';
-    signUpForm.style.display = 'none';
-});
-
-showSignUpTab.addEventListener('click', () => {
-    showSignUpTab.classList.add('active');
-    showSignInTab.classList.remove('active');
-    signUpForm.style.display = 'block';
-    signInForm.style.display = 'none';
-});
-
-// Live Password Character Validation
-const regPassInput = document.getElementById('regPassword');
-function checkPasswordRules(pwd) {
-    const rules = {
-        len: pwd.length >= 8 && pwd.length <= 32,
-        upper: /[A-Z]/.test(pwd),
-        lower: /[a-z]/.test(pwd),
-        num: /[0-9]/.test(pwd),
-        sym: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?]/.test(pwd),
-        noSpace: pwd.length > 0 && !/\s/.test(pwd) && /^[\x21-\x7E]+$/.test(pwd)
-    };
-
-    const setRuleUI = (id, passed) => {
-        const el = document.getElementById(id);
-        if (!el) return;
-        const label = el.textContent.slice(2);
-        el.textContent = (passed ? '✓ ' : '○ ') + label;
-        el.classList.toggle('passed', passed);
-    };
-
-    setRuleUI('ruleLen', rules.len);
-    setRuleUI('ruleUpper', rules.upper);
-    setRuleUI('ruleLower', rules.lower);
-    setRuleUI('ruleNum', rules.num);
-    setRuleUI('ruleSym', rules.sym);
-    setRuleUI('ruleNoSpace', rules.noSpace);
-
-    return Object.values(rules).every(Boolean);
-}
-
-regPassInput.addEventListener('input', (e) => checkPasswordRules(e.target.value));
-
-// Send Email OTP
-const sendOtpBtn = document.getElementById('sendOtpBtn');
-const otpNoticeBox = document.getElementById('otpNoticeBox');
-let otpCooldownTimer = null;
-
-sendOtpBtn.addEventListener('click', async () => {
-    const email = document.getElementById('regEmail').value.trim();
-    const errEl = document.getElementById('signupErrorMsg');
-    errEl.textContent = '';
-
-    if (!email || !email.includes('@')) {
-        errEl.textContent = 'Please enter a valid Email ID first.';
-        return;
+  async function handleGenerateUpiQr() {
+    const amt = Number(($('rechargeAmountInput') && $('rechargeAmountInput').value) || 0);
+    const min = Number(paymentConfig.minDeposit || 100);
+    if (!Number.isFinite(amt) || amt < min) {
+      showToast(`Minimum recharge amount is ₹${min}`, 'error');
+      return;
     }
-
-    sendOtpBtn.disabled = true;
-    sendOtpBtn.textContent = 'Sending...';
-
+    const btn = $('generateUpiQrBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Generating QR...'; }
     try {
-        const res = await fetch(window.apiUrl('/api/auth/send-otp'), {
+      const res = await apiFetch('/api/payment/upi/initiate', {
+        method: 'POST',
+        body: JSON.stringify({ amount: amt })
+      });
+      if (!res.ok || !res.data.success) {
+        showToast(res.data.message || res.data.error || 'Could not generate UPI QR', 'error');
+        return;
+      }
+      if ($('upiQrSvgWrap')) $('upiQrSvgWrap').innerHTML = res.data.qrSvg || '';
+      if ($('upiPayeeDisplay')) $('upiPayeeDisplay').textContent = res.data.payeeName || 'GB Colors';
+      if ($('upiIdDisplay')) $('upiIdDisplay').textContent = res.data.upiId || '';
+      if ($('upiAppDeepLink')) $('upiAppDeepLink').href = res.data.upiUri || '#';
+      if ($('upiQrPreviewBox')) $('upiQrPreviewBox').style.display = '';
+      showToast(`Live UPI QR generated for ${formatShortINR(amt)}`, 'success');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Generate Live UPI QR for Amount'; }
+    }
+  }
+
+  async function handleSubmitUtr() {
+    const amt = Number(($('rechargeAmountInput') && $('rechargeAmountInput').value) || 0);
+    const utr = String(($('depositUtrInput') && $('depositUtrInput').value) || '').trim();
+    const min = Number(paymentConfig.minDeposit || 100);
+    if (!Number.isFinite(amt) || amt < min) {
+      showToast(`Enter valid amount (minimum ₹${min})`, 'error');
+      return;
+    }
+    if (!utr || utr.length < 6) {
+      showToast('Enter a valid UPI UTR / transaction reference ID', 'error');
+      return;
+    }
+    const btn = $('submitDepositBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Submitting...'; }
+    try {
+      const res = await apiFetch('/api/payment/upi/submit-utr', {
+        method: 'POST',
+        body: JSON.stringify({ amount: amt, utr, method: 'UPI' })
+      });
+      if (!res.ok || !res.data.success) {
+        showToast(res.data.message || res.data.error || 'Could not submit deposit request', 'error');
+        return;
+      }
+      if ($('depositUtrInput')) $('depositUtrInput').value = '';
+      showToast(res.data.message || 'UTR submitted for verification', 'success');
+      switchPaymentSubTab('status');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '✅ Submit UTR for Admin Verification'; }
+    }
+  }
+
+  async function handleRazorpayPay() {
+    const amt = Number(($('rechargeAmountInput') && $('rechargeAmountInput').value) || 0);
+    const min = Number(paymentConfig.minDeposit || 100);
+    if (!Number.isFinite(amt) || amt < min) {
+      showToast(`Minimum recharge amount is ₹${min}`, 'error');
+      return;
+    }
+    if (typeof window.Razorpay === 'undefined') {
+      showToast('Razorpay SDK blocked or offline — please use Direct UPI QR & UTR below.', 'error');
+      return;
+    }
+    const btn = $('rzpPayBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Creating Order...'; }
+    try {
+      const res = await apiFetch('/api/payment/razorpay/create-order', {
+        method: 'POST',
+        body: JSON.stringify({ amount: amt })
+      });
+      if (!res.ok || !res.data.success) {
+        showToast(res.data.message || res.data.error || 'Razorpay checkout unavailable — use Direct UPI QR', 'error');
+        return;
+      }
+      const d = res.data;
+      const rzp = new window.Razorpay({
+        key: d.keyId,
+        amount: d.amountPaise,
+        currency: d.currency || 'INR',
+        name: 'GB COLORS',
+        description: `Wallet Recharge (${formatShortINR(amt)})`,
+        order_id: d.orderId,
+        prefill: {
+          email: d.prefillEmail || (currentUser && currentUser.email) || '',
+          name: d.prefillName || (currentUser && currentUser.username) || ''
+        },
+        theme: { color: '#10b981' },
+        handler: async function (response) {
+          const vRes = await apiFetch('/api/payment/razorpay/verify', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email })
-        });
-        const data = await res.json();
-
-        if (!data.success) {
-            errEl.textContent = data.message;
-            sendOtpBtn.disabled = false;
-            sendOtpBtn.textContent = 'Send OTP';
-            return;
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature
+            })
+          });
+          if (vRes.ok && vRes.data.success) {
+            SoundEngine.win();
+            showToast(vRes.data.message || 'Wallet credited instantly!', 'success');
+            switchPaymentSubTab('status');
+          } else {
+            showToast(vRes.data.message || vRes.data.error || 'Payment verification failed', 'error');
+          }
         }
-
-        otpNoticeBox.style.display = 'block';
-        otpNoticeBox.innerHTML = `📧 Verification OTP sent to <strong>${email}</strong> from GB_Colors Admin! Please check your Inbox (or Spam folder).`;
-
-        // 45s cooldown
-        let secs = 45;
-        sendOtpBtn.textContent = `Resend (${secs}s)`;
-        otpCooldownTimer = setInterval(() => {
-            secs--;
-            if (secs <= 0) {
-                clearInterval(otpCooldownTimer);
-                sendOtpBtn.disabled = false;
-                sendOtpBtn.textContent = 'Send OTP';
-            } else {
-                sendOtpBtn.textContent = `Resend (${secs}s)`;
-            }
-        }, 1000);
-    } catch (err) {
-        errEl.textContent = 'Network error sending OTP.';
-        sendOtpBtn.disabled = false;
-        sendOtpBtn.textContent = 'Send OTP';
+      });
+      rzp.on('payment.failed', function (resp) {
+        const desc = (resp && resp.error && resp.error.description) || 'Payment cancelled or failed';
+        showToast(desc, 'error');
+      });
+      rzp.open();
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Pay Instantly via Razorpay'; }
     }
-});
+  }
 
-// Sign Up Submit
-signUpForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('regEmail').value.trim();
-    const otp = document.getElementById('regOtp').value.trim();
-    const password = document.getElementById('regPassword').value;
-    const confirmPass = document.getElementById('regConfirmPassword').value;
-    const errEl = document.getElementById('signupErrorMsg');
-    errEl.textContent = '';
-
-    if (!checkPasswordRules(password)) {
-        errEl.textContent = 'Please satisfy all password character rules.';
+  async function handleSubmitWithdraw() {
+    const amt = Number(($('withdrawAmountInput') && $('withdrawAmountInput').value) || 0);
+    const upiOrBank = String(($('withdrawAccountInput') && $('withdrawAccountInput').value) || '').trim();
+    const min = Number(paymentConfig.minWithdraw || 100);
+    if (!Number.isFinite(amt) || amt < min) {
+      showToast(`Minimum withdrawal is ₹${min}`, 'error');
+      return;
+    }
+    if (!upiOrBank || upiOrBank.length < 4) {
+      showToast('Enter a valid UPI ID or Bank Account details', 'error');
+      return;
+    }
+    const btn = $('submitWithdrawBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Submitting Request...'; }
+    try {
+      const res = await apiFetch('/api/payment/withdraw', {
+        method: 'POST',
+        body: JSON.stringify({ amount: amt, upiOrBank })
+      });
+      if (!res.ok || !res.data.success) {
+        showToast(res.data.message || res.data.error || 'Could not submit withdrawal request', 'error');
         return;
+      }
+      if ($('withdrawAmountInput')) $('withdrawAmountInput').value = '';
+      SoundEngine.notify();
+      showToast(res.data.message || 'Withdrawal requested!', 'success');
+      switchPaymentSubTab('status');
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = 'Submit Withdrawal Request'; }
     }
-    if (password !== confirmPass) {
-        errEl.textContent = 'Passwords do not match.';
-        return;
+  }
+
+  // =========================================================
+  // RENDERING HELPERS
+  // =========================================================
+  function colorChipsHtml(colorStr) {
+    return String(colorStr || '').split('+').map((c) => {
+      const cls = c.trim().toLowerCase();
+      return `<span class="color-dot-pill ${cls}">${escapeHtml(c.trim())}</span>`;
+    }).join(' ');
+  }
+
+  function renderUserSummary() {
+    if (!currentUser) return;
+    const isReal = currentUser.mode === 'REAL';
+    const activeBal = isReal ? currentUser.realBalance : currentUser.demoBalance;
+
+    if ($('headerWalletLabel')) $('headerWalletLabel').textContent = isReal ? 'REAL CASH' : 'DEMO COINS';
+    if ($('activeBalanceDisplay')) $('activeBalanceDisplay').textContent = formatINR(activeBal);
+    if ($('modeDemoBtn')) $('modeDemoBtn').classList.toggle('active', !isReal);
+    if ($('modeRealBtn')) $('modeRealBtn').classList.toggle('active', isReal);
+
+    // Drawer summary
+    const uname = currentUser.username || 'Player';
+    if ($('drawerAvatar')) $('drawerAvatar').textContent = uname.charAt(0).toUpperCase();
+    if ($('drawerUsername')) $('drawerUsername').textContent = uname;
+    if ($('drawerEmail')) $('drawerEmail').textContent = currentUser.email || '';
+    if ($('drawerUserId')) $('drawerUserId').textContent = `UID: ${currentUser.userId || '—'}`;
+    if ($('drawerRealBal')) $('drawerRealBal').textContent = formatINR(currentUser.realBalance);
+    if ($('drawerDemoBal')) $('drawerDemoBal').textContent = formatINR(currentUser.demoBalance);
+
+    // Payment stats
+    if ($('payRealBal')) $('payRealBal').textContent = formatINR(currentUser.realBalance);
+    if ($('payDemoBal')) $('payDemoBal').textContent = formatINR(currentUser.demoBalance);
+    if ($('payTotalRecharged')) $('payTotalRecharged').textContent = formatINR(currentUser.totalRecharged);
+    if ($('payTotalWithdrawn')) $('payTotalWithdrawn').textContent = formatINR(currentUser.totalWithdrawn);
+    if ($('withdrawAvailableBal')) $('withdrawAvailableBal').textContent = formatINR(currentUser.realBalance);
+
+    renderActiveBetBadges();
+    renderUserBetAndTxLists();
+    renderPaymentStatuses();
+    renderProfileView();
+    renderHistoryView();
+  }
+
+  function renderActiveBetBadges() {
+    document.querySelectorAll('.bet-badge').forEach((b) => {
+      b.style.display = 'none';
+      b.textContent = '₹0';
+    });
+    if (!currentUser || !Array.isArray(currentUser.activeBets)) return;
+    const totals = {};
+    currentUser.activeBets.forEach((b) => {
+      if (b.period === gameState.period && b.status === 'PENDING') {
+        totals[b.choice] = (totals[b.choice] || 0) + Number(b.amount || 0);
+      }
+    });
+    Object.keys(totals).forEach((choice) => {
+      const badge = $('badge-' + choice);
+      if (badge && totals[choice] > 0) {
+        badge.textContent = formatShortINR(totals[choice]);
+        badge.style.display = 'inline-block';
+      }
+    });
+  }
+
+  function buildHistoryRowsHtml(history) {
+    if (!Array.isArray(history) || !history.length) {
+      return '<tr><td colspan="4" class="empty-cell">No rounds completed yet.</td></tr>';
+    }
+    return history.slice(0, 30).map((r) => {
+      const numCls = (r.color || '').toLowerCase().includes('green') ? 'n-green'
+        : (r.color || '').toLowerCase().includes('red') ? 'n-red' : 'n-violet';
+      return `
+        <tr>
+          <td class="mono">${escapeHtml(r.period)}</td>
+          <td><span class="hist-num-pill ${numCls}">${escapeHtml(r.number)}</span></td>
+          <td><span class="size-tag ${(r.size || '').toLowerCase()}">${escapeHtml(r.size)}</span></td>
+          <td>${colorChipsHtml(r.color)}</td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function renderGameHistory() {
+    const history = gameState.history || [];
+    const dotsEl = $('recentDotsList');
+    if (dotsEl) {
+      dotsEl.innerHTML = history.slice(0, 14).map((r) => {
+        const cls = (r.color || '').toLowerCase().includes('green') ? 'n-green'
+          : (r.color || '').toLowerCase().includes('red') ? 'n-red' : 'n-violet';
+        return `<span class="recent-dot-ball ${cls}" title="Period ${escapeHtml(r.period)}">${escapeHtml(r.number)}</span>`;
+      }).join('');
+    }
+    if ($('historyTableBody')) $('historyTableBody').innerHTML = buildHistoryRowsHtml(history);
+    if ($('fullHistoryTableBody')) $('fullHistoryTableBody').innerHTML = buildHistoryRowsHtml(history);
+  }
+
+  function renderUserBetAndTxLists() {
+    if (!currentUser) return;
+    const activeBets = (currentUser.activeBets || []).filter((b) => b.status === 'PENDING');
+    if ($('activeBetsCountBadge')) $('activeBetsCountBadge').textContent = String(activeBets.length);
+
+    const activeEl = $('activeBetsList');
+    if (activeEl) {
+      if (!activeBets.length) {
+        activeEl.innerHTML = '<div class="empty-state-box">No active bets placed in this round.</div>';
+      } else {
+        activeEl.innerHTML = activeBets.map((b) => `
+          <div class="feed-card-item">
+            <div>
+              <strong>${escapeHtml(b.choice)}</strong> <small>(${escapeHtml(b.mode)})</small>
+              <div class="fc-sub">Period ${escapeHtml(b.period)} • ${formatShortINR(b.amount)}</div>
+            </div>
+            <button type="button" class="btn-cancel-mini" data-cancel-bet="${escapeHtml(b.id)}" data-choice="${escapeHtml(b.choice)}" data-amt="${escapeHtml(b.amount)}" ${gameState.status !== 'BETTING' ? 'disabled' : ''}>Cancel</button>
+          </div>
+        `).join('');
+      }
     }
 
-    try {
-        const res = await fetch(window.apiUrl('/api/auth/signup'), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, otp, password })
-        });
-        const data = await res.json();
+    const betHistory = currentUser.betHistory || [];
+    if ($('myBetsCount')) $('myBetsCount').textContent = String(betHistory.length);
+    const myBetsHtml = !betHistory.length
+      ? '<div class="empty-state-box">No settled bets yet.</div>'
+      : betHistory.slice(0, 40).map((b) => {
+          const won = b.status === 'WON';
+          return `
+            <div class="feed-card-item">
+              <div>
+                <strong>${escapeHtml(b.choice)}</strong> <span class="badge-mode">${escapeHtml(b.mode)}</span>
+                <div class="fc-sub">Period ${escapeHtml(b.period)} • Stake ${formatShortINR(b.amount)}</div>
+              </div>
+              <div class="fc-right ${won ? 'text-green' : 'text-red'}">
+                <strong>${won ? '+' + formatShortINR(b.payout) : '-' + formatShortINR(b.amount)}</strong>
+                <small>${escapeHtml(b.status)}</small>
+              </div>
+            </div>
+          `;
+        }).join('');
+    if ($('myBetsList')) $('myBetsList').innerHTML = myBetsHtml;
+    if ($('fullMyBetsList')) $('fullMyBetsList').innerHTML = myBetsHtml;
 
-        if (!data.success) {
-            errEl.textContent = data.message;
-            return;
-        }
+    const txs = currentUser.transactions || [];
+    const txHtml = !txs.length
+      ? '<div class="empty-state-box">No wallet transactions recorded yet.</div>'
+      : txs.slice(0, 40).map((t) => {
+          const amt = Number(t.amount || 0);
+          const pos = amt >= 0;
+          return `
+            <div class="feed-card-item">
+              <div>
+                <strong>${escapeHtml(t.note || t.type)}</strong>
+                <div class="fc-sub">${escapeHtml(t.walletType || 'REAL')} • ${escapeHtml(formatTime(t.createdAt))}</div>
+              </div>
+              <div class="fc-right ${pos ? 'text-green' : 'text-red'}">
+                <strong>${pos ? '+' : '-'}${formatShortINR(Math.abs(amt))}</strong>
+              </div>
+            </div>
+          `;
+        }).join('');
+    if ($('transactionsList')) $('transactionsList').innerHTML = txHtml;
+    if ($('paymentPageTxList')) $('paymentPageTxList').innerHTML = txHtml;
+  }
 
-        authToken = data.token;
-        localStorage.setItem('gbcolors_token', authToken);
-        showToast(data.message);
-        enterUserArena(data.user);
-    } catch (err) {
-        errEl.textContent = 'Registration error. Please try again.';
+  function renderPaymentStatuses() {
+    if (!currentUser) return;
+    const withdraws = currentUser.withdrawRequests || [];
+    const wEl = $('userWithdrawStatusList');
+    if (wEl) {
+      if (!withdraws.length) {
+        wEl.innerHTML = '<div class="empty-state-box">No withdrawal requests submitted yet.</div>';
+      } else {
+        wEl.innerHTML = withdraws.map((w) => {
+          const st = String(w.status || 'PENDING').toUpperCase();
+          const cls = st === 'PAID' ? 'paid' : (st === 'REJECTED' ? 'rejected' : 'pending');
+          const statusLabel = st === 'PAID' ? 'COMPLETED & PAID' : (st === 'REJECTED' ? 'REJECTED (REFUNDED)' : 'PROCESSING');
+          return `
+            <div class="status-card ${cls}">
+              <div class="sc-top">
+                <strong>${formatINR(w.amount)}</strong>
+                <span class="sc-badge ${cls}">${statusLabel}</span>
+              </div>
+              <div class="sc-row"><span>Destination:</span><span>${escapeHtml(w.upiOrBank)}</span></div>
+              ${w.payoutRef ? `<div class="sc-row"><span>Payout Ref:</span><span class="mono">${escapeHtml(w.payoutRef)}</span></div>` : ''}
+              ${w.adminRemark ? `<div class="sc-row"><span>Remark:</span><span>${escapeHtml(w.adminRemark)}</span></div>` : ''}
+              <div class="sc-time">Requested: ${escapeHtml(formatTime(w.requestedAt))}${w.processedAt ? ' • Settled: ' + escapeHtml(formatTime(w.processedAt)) : ''}</div>
+            </div>
+          `;
+        }).join('');
+      }
     }
-});
 
-// Sign In Submit (User OR Hidden Admin)
-signInForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('loginEmail').value.trim();
-    const password = document.getElementById('loginPassword').value;
-    const errEl = document.getElementById('loginErrorMsg');
-    errEl.textContent = '';
-
-    try {
-        const res = await fetch(window.apiUrl('/api/auth/signin'), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email, password })
-        });
-        const data = await res.json();
-
-        if (!data.success) {
-            errEl.textContent = data.message;
-            return;
-        }
-
-        authToken = data.token;
-        localStorage.setItem('gbcolors_token', authToken);
-        showToast(data.message);
-
-        if (data.role === 'ADMIN') {
-            await enterAdminPortal(data.admin);
-        } else {
-            enterUserArena(data.user);
-        }
-    } catch (err) {
-        errEl.textContent = 'Sign In failed. Please try again.';
+    const deposits = currentUser.depositRequests || [];
+    const dEl = $('userDepositStatusList');
+    if (dEl) {
+      if (!deposits.length) {
+        dEl.innerHTML = '<div class="empty-state-box">No deposit requests submitted yet.</div>';
+      } else {
+        dEl.innerHTML = deposits.map((d) => {
+          const st = String(d.status || 'PENDING').toUpperCase();
+          const cls = st === 'APPROVED' ? 'paid' : (st === 'REJECTED' ? 'rejected' : 'pending');
+          return `
+            <div class="status-card ${cls}">
+              <div class="sc-top">
+                <strong>${formatINR(d.amount)} <small>(${escapeHtml(d.method || 'UPI')})</small></strong>
+                <span class="sc-badge ${cls}">${escapeHtml(st)}</span>
+              </div>
+              <div class="sc-row"><span>UTR / Ref:</span><span class="mono">${escapeHtml(d.utr)}</span></div>
+              ${d.adminRemark ? `<div class="sc-row"><span>Note:</span><span>${escapeHtml(d.adminRemark)}</span></div>` : ''}
+              <div class="sc-time">Submitted: ${escapeHtml(formatTime(d.requestedAt))}</div>
+            </div>
+          `;
+        }).join('');
+      }
     }
-});
+  }
 
-// Auto-login Check on Page Load
-async function checkInitialAuth() {
-    if (!authToken) {
-        authScreen.style.display = 'flex';
-        return;
+  function renderProfileView() {
+    if (!currentUser) return;
+    const uname = currentUser.username || 'Player';
+    if ($('profAvatarLg')) $('profAvatarLg').textContent = uname.charAt(0).toUpperCase();
+    if ($('profUsername')) $('profUsername').textContent = uname;
+    if ($('profEmail')) $('profEmail').textContent = currentUser.email || '';
+    if ($('profUserId')) $('profUserId').textContent = `UID: ${currentUser.userId || '—'}`;
+    if ($('profVipBadge')) $('profVipBadge').textContent = `VIP ${currentUser.vipLevel || 1}`;
+    if ($('profStatusBadge')) $('profStatusBadge').textContent = currentUser.blockType && currentUser.blockType !== 'NONE' ? currentUser.blockType : 'ACTIVE';
+    if ($('profRealBal')) $('profRealBal').textContent = formatINR(currentUser.realBalance);
+    if ($('profDemoBal')) $('profDemoBal').textContent = formatINR(currentUser.demoBalance);
+    if ($('profTotalWon')) $('profTotalWon').textContent = formatINR(currentUser.totalWon);
+    if ($('profTotalLost')) $('profTotalLost').textContent = formatINR(currentUser.totalLost);
+    if ($('profTotalRecharged')) $('profTotalRecharged').textContent = formatINR(currentUser.totalRecharged);
+    if ($('profTotalWithdrawn')) $('profTotalWithdrawn').textContent = formatINR(currentUser.totalWithdrawn);
+  }
+
+  function renderHistoryView() {
+    if (!currentUser) return;
+    const hist = currentUser.betHistory || [];
+    const wins = hist.filter((b) => b.status === 'WON').length;
+    const rate = hist.length ? Math.round((wins / hist.length) * 100) : 0;
+    if ($('histTotalBets')) $('histTotalBets').textContent = String(hist.length);
+    if ($('histTotalWon')) $('histTotalWon').textContent = formatINR(currentUser.totalWon);
+    if ($('histTotalLost')) $('histTotalLost').textContent = formatINR(currentUser.totalLost);
+    if ($('histWinRate')) $('histWinRate').textContent = rate + '%';
+  }
+
+  function updateClockAndLock() {
+    const t = Math.max(0, Number(gameState.timeLeft || 0));
+    const m = Math.floor(t / 60);
+    const s = t % 60;
+    if ($('periodNumber')) $('periodNumber').textContent = gameState.period || '--------';
+    if ($('timerMin')) $('timerMin').textContent = String(m).padStart(2, '0');
+    if ($('timerSec')) $('timerSec').textContent = String(s).padStart(2, '0');
+
+    const cycleSec = Number(gameState.cycleDurationSeconds || 30);
+    const lockSec = Number(gameState.betCloseSeconds || 5);
+    if ($('modeTagDisplay')) $('modeTagDisplay').textContent = `WIN GO • ${cycleSec}S`;
+    if ($('rulesCycleSecondsTxt')) $('rulesCycleSecondsTxt').textContent = `${cycleSec}s`;
+    if ($('rulesLockSecondsTxt')) $('rulesLockSecondsTxt').textContent = `${lockSec}s`;
+    if ($('lockOverlayHint')) $('lockOverlayHint').textContent = `Closing in final ${lockSec}s — revealing soon...`;
+
+    const isLocked = gameState.status !== 'BETTING';
+    const overlay = $('lockOverlay');
+    if (overlay) overlay.style.display = isLocked ? 'flex' : 'none';
+    const clockEl = $('countdownClock');
+    if (clockEl) clockEl.classList.toggle('urgent', isLocked || t <= lockSec);
+
+    if (isLocked && $('betModal') && $('betModal').style.display !== 'none') {
+      $('betModal').style.display = 'none';
+    }
+    if (isLocked && t > 0) {
+      SoundEngine.tick();
+    }
+  }
+
+  // =========================================================
+  // BETTING & CANCEL MODALS
+  // =========================================================
+  function updateBetSummary() {
+    const customInput = $('betCustomAmountInput');
+    const customVal = Number(customInput && customInput.value);
+    const total = Number.isFinite(customVal) && customVal > 0 ? customVal : (pendingBet.unit * pendingBet.mult);
+
+    let mult = 2;
+    if (pendingBet.type === 'NUMBER') mult = 9;
+    else if (pendingBet.type === 'COLOR' && pendingBet.choice === 'VIOLET') mult = 4.5;
+
+    if ($('summaryTotalAmt')) $('summaryTotalAmt').textContent = formatShortINR(total);
+    if ($('summaryEstPayout')) $('summaryEstPayout').textContent = formatShortINR(Math.round(total * mult * 100) / 100);
+  }
+
+  function openBetModal(type, choice) {
+    if (gameState.status !== 'BETTING') {
+      showToast('Betting is closed for this round', 'error');
+      return;
+    }
+    pendingBet = { type, choice, unit: 10, mult: 1 };
+    if ($('modalBetTarget')) $('modalBetTarget').textContent = `${choice} (${type})`;
+    document.querySelectorAll('.unit-chip').forEach((b) => b.classList.toggle('active', b.dataset.unit === '10'));
+    document.querySelectorAll('.mult-chip').forEach((b) => b.classList.toggle('active', b.dataset.mult === '1'));
+    if ($('betCustomAmountInput')) $('betCustomAmountInput').value = '10';
+    updateBetSummary();
+    if ($('betModal')) $('betModal').style.display = 'flex';
+    SoundEngine.click();
+  }
+
+  function showOutcomePopup(data) {
+    const res = data.result || {};
+    const bets = Array.isArray(data.settledBets) ? data.settledBets : [];
+    let netProfit = 0;
+    let totalStake = 0;
+    let totalPayout = 0;
+    bets.forEach((b) => {
+      totalStake += Number(b.amount || 0);
+      totalPayout += Number(b.payout || 0);
+    });
+    netProfit = totalPayout - totalStake;
+
+    const ball = $('resultNumberBall');
+    if (ball) {
+      ball.textContent = String(res.number != null ? res.number : '?');
+      const col = String(res.color || '').toLowerCase();
+      ball.className = 'result-ball ' + (col.includes('green') ? 'n-green' : col.includes('red') ? 'n-red' : 'n-violet');
+    }
+    if ($('resultPeriodTxt')) $('resultPeriodTxt').textContent = `Period ${res.period || ''} • ${res.size || ''} • ${res.color || ''}`;
+
+    if (bets.length > 0) {
+      const won = totalPayout > 0;
+      if ($('resultIcon')) $('resultIcon').textContent = won ? '🏆' : '📉';
+      if ($('resultHeading')) $('resultHeading').textContent = won ? 'CONGRATULATIONS!' : 'BETTER LUCK NEXT ROUND';
+      if ($('resultProfitAmt')) {
+        $('resultProfitAmt').textContent = won ? `+${formatShortINR(totalPayout)} Won` : `-${formatShortINR(totalStake)}`;
+        $('resultProfitAmt').className = 'result-profit ' + (won ? 'win' : 'loss');
+      }
+      if (won) SoundEngine.win();
+      else SoundEngine.loss();
+    } else {
+      if ($('resultIcon')) $('resultIcon').textContent = '🎲';
+      if ($('resultHeading')) $('resultHeading').textContent = 'ROUND RESULT';
+      if ($('resultProfitAmt')) {
+        $('resultProfitAmt').textContent = `${res.color || ''} • ${res.size || ''}`;
+        $('resultProfitAmt').className = 'result-profit neutral';
+      }
     }
 
-    try {
-        const res = await fetch(window.apiUrl('/api/auth/me'), {
-            headers: { 'Authorization': `Bearer ${authToken}` }
-        });
-        const data = await res.json();
-
-        if (!data.success) {
-            localStorage.removeItem('gbcolors_token');
-            authToken = null;
-            authScreen.style.display = 'flex';
-            return;
-        }
-
-        if (data.role === 'ADMIN') {
-            await enterAdminPortal(data.admin);
-        } else {
-            enterUserArena(data.user);
-        }
-    } catch (e) {
-        authScreen.style.display = 'flex';
+    if ($('resultPopup')) $('resultPopup').style.display = 'flex';
+    if (resultAutoCloseTimer) clearTimeout(resultAutoCloseTimer);
+    if (userSettings.autoClose) {
+      resultAutoCloseTimer = setTimeout(() => {
+        if ($('resultPopup')) $('resultPopup').style.display = 'none';
+      }, 4000);
     }
-}
+  }
 
-window.performLogout = async function () {
-    try {
-        if (authToken) {
-            await fetch(window.apiUrl('/api/auth/logout'), {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${authToken}` }
-            });
-        }
-    } catch (e) {}
-
-    localStorage.removeItem('gbcolors_token');
-    authToken = null;
+  // =========================================================
+  // WEBSOCKET CONNECTION
+  // =========================================================
+  function connectUserSocket() {
     if (socket) {
-        socket.disconnect();
-        socket = null;
+      try { socket.disconnect(); } catch {}
+      socket = null;
+    }
+    if (typeof window.io !== 'function') {
+      showToast('WebSocket library missing', 'error');
+      return;
     }
 
-    adminPortalRoot.innerHTML = '';
-    adminPortalRoot.style.display = 'none';
-    gameAppRoot.style.display = 'none';
-    authScreen.style.display = 'flex';
-    showToast('Signed out successfully.');
-};
+    socket = window.io(getWsBaseUrl(), { auth: { token: authToken } });
 
-// Mount Protected Admin Portal dynamically ONLY for Admin
-async function enterAdminPortal(adminInfo) {
-    authScreen.style.display = 'none';
-    gameAppRoot.style.display = 'none';
-    adminPortalRoot.style.display = 'block';
+    socket.on('init_state', (payload) => {
+      if (!payload) return;
+      if (payload.user) currentUser = payload.user;
+      if (payload.gameState) {
+        gameState = Object.assign(gameState, payload.gameState);
+        if (Array.isArray(payload.gameState.tickerEvents)) {
+          LiveTickerEngine.addEvents(payload.gameState.tickerEvents);
+        }
+      }
+      renderUserSummary();
+      renderGameHistory();
+      updateClockAndLock();
+      LiveTickerEngine.start();
 
-    // Fetch protected HTML view
-    const htmlRes = await fetch(window.apiUrl('/api/admin/view'), {
-        headers: { 'Authorization': `Bearer ${authToken}` }
-    });
-    const adminHtml = await htmlRes.text();
-    adminPortalRoot.innerHTML = adminHtml;
-
-    // Fetch protected JS script and execute
-    const jsRes = await fetch(window.apiUrl('/api/admin/script'), {
-        headers: { 'Authorization': `Bearer ${authToken}` }
-    });
-    const adminJsCode = await jsRes.text();
-    eval(adminJsCode);
-
-    // Connect authenticated admin socket
-    socket = io(window.getSocketUrl(), { auth: { token: authToken } });
-    if (window.initAdminDashboard) {
-        window.initAdminDashboard(authToken, socket, adminInfo);
-    }
-}
-
-// Enter Regular User Game Arena
-function enterUserArena(userInfo) {
-    if (userInfo) user = { ...user, ...userInfo };
-    authScreen.style.display = 'none';
-    adminPortalRoot.style.display = 'none';
-    adminPortalRoot.innerHTML = '';
-    gameAppRoot.style.display = 'flex';
-
-    connectUserSocket();
-}
-
-// ====================================================
-// 2. USER GAME ARENA SOCKET & UI LOGIC
-// ====================================================
-function connectUserSocket() {
-    if (socket) socket.disconnect();
-    socket = io(window.getSocketUrl(), { auth: { token: authToken } });
-
-    socket.on('init_state', (data) => {
-        user = { ...user, ...data.user };
-        activeBets = data.user.activeBets || [];
-
-        updateActiveBalanceDisplay();
-        updateButtonBadges();
-        renderRecentResults(data.gameState.history);
-        renderHistoryTable(data.gameState.history);
-        renderMyBets(user.betHistory);
-        renderActiveBets(activeBets);
-        renderTransactions(user.transactions);
-
-        currentPeriod = data.gameState.period;
-        document.getElementById('periodNumber').textContent = currentPeriod;
-        updateTimerDisplay(data.gameState.timeLeft, data.gameState.status);
+      if (currentUser && Array.isArray(currentUser.unreadNotifications)) {
+        ingestUnreadNotifications(currentUser.unreadNotifications, true);
+      }
     });
 
-    socket.on('game_tick', (data) => {
-        currentPeriod = data.period;
-        document.getElementById('periodNumber').textContent = data.period;
-        updateTimerDisplay(data.timeLeft, data.status);
+    socket.on('game_tick', (tick) => {
+      if (!tick) return;
+      gameState.period = tick.period || gameState.period;
+      gameState.timeLeft = tick.timeLeft != null ? tick.timeLeft : gameState.timeLeft;
+      gameState.status = tick.status || gameState.status;
+      if (tick.cycleDurationSeconds) gameState.cycleDurationSeconds = tick.cycleDurationSeconds;
+      if (tick.betCloseSeconds) gameState.betCloseSeconds = tick.betCloseSeconds;
+      updateClockAndLock();
     });
 
-    socket.on('user_updated', (updatedUser) => {
-        user = { ...user, ...updatedUser };
-        updateActiveBalanceDisplay();
-        renderTransactions(user.transactions);
+    socket.on('user_updated', (u) => {
+      if (!u) return;
+      const keepActiveBets = currentUser ? currentUser.activeBets : [];
+      currentUser = Object.assign({}, currentUser || {}, u);
+      if (!u.activeBets) currentUser.activeBets = keepActiveBets;
+      renderUserSummary();
     });
 
     socket.on('active_bets_updated', (bets) => {
-        activeBets = bets;
-        renderActiveBets(activeBets);
-        updateButtonBadges();
+      if (!currentUser) return;
+      currentUser.activeBets = Array.isArray(bets) ? bets : [];
+      renderActiveBetBadges();
+      renderUserBetAndTxLists();
+    });
+
+    let lastPeriodSettledBets = [];
+    socket.on('bet_settled', (d) => {
+      if (!d) return;
+      if (currentUser) {
+        if (d.demoBalance != null) currentUser.demoBalance = d.demoBalance;
+        if (d.realBalance != null) currentUser.realBalance = d.realBalance;
+      }
+      if (d.bet) lastPeriodSettledBets.push(d.bet);
+      renderUserSummary();
     });
 
     socket.on('round_result', (data) => {
-        renderRecentResults(data.history);
-        renderHistoryTable(data.history);
+      if (!data) return;
+      if (Array.isArray(data.history)) gameState.history = data.history;
+      if (Array.isArray(data.newTickerEvents)) LiveTickerEngine.addEvents(data.newTickerEvents);
+      if (currentUser) currentUser.activeBets = [];
+      renderGameHistory();
+      renderUserSummary();
 
-        activeBets = [];
-        renderActiveBets(activeBets);
-        updateButtonBadges();
+      const settled = lastPeriodSettledBets.slice();
+      lastPeriodSettledBets = [];
+      showOutcomePopup({ result: data.result, settledBets: settled });
     });
 
-    socket.on('bet_settled', (data) => {
-        user.demoBalance = data.demoBalance;
-        user.realBalance = data.realBalance;
-        updateActiveBalanceDisplay();
+    socket.on('ticker_event', (ev) => {
+      if (ev) LiveTickerEngine.addEvents([ev]);
+    });
 
-        user.betHistory.unshift(data.bet);
-        if (user.betHistory.length > 60) user.betHistory.pop();
-        renderMyBets(user.betHistory);
+    socket.on('notification', (notif) => {
+      if (notif) ingestUnreadNotifications([notif], false);
+    });
 
-        showOutcomePopup(data.bet);
+    socket.on('account_blocked', (info) => {
+      // Disconnect cleanly first so gb-ws reconnect loop stops permanently
+      if (socket) {
+        try { socket.disconnect(); } catch {}
+        socket = null;
+      }
+      const reason = (info && info.reason) || 'Your account was restricted by Admin.';
+      const msg = (info && info.message) || reason;
+      if ($('blockedModalTitle')) {
+        $('blockedModalTitle').textContent = (info && info.blockType === 'PERMANENT') ? 'Account Permanently Blocked' : 'Account Temporarily Blocked';
+      }
+      if ($('blockedModalReason')) $('blockedModalReason').textContent = msg;
+      if ($('blockedModalUntil')) {
+        $('blockedModalUntil').textContent = info && info.blockedUntil
+          ? `Restricted until: ${formatTime(info.blockedUntil)}`
+          : 'Permanent restriction — contact support.';
+      }
+      if ($('blockedAlertModal')) $('blockedAlertModal').style.display = 'flex';
+      performLogout(true);
+      if ($('loginErrorMsg')) {
+        $('loginErrorMsg').textContent = msg;
+        $('loginErrorMsg').style.display = 'block';
+      }
     });
 
     socket.on('connect_error', (err) => {
-        if (err.message === 'AUTH_REQUIRED') {
-            window.performLogout();
-        }
+      if (err && err.message === 'AUTH_REQUIRED') {
+        performLogout();
+        showToast('Session expired — please sign in again', 'error');
+      }
     });
-}
+  }
 
-// DOM Elements inside User Game Arena
-const activeBalanceDisplay = document.getElementById('activeBalanceDisplay');
-const modeDemoBtn = document.getElementById('modeDemoBtn');
-const modeRealBtn = document.getElementById('modeRealBtn');
-const userProfileBtn = document.getElementById('userProfileBtn');
-const userStatusText = document.getElementById('userStatusText');
-const withdrawNavBtn = document.getElementById('withdrawNavBtn');
+  // =========================================================
+  // AUTHENTICATION & PORTAL ROUTING
+  // =========================================================
+  function enterUserArena(user) {
+    currentUser = user;
+    if ($('authScreen')) $('authScreen').style.display = 'none';
+    if ($('adminPortalRoot')) $('adminPortalRoot').style.display = 'none';
+    if ($('gameAppRoot')) $('gameAppRoot').style.display = 'block';
+    renderUserSummary();
+    navigateToView('game');
+    loadPaymentConfig();
+    connectUserSocket();
+  }
 
-const timerSecEl = document.getElementById('timerSec');
-const timerMinEl = document.getElementById('timerMin');
-const countdownClockEl = document.getElementById('countdownClock');
-const lockOverlayEl = document.getElementById('lockOverlay');
-const recentDotsListEl = document.getElementById('recentDotsList');
-
-const historyTableBodyEl = document.getElementById('historyTableBody');
-const activeBetsListEl = document.getElementById('activeBetsList');
-const activeBetsCountBadgeEl = document.getElementById('activeBetsCountBadge');
-const myBetsListEl = document.getElementById('myBetsList');
-const myBetsCountEl = document.getElementById('myBetsCount');
-const transactionsListEl = document.getElementById('transactionsList');
-
-function updateActiveBalanceDisplay() {
-    const isReal = user.mode === 'REAL';
-    const bal = isReal ? user.realBalance : user.demoBalance;
-    activeBalanceDisplay.textContent = formatCurrency(bal);
-
-    modeRealBtn.classList.toggle('active', isReal);
-    modeDemoBtn.classList.toggle('active', !isReal);
-    userStatusText.textContent = user.username || 'Account';
-}
-
-function updateButtonBadges() {
-    document.querySelectorAll('.bet-placed-badge').forEach(badge => {
-        badge.classList.remove('active');
-        badge.textContent = '₹0';
-    });
-
-    const totals = {};
-    activeBets.forEach(b => {
-        const key = String(b.choice).toUpperCase();
-        totals[key] = (totals[key] || 0) + b.amount;
-    });
-
-    for (const [choice, amt] of Object.entries(totals)) {
-        const badge = document.getElementById(`badge-${choice}`);
-        if (badge && amt > 0) {
-            badge.textContent = `₹${formatCurrency(amt)}`;
-            badge.classList.add('active');
-        }
+  async function enterAdminPortal(adminInfo) {
+    if ($('authScreen')) $('authScreen').style.display = 'none';
+    if ($('gameAppRoot')) $('gameAppRoot').style.display = 'none';
+    if (socket) {
+      try { socket.disconnect(); } catch {}
+      socket = null;
     }
-}
+    const root = $('adminPortalRoot');
+    if (!root) return;
+    root.style.display = 'block';
+    root.innerHTML = '<div class="admin-loading-box">Loading Admin Command Center...</div>';
 
-function updateTimerDisplay(seconds) {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    timerMinEl.textContent = String(mins).padStart(2, '0');
-    timerSecEl.textContent = String(secs).padStart(2, '0');
+    try {
+      const [htmlRes, jsRes] = await Promise.all([
+        fetch(getApiUrl('/api/admin/view'), { headers: { Authorization: 'Bearer ' + authToken } }),
+        fetch(getApiUrl('/api/admin/script'), { headers: { Authorization: 'Bearer ' + authToken } })
+      ]);
+      if (!htmlRes.ok || !jsRes.ok) {
+        performLogout();
+        showToast('Admin authorization failed', 'error');
+        return;
+      }
+      root.innerHTML = await htmlRes.text();
+      const prevScript = document.getElementById('gbAdminRuntimeScript');
+      if (prevScript) prevScript.remove();
+      const scriptText = await jsRes.text();
+      const s = document.createElement('script');
+      s.id = 'gbAdminRuntimeScript';
+      s.textContent = scriptText;
+      document.body.appendChild(s);
 
-    if (seconds <= 5 && seconds > 0) {
-        countdownClockEl.classList.add('timer-pulse');
-        lockOverlayEl.classList.add('active');
-        playTickSound();
+      if (typeof window.io === 'function') {
+        socket = window.io(getWsBaseUrl(), { auth: { token: authToken } });
+        socket.on('connect_error', (err) => {
+          if (err && err.message === 'AUTH_REQUIRED') {
+            performLogout();
+            showToast('Admin session expired — please sign in again', 'error');
+          }
+        });
+      }
+      if (typeof window.initAdminDashboard === 'function') {
+        window.initAdminDashboard(authToken, socket, adminInfo || {});
+      }
+    } catch (err) {
+      root.innerHTML = `<div class="admin-loading-box">Failed to load Admin Portal: ${escapeHtml(err.message)}</div>`;
+    }
+  }
+
+  function performLogout(preserveError) {
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    authToken = '';
+    currentUser = null;
+    sessionNotifications = [];
+    popupQueue = [];
+    activePopupNotif = null;
+    LiveTickerEngine.stop();
+    if (socket) {
+      try { socket.disconnect(); } catch {}
+      socket = null;
+    }
+    if ($('adminPortalRoot')) {
+      $('adminPortalRoot').style.display = 'none';
+      $('adminPortalRoot').innerHTML = '';
+    }
+    if ($('gameAppRoot')) $('gameAppRoot').style.display = 'none';
+    if ($('authScreen')) $('authScreen').style.display = 'flex';
+    if (!preserveError && $('loginErrorMsg')) {
+      $('loginErrorMsg').style.display = 'none';
+      $('loginErrorMsg').textContent = '';
+    }
+  }
+  window.performLogout = performLogout;
+
+  async function checkInitialAuth() {
+    if (!authToken) {
+      performLogout();
+      return;
+    }
+    const res = await apiFetch('/api/auth/me', { method: 'GET' });
+    if (!res.ok || !res.data.success) {
+      performLogout(Boolean(res.data && res.data.blocked));
+      if (res.data && res.data.blocked && $('loginErrorMsg')) {
+        $('loginErrorMsg').textContent = res.data.message || 'Your account is blocked.';
+        $('loginErrorMsg').style.display = 'block';
+      }
+      return;
+    }
+    if (res.data.role === 'ADMIN') {
+      enterAdminPortal(res.data.admin);
     } else {
-        countdownClockEl.classList.remove('timer-pulse');
-        lockOverlayEl.classList.remove('active');
+      enterUserArena(res.data.user);
     }
-}
+  }
 
-function getNumberBadgeClass(num, colors) {
-    if (num === 0) return 'bg-red-violet';
-    if (num === 5) return 'bg-green-violet';
-    if (colors && colors.includes('green')) return 'bg-green';
-    return 'bg-red';
-}
+  // Password validation UI helper
+  function evaluatePasswordRules(pw) {
+    const val = String(pw || '');
+    const checks = {
+      ruleLen: val.length >= 8,
+      ruleUpper: /[A-Z]/.test(val),
+      ruleLower: /[a-z]/.test(val),
+      ruleNum: /\d/.test(val),
+      ruleSym: /[^A-Za-z0-9\s]/.test(val),
+      ruleNoSpace: val.length > 0 && !/\s/.test(val)
+    };
+    Object.keys(checks).forEach((id) => {
+      const el = $(id);
+      if (el) el.classList.toggle('valid', checks[id]);
+    });
+    return Object.values(checks).every(Boolean);
+  }
 
-function renderRecentResults(historyList) {
-    if (!historyList || !historyList.length) return;
-    recentDotsListEl.innerHTML = historyList.slice(0, 7).map(item => {
-        return `<span class="recent-badge ${getNumberBadgeClass(item.number, item.colors)}">${item.number}</span>`;
-    }).join('');
-}
-
-function renderHistoryTable(historyList) {
-    if (!historyList || !historyList.length) return;
-    historyTableBodyEl.innerHTML = historyList.map(item => {
-        const badgeClass = getNumberBadgeClass(item.number, item.colors);
-        const colorLabels = item.colors.map(c => c.toUpperCase()).join(' + ');
-        const sizeClass = item.size === 'big' ? 'tag-big' : 'tag-small';
-        return `
-            <tr>
-                <td class="history-period-col">${item.period.slice(-4)}</td>
-                <td><div class="history-num-badge ${badgeClass}">${item.number}</div></td>
-                <td><span class="tag-size ${sizeClass}">${item.size.toUpperCase()}</span></td>
-                <td style="font-size: 11px; font-weight: 700; color: ${item.colors.includes('green') ? '#10b981' : '#ef4444'}">${colorLabels}</td>
-            </tr>
-        `;
-    }).join('');
-}
-
-function renderActiveBets(bets) {
-    activeBetsCountBadgeEl.textContent = bets.length;
-    if (!bets || bets.length === 0) {
-        activeBetsListEl.innerHTML = `<div class="empty-state">No active bets in the current round.</div>`;
-        return;
+  // =========================================================
+  // EVENT BINDINGS
+  // =========================================================
+  function bindEvents() {
+    // Auth Tabs
+    if ($('showSignInTab')) {
+      $('showSignInTab').addEventListener('click', () => {
+        $('showSignInTab').classList.add('active');
+        $('showSignUpTab').classList.remove('active');
+        $('signInForm').style.display = '';
+        $('signUpForm').style.display = 'none';
+      });
     }
-    activeBetsListEl.innerHTML = bets.map(b => `
-        <div class="bet-card-item active-bet">
-            <div class="bet-card-left">
-                <span class="bet-card-target">${b.type}: <strong>${b.choice}</strong> (₹${formatCurrency(b.amount)})</span>
-                <span class="bet-card-period">Issue: ${b.period.slice(-4)} | Mode: ${b.mode}</span>
-            </div>
-            <div class="bet-card-right">
-                <button class="btn-card-cancel" onclick="openCancelModal('${b.id}', '${b.choice}', ${b.amount})">Cancel Bet</button>
-            </div>
-        </div>
-    `).join('');
-}
-
-function renderMyBets(betHistory) {
-    myBetsCountEl.textContent = betHistory ? betHistory.length : 0;
-    if (!betHistory || betHistory.length === 0) {
-        myBetsListEl.innerHTML = `<div class="empty-state">No bets recorded yet.</div>`;
-        return;
+    if ($('showSignUpTab')) {
+      $('showSignUpTab').addEventListener('click', () => {
+        $('showSignUpTab').classList.add('active');
+        $('showSignInTab').classList.remove('active');
+        $('signUpForm').style.display = '';
+        $('signInForm').style.display = 'none';
+      });
     }
-    myBetsListEl.innerHTML = betHistory.map(b => {
-        const statusClass = b.status === 'CANCELLED' ? 'cancelled' : (b.win ? 'won' : 'lost');
-        const profitClass = b.win ? 'win' : 'lose';
-        const sign = b.win ? '+' : '';
-        const profitText = b.status === 'CANCELLED' ? 'CANCELLED (Refunded)' : `${sign}₹${formatCurrency(b.netProfit)}`;
-        return `
-            <div class="bet-card-item ${statusClass}">
-                <div class="bet-card-left">
-                    <span class="bet-card-target">${b.type}: <strong>${b.choice}</strong> (₹${formatCurrency(b.amount)})</span>
-                    <span class="bet-card-period">Issue: ${b.period.slice(-4)} | Mode: ${b.mode || 'DEMO'}</span>
-                </div>
-                <div class="bet-card-right">
-                    <span class="bet-profit-amt ${profitClass}">${profitText}</span>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
 
-function renderTransactions(txs) {
-    if (!txs || txs.length === 0) {
-        transactionsListEl.innerHTML = `<div class="empty-state">No deposits or withdrawals yet.</div>`;
-        return;
+    if ($('regPassword')) {
+      $('regPassword').addEventListener('input', (e) => evaluatePasswordRules(e.target.value));
     }
-    transactionsListEl.innerHTML = txs.map(t => {
-        const isDep = t.type === 'DEPOSIT';
-        const d = new Date(t.timestamp);
-        const timeStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const statusColor = t.status.includes('PAID') || t.status === 'SUCCESS' ? '#10b981' : (t.status.includes('PENDING') ? '#f59e0b' : '#ef4444');
-        return `
-            <div class="bet-card-item ${isDep ? 'won' : 'active-bet'}">
-                <div class="bet-card-left">
-                    <span class="bet-card-target">${t.type} — <strong>₹${formatCurrency(t.amount)}</strong></span>
-                    <span class="bet-card-period">${t.account || t.utr || ''} | ${timeStr}</span>
-                </div>
-                <div class="bet-card-right">
-                    <span style="font-size: 11px; font-weight: 800; color: ${statusColor};">${t.status}</span>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
 
-// Strict Bet Cancel Flow
-const cancelConfirmModal = document.getElementById('cancelConfirmModal');
-const cancelTargetName = document.getElementById('cancelTargetName');
-const cancelAmountTxt = document.getElementById('cancelAmountTxt');
-
-window.openCancelModal = function (betId, choice, amount) {
-    betPendingCancelId = betId;
-    cancelTargetName.textContent = choice;
-    cancelAmountTxt.textContent = `₹${formatCurrency(amount)}`;
-    cancelConfirmModal.classList.add('active');
-};
-
-document.getElementById('closeCancelModal').addEventListener('click', () => cancelConfirmModal.classList.remove('active'));
-document.getElementById('abortCancelBtn').addEventListener('click', () => cancelConfirmModal.classList.remove('active'));
-document.getElementById('executeCancelBtn').addEventListener('click', () => {
-    if (!betPendingCancelId || !socket) return;
-    socket.emit('cancel_bet', betPendingCancelId, (res) => {
-        cancelConfirmModal.classList.remove('active');
-        if (res.success) playBetSound();
-        showToast(res.message);
-        betPendingCancelId = null;
-    });
-});
-
-// Fast 1-Tap Bet Modal
-const betModalEl = document.getElementById('betModal');
-const modalBetTargetEl = document.getElementById('modalBetTarget');
-const summaryTotalAmtEl = document.getElementById('summaryTotalAmt');
-const summaryEstPayoutEl = document.getElementById('summaryEstPayout');
-const confirmBetBtnEl = document.getElementById('confirmBetBtn');
-
-document.querySelectorAll('.bet-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-        getAudioContext();
-        const type = btn.getAttribute('data-type');
-        const choice = btn.getAttribute('data-choice');
-
-        currentSelectedBet.type = type;
-        currentSelectedBet.choice = choice;
-        currentSelectedBet.baseAmount = 10;
-        currentSelectedBet.multiplier = 1;
-        currentSelectedBet.payoutRate = type === 'NUMBER' ? 9 : (choice === 'VIOLET' ? 4.5 : 2);
-
-        modalBetTargetEl.textContent = `${type}: ${choice}`;
-        updateModalCalculations();
-
-        document.querySelectorAll('#betModal .chip-btn').forEach(c => c.classList.remove('active'));
-        document.querySelector('#betModal .chip-btn[data-amount="10"]')?.classList.add('active');
-        document.querySelectorAll('#betModal .mult-btn').forEach(m => m.classList.remove('active'));
-        document.querySelector('#betModal .mult-btn[data-mult="1"]')?.classList.add('active');
-
-        betModalEl.classList.add('active');
-    });
-});
-
-function updateModalCalculations() {
-    const totalAmount = currentSelectedBet.baseAmount * currentSelectedBet.multiplier;
-    const estPayout = Math.floor(totalAmount * currentSelectedBet.payoutRate);
-    summaryTotalAmtEl.textContent = `₹${formatCurrency(totalAmount)}`;
-    summaryEstPayoutEl.textContent = `₹${formatCurrency(estPayout)}`;
-    confirmBetBtnEl.textContent = `Confirm & Place Bet (₹${formatCurrency(totalAmount)})`;
-}
-
-document.querySelectorAll('#betModal .chip-btn').forEach(chip => {
-    chip.addEventListener('click', () => {
-        document.querySelectorAll('#betModal .chip-btn').forEach(c => c.classList.remove('active'));
-        chip.classList.add('active');
-        currentSelectedBet.baseAmount = parseInt(chip.getAttribute('data-amount'), 10);
-        updateModalCalculations();
-    });
-});
-
-document.querySelectorAll('#betModal .mult-btn').forEach(mBtn => {
-    mBtn.addEventListener('click', () => {
-        document.querySelectorAll('#betModal .mult-btn').forEach(m => m.classList.remove('active'));
-        mBtn.classList.add('active');
-        currentSelectedBet.multiplier = parseInt(mBtn.getAttribute('data-mult'), 10);
-        updateModalCalculations();
-    });
-});
-
-confirmBetBtnEl.addEventListener('click', () => {
-    const totalAmount = currentSelectedBet.baseAmount * currentSelectedBet.multiplier;
-    socket.emit('place_bet', {
-        type: currentSelectedBet.type,
-        choice: currentSelectedBet.choice,
-        amount: totalAmount
-    }, (res) => {
-        if (res.success) {
-            playBetSound();
-            betModalEl.classList.remove('active');
+    // Send OTP
+    if ($('sendOtpBtn')) {
+      $('sendOtpBtn').addEventListener('click', async () => {
+        const email = String(($('regEmail') && $('regEmail').value) || '').trim();
+        if (!email) {
+          showToast('Enter your email first', 'error');
+          return;
         }
-        showToast(res.message);
-    });
-});
-
-document.getElementById('closeBetModal').addEventListener('click', () => betModalEl.classList.remove('active'));
-
-// Mode Switcher
-modeDemoBtn.addEventListener('click', () => {
-    socket.emit('switch_mode', 'DEMO', (res) => {
-        if (res.success) showToast('Switched to Demo Practice Mode');
-    });
-});
-modeRealBtn.addEventListener('click', () => {
-    socket.emit('switch_mode', 'REAL', (res) => {
-        if (res.success) showToast('Switched to Real Money Mode!');
-    });
-});
-
-// Deposit Modal
-const depositModal = document.getElementById('depositModal');
-const tabDemoReload = document.getElementById('tabDemoReload');
-const tabRealDeposit = document.getElementById('tabRealDeposit');
-const sectionDemoReload = document.getElementById('sectionDemoReload');
-const sectionRealDeposit = document.getElementById('sectionRealDeposit');
-
-document.getElementById('walletActionBtn').addEventListener('click', () => depositModal.classList.add('active'));
-document.getElementById('closeDepositModal').addEventListener('click', () => depositModal.classList.remove('active'));
-
-tabDemoReload.addEventListener('click', () => {
-    tabDemoReload.classList.add('active');
-    tabRealDeposit.classList.remove('active');
-    sectionDemoReload.style.display = 'block';
-    sectionRealDeposit.style.display = 'none';
-});
-tabRealDeposit.addEventListener('click', () => {
-    tabRealDeposit.classList.add('active');
-    tabDemoReload.classList.remove('active');
-    sectionRealDeposit.style.display = 'block';
-    sectionDemoReload.style.display = 'none';
-});
-
-window.addDemoBalance = function (amt) {
-    socket.emit('add_demo_balance', amt, (res) => {
-        if (res.success) {
-            playBetSound();
-            showToast(res.message);
-            depositModal.classList.remove('active');
+        const btn = $('sendOtpBtn');
+        btn.disabled = true;
+        btn.textContent = 'Sending...';
+        try {
+          const res = await apiFetch('/api/auth/send-otp', {
+            method: 'POST',
+            body: JSON.stringify({ email })
+          });
+          if (!res.ok || !res.data.success) {
+            showToast(res.data.message || res.data.error || 'Could not send OTP', 'error');
+            return;
+          }
+          if ($('otpNoticeBox')) {
+            $('otpNoticeBox').textContent = res.data.devOtp
+              ? `Verification Code (Dev Mode): ${res.data.devOtp}`
+              : (res.data.message || 'OTP sent to your email address');
+            $('otpNoticeBox').style.display = 'block';
+          }
+          showToast('Verification OTP sent!', 'success');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = 'Resend OTP';
         }
-    });
-};
+      });
+    }
 
-window.setDepositAmt = function (amt, btnEl) {
-    selectedDepositAmt = amt;
-    document.querySelectorAll('#depAmtChips .chip-btn').forEach(b => b.classList.remove('active'));
-    if (btnEl) btnEl.classList.add('active');
-};
+    // Sign Up
+    if ($('signUpForm')) {
+      $('signUpForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errBox = $('signupErrorMsg');
+        if (errBox) errBox.style.display = 'none';
+        const email = String($('regEmail').value || '').trim();
+        const otp = String($('regOtp').value || '').trim();
+        const password = String($('regPassword').value || '');
+        const confirm = String($('regConfirmPassword').value || '');
+        if (!evaluatePasswordRules(password)) {
+          errBox.textContent = 'Password must satisfy all security rules above.';
+          errBox.style.display = 'block';
+          return;
+        }
+        if (password !== confirm) {
+          errBox.textContent = 'Passwords do not match.';
+          errBox.style.display = 'block';
+          return;
+        }
+        const btn = $('signUpSubmitBtn');
+        btn.disabled = true;
+        try {
+          const res = await apiFetch('/api/auth/signup', {
+            method: 'POST',
+            body: JSON.stringify({ email, otp, password })
+          });
+          if (!res.ok || !res.data.success) {
+            errBox.textContent = res.data.message || res.data.error || 'Signup failed';
+            errBox.style.display = 'block';
+            return;
+          }
+          authToken = res.data.token;
+          localStorage.setItem(AUTH_TOKEN_KEY, authToken);
+          enterUserArena(res.data.user);
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    }
 
-document.getElementById('submitDepositBtn').addEventListener('click', () => {
-    const utr = document.getElementById('depositUtrInput').value.trim();
-    if (!utr || utr.length < 8) {
-        showToast('Please enter a valid 12-digit UPI UTR number!');
+    // Sign In
+    if ($('signInForm')) {
+      $('signInForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errBox = $('loginErrorMsg');
+        if (errBox) errBox.style.display = 'none';
+        const email = String($('loginEmail').value || '').trim();
+        const password = String($('loginPassword').value || '');
+        const btn = $('signInSubmitBtn');
+        btn.disabled = true;
+        try {
+          const res = await apiFetch('/api/auth/signin', {
+            method: 'POST',
+            body: JSON.stringify({ email, password })
+          });
+          if (!res.ok || !res.data.success) {
+            errBox.textContent = res.data.message || res.data.error || 'Invalid credentials';
+            errBox.style.display = 'block';
+            return;
+          }
+          authToken = res.data.token;
+          localStorage.setItem(AUTH_TOKEN_KEY, authToken);
+          if (res.data.role === 'ADMIN') {
+            enterAdminPortal(res.data.admin);
+          } else {
+            enterUserArena(res.data.user);
+          }
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    }
+
+    // Side Drawer & Navigation
+    if ($('userMenuBtn')) $('userMenuBtn').addEventListener('click', openUserDrawer);
+    if ($('closeUserDrawerBtn')) $('closeUserDrawerBtn').addEventListener('click', closeUserDrawer);
+    if ($('userDrawerBackdrop')) $('userDrawerBackdrop').addEventListener('click', closeUserDrawer);
+    if ($('brandHomeBtn')) $('brandHomeBtn').addEventListener('click', () => navigateToView('game'));
+    if ($('headerRechargeBtn')) $('headerRechargeBtn').addEventListener('click', () => navigateToView('payment', 'recharge'));
+    if ($('paymentNavBtn')) $('paymentNavBtn').addEventListener('click', () => navigateToView('payment', 'recharge'));
+
+    document.addEventListener('click', (e) => {
+      const navBtn = e.target.closest('[data-view]');
+      if (navBtn && navBtn.closest('#userSideDrawer')) {
+        navigateToView(navBtn.dataset.view);
         return;
+      }
+      const goNav = e.target.closest('[data-nav]');
+      if (goNav) {
+        navigateToView(goNav.dataset.nav, goNav.dataset.paytab || null);
+      }
+    });
+
+    // Logout buttons
+    [$('drawerLogoutBtn'), $('profLogoutBtn'), $('settingsLogoutBtn')].forEach((btn) => {
+      if (btn) {
+        btn.addEventListener('click', async () => {
+          closeUserDrawer();
+          try { await apiFetch('/api/auth/logout', { method: 'POST' }); } catch {}
+          performLogout();
+          showToast('Signed out cleanly', 'info');
+        });
+      }
+    });
+
+    // Mode Switcher
+    if ($('modeDemoBtn')) {
+      $('modeDemoBtn').addEventListener('click', () => {
+        if (socket) socket.emit('switch_mode', 'DEMO');
+      });
     }
-    socket.emit('submit_deposit', { amount: selectedDepositAmt, utr, method: 'UPI' }, (res) => {
-        if (res.success) {
-            playWinSound();
-            document.getElementById('depositUtrInput').value = '';
-            depositModal.classList.remove('active');
+    if ($('modeRealBtn')) {
+      $('modeRealBtn').addEventListener('click', () => {
+        if (socket) socket.emit('switch_mode', 'REAL');
+      });
+    }
+
+    // Sound Header Quick Toggle
+    if ($('soundToggleBtn')) {
+      $('soundToggleBtn').addEventListener('click', () => {
+        userSettings.sfx = !userSettings.sfx;
+        saveSettings();
+        $('soundToggleBtn').textContent = userSettings.sfx ? '🔊' : '🔇';
+        if ($('settingSfx')) $('settingSfx').checked = userSettings.sfx;
+      });
+    }
+
+    // Settings Toggles
+    const syncSettingsUi = () => {
+      if ($('settingSfx')) $('settingSfx').checked = userSettings.sfx;
+      if ($('settingBgm')) $('settingBgm').checked = userSettings.bgm;
+      if ($('settingAutoClose')) $('settingAutoClose').checked = userSettings.autoClose;
+      if ($('settingVibrate')) $('settingVibrate').checked = userSettings.vibrate;
+      if ($('soundToggleBtn')) $('soundToggleBtn').textContent = userSettings.sfx ? '🔊' : '🔇';
+    };
+    syncSettingsUi();
+
+    ['settingSfx', 'settingBgm', 'settingAutoClose', 'settingVibrate'].forEach((id) => {
+      const el = $(id);
+      if (!el) return;
+      el.addEventListener('change', () => {
+        userSettings.sfx = $('settingSfx').checked;
+        userSettings.bgm = $('settingBgm').checked;
+        userSettings.autoClose = $('settingAutoClose').checked;
+        userSettings.vibrate = $('settingVibrate').checked;
+        saveSettings();
+        syncSettingsUi();
+        SoundEngine.syncBgm();
+      });
+    });
+    if ($('testAudioBtn')) $('testAudioBtn').addEventListener('click', () => SoundEngine.win());
+
+    // Records Sub-tabs
+    document.querySelectorAll('.rec-tab-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const t = btn.dataset.rectab;
+        document.querySelectorAll('.rec-tab-btn').forEach((b) => b.classList.toggle('active', b === btn));
+        ['history', 'active', 'mybets', 'txs'].forEach((p) => {
+          const panel = $('recPanel-' + p);
+          if (panel) panel.classList.toggle('active', p === t);
+        });
+      });
+    });
+
+    // Payment Sub-tabs & Quick Chips
+    document.querySelectorAll('.pay-subtab-btn').forEach((btn) => {
+      btn.addEventListener('click', () => switchPaymentSubTab(btn.dataset.paytab));
+    });
+    document.querySelectorAll('.chip-amt-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const input = $(btn.dataset.target);
+        if (input) input.value = btn.dataset.val;
+        SoundEngine.click();
+      });
+    });
+    document.querySelectorAll('.btn-demo-add').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const amt = Number(btn.dataset.demoamt || 0);
+        if (socket && amt > 0) {
+          socket.emit('add_demo_balance', amt, (ack) => {
+            if (ack && ack.success) showToast(`Added ${formatShortINR(amt)} Demo Coins`, 'success');
+          });
         }
-        showToast(res.message);
+      });
     });
-});
 
-// Withdrawal Modal
-const withdrawModal = document.getElementById('withdrawModal');
-withdrawNavBtn.addEventListener('click', () => {
-    document.getElementById('withdrawAvailableBal').textContent = `₹${formatCurrency(user.realBalance)}`;
-    withdrawModal.classList.add('active');
-});
-document.getElementById('closeWithdrawModal').addEventListener('click', () => withdrawModal.classList.remove('active'));
-
-document.getElementById('submitWithdrawBtn').addEventListener('click', () => {
-    const amount = parseInt(document.getElementById('withdrawAmountInput').value, 10);
-    const upiOrBank = document.getElementById('withdrawAccountInput').value.trim();
-    socket.emit('submit_withdrawal', { amount, upiOrBank }, (res) => {
-        if (res.success) {
-            document.getElementById('withdrawAmountInput').value = '';
-            document.getElementById('withdrawAccountInput').value = '';
-            withdrawModal.classList.remove('active');
+    if ($('generateUpiQrBtn')) $('generateUpiQrBtn').addEventListener('click', handleGenerateUpiQr);
+    if ($('submitDepositBtn')) $('submitDepositBtn').addEventListener('click', handleSubmitUtr);
+    if ($('rzpPayBtn')) $('rzpPayBtn').addEventListener('click', handleRazorpayPay);
+    if ($('submitWithdrawBtn')) $('submitWithdrawBtn').addEventListener('click', handleSubmitWithdraw);
+    if ($('copyUpiIdBtn')) {
+      $('copyUpiIdBtn').addEventListener('click', async () => {
+        const text = ($('upiIdDisplay') && $('upiIdDisplay').textContent) || '';
+        if (!text) return;
+        try {
+          await navigator.clipboard.writeText(text);
+          showToast('UPI ID copied!', 'success');
+        } catch {
+          showToast('UPI ID: ' + text, 'info');
         }
-        showToast(res.message);
-    });
-});
-
-// User Profile Modal
-const profileModal = document.getElementById('profileModal');
-userProfileBtn.addEventListener('click', () => {
-    document.getElementById('profUsername').textContent = user.username;
-    document.getElementById('profEmail').textContent = user.email;
-    document.getElementById('profVipBadge').textContent = user.userId;
-    document.getElementById('profDemoBal').textContent = `₹${formatCurrency(user.demoBalance)}`;
-    document.getElementById('profRealBal').textContent = `₹${formatCurrency(user.realBalance)}`;
-    profileModal.classList.add('active');
-});
-document.getElementById('closeProfileModal').addEventListener('click', () => profileModal.classList.remove('active'));
-document.getElementById('userLogoutBtn').addEventListener('click', () => {
-    profileModal.classList.remove('active');
-    window.performLogout();
-});
-
-// Settings Modal
-const settingsModal = document.getElementById('settingsModal');
-document.getElementById('settingsBtn').addEventListener('click', () => settingsModal.classList.add('active'));
-document.getElementById('closeSettingsModal').addEventListener('click', () => settingsModal.classList.remove('active'));
-
-const settingSfx = document.getElementById('settingSfx');
-const settingBgm = document.getElementById('settingBgm');
-const settingAutoClose = document.getElementById('settingAutoClose');
-const settingVibrate = document.getElementById('settingVibrate');
-const soundIconEl = document.getElementById('soundIcon');
-
-settingSfx.addEventListener('change', (e) => { settings.sfx = e.target.checked; });
-settingBgm.addEventListener('change', (e) => { toggleBgm(e.target.checked); });
-settingAutoClose.addEventListener('change', (e) => { settings.autoClose = e.target.checked; });
-settingVibrate.addEventListener('change', (e) => { settings.vibrate = e.target.checked; });
-
-document.getElementById('soundToggleBtn').addEventListener('click', () => {
-    settings.sfx = !settings.sfx;
-    soundIconEl.textContent = settings.sfx ? '🔊' : '🔇';
-    settingSfx.checked = settings.sfx;
-    showToast(settings.sfx ? 'Sound Unmuted' : 'Sound Muted');
-});
-
-// Outcome Popup
-const resultPopupEl = document.getElementById('resultPopup');
-function showOutcomePopup(bet) {
-    const badgeClass = getNumberBadgeClass(bet.resultNumber, bet.resultColors);
-    document.getElementById('resultNumberBall').className = `result-ball ${badgeClass}`;
-    document.getElementById('resultNumberBall').textContent = bet.resultNumber;
-    document.getElementById('resultPeriodTxt').textContent = `Period: ${bet.period} | Result: ${bet.resultColors.join('+').toUpperCase()}`;
-
-    const iconEl = document.getElementById('resultIcon');
-    const headEl = document.getElementById('resultHeading');
-    const amtEl = document.getElementById('resultProfitAmt');
-
-    if (bet.win) {
-        playWinSound();
-        iconEl.textContent = '🎉';
-        headEl.textContent = 'Congratulations!';
-        headEl.style.color = '#10b981';
-        amtEl.textContent = `+₹${formatCurrency(bet.netProfit)}`;
-        amtEl.style.color = '#10b981';
-    } else {
-        playLoseSound();
-        iconEl.textContent = '💔';
-        headEl.textContent = 'Better Luck Next Time!';
-        headEl.style.color = '#ef4444';
-        amtEl.textContent = `-₹${formatCurrency(bet.amount)}`;
-        amtEl.style.color = '#ef4444';
+      });
     }
 
-    resultPopupEl.classList.add('active');
-    if (settings.autoClose) {
-        setTimeout(() => resultPopupEl.classList.remove('active'), 4000);
-    }
-}
-document.getElementById('closeResultBtn').addEventListener('click', () => resultPopupEl.classList.remove('active'));
-
-// User Panel Tab Switching
-document.querySelectorAll('.tab-btn').forEach(tab => {
-    tab.addEventListener('click', () => {
-        document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        tab.classList.add('active');
-        document.getElementById(tab.getAttribute('data-tab'))?.classList.add('active');
+    // Betting Buttons
+    document.querySelectorAll('.bet-btn').forEach((btn) => {
+      btn.addEventListener('click', () => openBetModal(btn.dataset.type, btn.dataset.choice));
     });
-});
 
-// Initialize on load
-checkInitialAuth();
+    document.querySelectorAll('.unit-chip').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        pendingBet.unit = Number(btn.dataset.unit || 10);
+        document.querySelectorAll('.unit-chip').forEach((b) => b.classList.toggle('active', b === btn));
+        if ($('betCustomAmountInput')) $('betCustomAmountInput').value = String(pendingBet.unit * pendingBet.mult);
+        updateBetSummary();
+        SoundEngine.click();
+      });
+    });
+    document.querySelectorAll('.mult-chip').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        pendingBet.mult = Number(btn.dataset.mult || 1);
+        document.querySelectorAll('.mult-chip').forEach((b) => b.classList.toggle('active', b === btn));
+        if ($('betCustomAmountInput')) $('betCustomAmountInput').value = String(pendingBet.unit * pendingBet.mult);
+        updateBetSummary();
+        SoundEngine.click();
+      });
+    });
+    if ($('betCustomAmountInput')) $('betCustomAmountInput').addEventListener('input', updateBetSummary);
+    if ($('closeBetModal')) $('closeBetModal').addEventListener('click', () => { $('betModal').style.display = 'none'; });
+    if ($('confirmBetBtn')) {
+      $('confirmBetBtn').addEventListener('click', () => {
+        if (!socket || !socket.connected) {
+          showToast('Connecting to arena...', 'error');
+          return;
+        }
+        const amt = Number(($('betCustomAmountInput') && $('betCustomAmountInput').value) || (pendingBet.unit * pendingBet.mult));
+        if (!Number.isFinite(amt) || amt <= 0) {
+          showToast('Enter a valid wager amount', 'error');
+          return;
+        }
+        $('confirmBetBtn').disabled = true;
+        socket.emit('place_bet', { type: pendingBet.type, choice: pendingBet.choice, amount: amt }, (ack) => {
+          $('confirmBetBtn').disabled = false;
+          if (ack && ack.success) {
+            $('betModal').style.display = 'none';
+            SoundEngine.click();
+            showToast(`Bet ${formatShortINR(amt)} placed on ${pendingBet.choice}`, 'success');
+          } else {
+            showToast((ack && ack.message) || 'Could not place bet', 'error');
+          }
+        });
+      });
+    }
+
+    // Cancel Bet Delegation
+    document.addEventListener('click', (e) => {
+      const cBtn = e.target.closest('[data-cancel-bet]');
+      if (!cBtn) return;
+      pendingCancelBetId = cBtn.dataset.cancelBet;
+      if ($('cancelTargetName')) $('cancelTargetName').textContent = cBtn.dataset.choice || 'Bet';
+      if ($('cancelAmountTxt')) $('cancelAmountTxt').textContent = formatShortINR(cBtn.dataset.amt || 0);
+      if ($('cancelConfirmModal')) $('cancelConfirmModal').style.display = 'flex';
+    });
+    if ($('closeCancelModal')) $('closeCancelModal').addEventListener('click', () => { $('cancelConfirmModal').style.display = 'none'; });
+    if ($('abortCancelBtn')) $('abortCancelBtn').addEventListener('click', () => { $('cancelConfirmModal').style.display = 'none'; });
+    if ($('executeCancelBtn')) {
+      $('executeCancelBtn').addEventListener('click', () => {
+        if (!pendingCancelBetId || !socket) return;
+        socket.emit('cancel_bet', pendingCancelBetId, (ack) => {
+          $('cancelConfirmModal').style.display = 'none';
+          if (ack && ack.success) showToast('Bet cancelled & refunded', 'info');
+          else showToast((ack && ack.message) || 'Cannot cancel bet', 'error');
+        });
+      });
+    }
+
+    // Outcome Popup Close
+    if ($('closeResultBtn')) $('closeResultBtn').addEventListener('click', () => { $('resultPopup').style.display = 'none'; });
+
+    // Notifications Modals
+    if ($('notifModalAckBtn')) $('notifModalAckBtn').addEventListener('click', () => acknowledgeActivePopup(false));
+    if ($('notifModalViewStatusBtn')) $('notifModalViewStatusBtn').addEventListener('click', () => acknowledgeActivePopup(true));
+    if ($('notifBellBtn')) {
+      $('notifBellBtn').addEventListener('click', () => {
+        renderNotificationsInbox();
+        if ($('notificationsHistoryModal')) $('notificationsHistoryModal').style.display = 'flex';
+      });
+    }
+    if ($('drawerNotifBtn')) {
+      $('drawerNotifBtn').addEventListener('click', () => {
+        closeUserDrawer();
+        renderNotificationsInbox();
+        if ($('notificationsHistoryModal')) $('notificationsHistoryModal').style.display = 'flex';
+      });
+    }
+    if ($('closeNotifsHistoryModal')) {
+      $('closeNotifsHistoryModal').addEventListener('click', () => { $('notificationsHistoryModal').style.display = 'none'; });
+    }
+    if ($('markAllNotifsReadBtn')) {
+      $('markAllNotifsReadBtn').addEventListener('click', async () => {
+        const unreadIds = sessionNotifications.filter((n) => !n.isRead).map((n) => n.id);
+        await markNotificationsAsRead(unreadIds);
+        showToast('All notifications marked as read', 'success');
+      });
+    }
+
+    // Blocked Modal Ack
+    if ($('blockedModalAckBtn')) {
+      $('blockedModalAckBtn').addEventListener('click', () => {
+        if ($('blockedAlertModal')) $('blockedAlertModal').style.display = 'none';
+      });
+    }
+
+    // Escape closes drawer/modals
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeUserDrawer();
+    });
+  }
+
+  // Bootstrap
+  document.addEventListener('DOMContentLoaded', () => {
+    bindEvents();
+    checkInitialAuth();
+  });
+})();

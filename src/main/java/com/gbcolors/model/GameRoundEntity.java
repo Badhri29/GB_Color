@@ -26,6 +26,15 @@ public class GameRoundEntity {
     @Column(name = "size", nullable = false, length = 16)
     private String size;
 
+    @Column(name = "total_collected", precision = 14, scale = 2)
+    private java.math.BigDecimal totalCollected = java.math.BigDecimal.ZERO;
+
+    @Column(name = "total_payout", precision = 14, scale = 2)
+    private java.math.BigDecimal totalPayout = java.math.BigDecimal.ZERO;
+
+    @Column(name = "house_profit", precision = 14, scale = 2)
+    private java.math.BigDecimal houseProfit = java.math.BigDecimal.ZERO;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
 
@@ -43,6 +52,15 @@ public class GameRoundEntity {
 
     public String getSize() { return size; }
     public void setSize(String size) { this.size = size; }
+
+    public java.math.BigDecimal getTotalCollected() { return totalCollected != null ? totalCollected : java.math.BigDecimal.ZERO; }
+    public void setTotalCollected(java.math.BigDecimal totalCollected) { this.totalCollected = totalCollected; }
+
+    public java.math.BigDecimal getTotalPayout() { return totalPayout != null ? totalPayout : java.math.BigDecimal.ZERO; }
+    public void setTotalPayout(java.math.BigDecimal totalPayout) { this.totalPayout = totalPayout; }
+
+    public java.math.BigDecimal getHouseProfit() { return houseProfit != null ? houseProfit : java.math.BigDecimal.ZERO; }
+    public void setHouseProfit(java.math.BigDecimal houseProfit) { this.houseProfit = houseProfit; }
 
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }

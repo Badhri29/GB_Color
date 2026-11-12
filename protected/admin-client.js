@@ -3,22 +3,54 @@
     let adminSocket = null;
     let latestAnalytics = null;
     let smtpFormPopulated = false;
+    let gameConfigPopulated = false;
+    let paymentConfigPopulated = false;
+    let blockTargetEmail = '';
+    let selectedBlockType = 'TEMPORARY';
 
     window.initAdminDashboard = function (token, socket, adminInfo) {
         adminToken = token;
         adminSocket = socket;
 
         const emailEl = document.getElementById('admHeaderEmail');
+        const drawerEmailEl = document.getElementById('admDrawerEmail');
         if (emailEl && adminInfo) emailEl.textContent = adminInfo.email;
+        if (drawerEmailEl && adminInfo) drawerEmailEl.textContent = adminInfo.email;
 
-        // Setup Admin Navigation Tabs
+        function switchAdminTab(tabId) {
+            document.querySelectorAll('.adm-tab-btn').forEach(b => {
+                b.classList.toggle('active', b.getAttribute('data-admtab') === tabId);
+            });
+            document.querySelectorAll('.adm-tab-panel').forEach(p => {
+                p.classList.toggle('active', p.id === tabId);
+            });
+            document.querySelectorAll('#admSideDrawer .drawer-nav-item').forEach(b => {
+                b.classList.toggle('active', b.getAttribute('data-admdrawer') === tabId);
+            });
+        }
+
         document.querySelectorAll('.adm-tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => switchAdminTab(btn.getAttribute('data-admtab')));
+        });
+
+        // Side Drawer Controls (PC & Mobile)
+        const drawer = document.getElementById('admSideDrawer');
+        const backdrop = document.getElementById('admDrawerBackdrop');
+        function openAdmDrawer() {
+            drawer?.classList.add('open');
+            backdrop?.classList.add('active');
+        }
+        function closeAdmDrawer() {
+            drawer?.classList.remove('open');
+            backdrop?.classList.remove('active');
+        }
+        document.getElementById('admMenuBtn')?.addEventListener('click', openAdmDrawer);
+        document.getElementById('closeAdmDrawerBtn')?.addEventListener('click', closeAdmDrawer);
+        backdrop?.addEventListener('click', closeAdmDrawer);
+        document.querySelectorAll('#admSideDrawer .drawer-nav-item').forEach(btn => {
             btn.addEventListener('click', () => {
-                document.querySelectorAll('.adm-tab-btn').forEach(b => b.classList.remove('active'));
-                document.querySelectorAll('.adm-tab-panel').forEach(p => p.classList.remove('active'));
-                btn.classList.add('active');
-                const target = btn.getAttribute('data-admtab');
-                document.getElementById(target)?.classList.add('active');
+                switchAdminTab(btn.getAttribute('data-admdrawer'));
+                closeAdmDrawer();
             });
         });
 
@@ -41,14 +73,69 @@
             `).join('');
         }
 
-        // Logout button
-        document.getElementById('admLogoutBtn')?.addEventListener('click', () => {
+        // Logout buttons
+        document.getElementById('admLogoutBtn')?.addEventListener('click', () => window.performLogout());
+        document.getElementById('admDrawerLogoutBtn')?.addEventListener('click', () => {
+            closeAdmDrawer();
             window.performLogout();
         });
 
         // Search users filter
         document.getElementById('admUserSearch')?.addEventListener('input', () => {
             if (latestAnalytics) renderUsersTable(latestAnalytics.users);
+        });
+
+        // Save Game Timing & Profit Margin (Settings Tab + Inline Margin)
+        async function saveGameConfig(cycleVal, closeVal, marginVal) {
+            const res = await fetch(window.apiUrl('/api/admin/game-config'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${adminToken}`
+                },
+                body: JSON.stringify({
+                    cycleDurationSeconds: cycleVal,
+                    betCloseSeconds: closeVal,
+                    adminMinProfitPercent: marginVal
+                })
+            });
+            const data = await res.json();
+            window.showToast(data.message);
+        }
+
+        document.getElementById('saveGameConfigBtn')?.addEventListener('click', () => {
+            const c = parseInt(document.getElementById('cfgCycleSeconds').value, 10);
+            const cl = parseInt(document.getElementById('cfgBetCloseSeconds').value, 10);
+            const m = parseInt(document.getElementById('cfgAdminMarginPct').value, 10);
+            saveGameConfig(c, cl, m);
+        });
+
+        document.getElementById('admSaveInlineMarginBtn')?.addEventListener('click', () => {
+            const c = latestAnalytics ? latestAnalytics.cycleDurationSeconds : 30;
+            const cl = latestAnalytics ? latestAnalytics.betCloseSeconds : 5;
+            const m = parseInt(document.getElementById('admInlineMarginInput').value, 10);
+            document.getElementById('cfgAdminMarginPct').value = m;
+            saveGameConfig(c, cl, m);
+        });
+
+        // Save Payment Config
+        document.getElementById('savePaymentConfigBtn')?.addEventListener('click', async () => {
+            const payload = {
+                upiId: document.getElementById('cfgUpiId').value,
+                upiPayeeName: document.getElementById('cfgUpiPayeeName').value,
+                razorpayKeyId: document.getElementById('cfgRzpKeyId').value,
+                razorpayKeySecret: document.getElementById('cfgRzpKeySecret').value
+            };
+            const res = await fetch(window.apiUrl('/api/admin/payment-config'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${adminToken}`
+                },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            window.showToast(data.message);
         });
 
         // Save SMTP settings
@@ -92,39 +179,144 @@
             }
         });
 
+        // Admin Block Modal Wiring
+        const blockModal = document.getElementById('admBlockModal');
+        const tempBtn = document.getElementById('admBlockTypeTempBtn');
+        const permBtn = document.getElementById('admBlockTypePermBtn');
+        const tempWrap = document.getElementById('admTempDurationWrap');
+
+        tempBtn?.addEventListener('click', () => {
+            selectedBlockType = 'TEMPORARY';
+            tempBtn.classList.add('active');
+            permBtn?.classList.remove('active');
+            if (tempWrap) tempWrap.style.display = 'block';
+        });
+        permBtn?.addEventListener('click', () => {
+            selectedBlockType = 'PERMANENT';
+            permBtn.classList.add('active');
+            tempBtn?.classList.remove('active');
+            if (tempWrap) tempWrap.style.display = 'none';
+        });
+
+        document.getElementById('closeAdmBlockModal')?.addEventListener('click', () => blockModal?.classList.remove('active'));
+        document.getElementById('cancelAdmBlockBtn')?.addEventListener('click', () => blockModal?.classList.remove('active'));
+
+        document.getElementById('confirmAdmBlockBtn')?.addEventListener('click', async () => {
+            const hours = parseInt(document.getElementById('admBlockHoursInput').value, 10) || 24;
+            const reason = document.getElementById('admBlockReasonInput').value.trim();
+            const res = await fetch(window.apiUrl('/api/admin/user/block'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${adminToken}`
+                },
+                body: JSON.stringify({
+                    email: blockTargetEmail,
+                    blockType: selectedBlockType,
+                    durationHours: hours,
+                    reason
+                })
+            });
+            const data = await res.json();
+            window.showToast(data.message);
+            if (data.success) {
+                blockModal?.classList.remove('active');
+            }
+        });
+
         // Listen to socket updates
         adminSocket.on('admin_init', (data) => {
-            renderAdminAnalytics(data.analytics);
+            if (data.analytics) renderAdminAnalytics(data.analytics);
+            if (data.history) renderAdminHistoryTables(data.history);
         });
 
         adminSocket.on('admin_live_update', (analytics) => {
             renderAdminAnalytics(analytics);
+            if (analytics && analytics.history) renderAdminHistoryTables(analytics.history);
         });
 
         adminSocket.on('game_tick', (tick) => {
             const pEl = document.getElementById('admPeriodNum');
             const tEl = document.getElementById('admTimeLeft');
             const sEl = document.getElementById('admRoundStatus');
+            const tcEl = document.getElementById('admTimingChip');
             if (pEl) pEl.textContent = tick.period;
-            if (tEl) tEl.textContent = `00:${String(tick.timeLeft).padStart(2, '0')}`;
+            if (tEl) {
+                const m = Math.floor(tick.timeLeft / 60);
+                const s = tick.timeLeft % 60;
+                tEl.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+            }
             if (sEl) {
                 sEl.textContent = tick.status;
                 sEl.className = `status-chip ${tick.status === 'LOCKED' ? 'chip-danger' : 'chip-ok'}`;
             }
+            if (tcEl && tick.cycleDurationSeconds) {
+                tcEl.textContent = `${tick.cycleDurationSeconds}s / Close ${tick.betCloseSeconds}s`;
+            }
         });
+    };
+
+    window.applyTimingPreset = function (cycle, close) {
+        const cEl = document.getElementById('cfgCycleSeconds');
+        const clEl = document.getElementById('cfgBetCloseSeconds');
+        if (cEl) cEl.value = cycle;
+        if (clEl) clEl.value = close;
+    };
+
+    window.setBlockHours = function (hrs) {
+        const el = document.getElementById('admBlockHoursInput');
+        if (el) el.value = hrs;
+    };
+
+    window.openBlockUserModal = function (email) {
+        blockTargetEmail = email;
+        selectedBlockType = 'TEMPORARY';
+        document.getElementById('admBlockTargetEmail').textContent = email;
+        document.getElementById('admBlockReasonInput').value = '';
+        document.getElementById('admBlockHoursInput').value = 24;
+        document.getElementById('admBlockTypeTempBtn')?.classList.add('active');
+        document.getElementById('admBlockTypePermBtn')?.classList.remove('active');
+        document.getElementById('admTempDurationWrap').style.display = 'block';
+        document.getElementById('admBlockModal')?.classList.add('active');
+    };
+
+    window.unblockUser = async function (email) {
+        const res = await fetch(window.apiUrl('/api/admin/user/unblock'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${adminToken}`
+            },
+            body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        window.showToast(data.message);
     };
 
     window.setOutcomeMode = function (mode, forcedNum = null) {
         if (!adminSocket) return;
         adminSocket.emit('admin_set_outcome_mode', { mode, forcedNum }, (res) => {
-            if (res.success) {
+            if (res && res.success) {
                 window.showToast(
                     mode === 'MANUAL'
-                        ? `Forced Next Winning Number to ${forcedNum}`
+                        ? `Forced Next Winning Number to #${forcedNum}`
                         : `Outcome Engine set to ${mode.replace('_', ' ')}`
                 );
             }
         });
+    };
+
+    window.processDepositAction = async function (requestId, action) {
+        const res = await fetch(window.apiUrl('/api/admin/deposit/action'), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${adminToken}`
+            },
+            body: JSON.stringify({ requestId, action })
+        });
+        const data = await res.json();
+        window.showToast(data.message);
     };
 
     window.processWithdrawAction = async function (requestId, action) {
@@ -163,20 +355,124 @@
         return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
 
+    function getBallClass(num, colors) {
+        if (num === 0) return 'bg-red-violet';
+        if (num === 5) return 'bg-green-violet';
+        if (colors && colors.includes('green')) return 'bg-green';
+        return 'bg-red';
+    }
+
+    function renderUpcomingPreview(data) {
+        const card = document.getElementById('admUpcomingPreviewCard');
+        const titleEl = document.getElementById('admUpcomingTitle');
+        const countEl = document.getElementById('admUpcomingCountdown');
+        const bodyEl = document.getElementById('admUpcomingBody');
+        if (!card || !bodyEl) return;
+
+        if (data.status === 'LOCKED' && data.upcomingResult) {
+            const u = data.upcomingResult;
+            const ballClass = getBallClass(u.number, u.colors);
+            const profitSign = u.houseProfit >= 0 ? '+' : '-';
+            const profitColor = u.houseProfit >= 0 ? '#10b981' : '#ef4444';
+            card.classList.add('locked-active');
+            titleEl.textContent = '🔒 BETTING CLOSED — UPCOMING RESULT PREVIEW (BEFORE REVEAL)';
+            countEl.textContent = `Reveals to Users in ${u.revealInSeconds}s`;
+            countEl.className = 'upcoming-countdown-badge danger';
+
+            bodyEl.innerHTML = `
+                <div class="upcoming-grid">
+                    <div class="upcoming-ball-wrap">
+                        <div class="history-num-badge ${ballClass}" style="width:52px;height:52px;font-size:22px;">${u.number}</div>
+                        <div>
+                            <strong style="font-size:16px;">${u.colors.map(c => c.toUpperCase()).join(' + ')}</strong>
+                            <div style="font-size:12px;color:#94a3b8;">Size: ${u.size.toUpperCase()} | Mode: ${u.modeUsed}</div>
+                        </div>
+                    </div>
+                    <div class="upcoming-stat">
+                        <span>Pool Collected (${u.poolType})</span>
+                        <strong>₹${fmt(u.totalCollected)}</strong>
+                    </div>
+                    <div class="upcoming-stat">
+                        <span>Payout Owed (${u.winnersCount} Wins)</span>
+                        <strong style="color:#fbbf24;">₹${fmt(u.totalPayout)}</strong>
+                    </div>
+                    <div class="upcoming-stat">
+                        <span>Expected House Profit</span>
+                        <strong style="color:${profitColor};font-size:20px;">${profitSign}₹${fmt(Math.abs(u.houseProfit))}</strong>
+                    </div>
+                </div>
+            `;
+        } else {
+            card.classList.remove('locked-active');
+            titleEl.textContent = `🟢 BETTING OPEN — Live Cycle Forecast (Closes at final ${data.betCloseSeconds}s)`;
+            countEl.textContent = `${data.timeLeft}s Left`;
+            countEl.className = 'upcoming-countdown-badge';
+
+            const poolAmt = data.liveTotals ? data.liveTotals.totalBetAmount : 0;
+            if (poolAmt === 0) {
+                bodyEl.innerHTML = `<span class="adm-help-txt">No bets placed yet in period <strong>${data.period}</strong>. Once betting closes at <strong>00:${String(data.betCloseSeconds).padStart(2, '0')}</strong>, the locked winning result and profit appear here before players see them.</span>`;
+            } else {
+                const bestList = (data.bestCandidates || []).map(n => `#${n}`).join(', ');
+                const maxP = data.projectedMaxProfit || 0;
+                bodyEl.innerHTML = `<span class="adm-help-txt">Current ${data.targetMode} Pool: <strong>₹${fmt(poolAmt)}</strong> | Candidate Pick(s): <strong>${bestList}</strong> | Best Available Profit: <strong style="color:#10b981;">${maxP >= 0 ? '+' : '-'}₹${fmt(Math.abs(maxP))}</strong> (Exact outcome locks when timer hits ${data.betCloseSeconds}s)</span>`;
+            }
+        }
+    }
+
+    function renderAdminHistoryTables(historyList) {
+        const rowsHtml = (!historyList || historyList.length === 0)
+            ? `<tr><td colspan="8" style="text-align:center;padding:20px;color:#64748b;">No completed rounds yet.</td></tr>`
+            : historyList.map(item => {
+                const badgeClass = getBallClass(item.number, item.colors);
+                const colorLabels = (item.colors || []).map(c => c.toUpperCase()).join(' + ');
+                const sizeClass = item.size === 'big' ? 'tag-big' : 'tag-small';
+                const profit = item.houseProfit || 0;
+                const pSign = profit >= 0 ? '+' : '-';
+                const pColor = profit > 0 ? '#10b981' : (profit < 0 ? '#ef4444' : '#94a3b8');
+                return `
+                    <tr>
+                        <td class="history-period-col">${item.period}</td>
+                        <td><div class="history-num-badge ${badgeClass}">${item.number}</div></td>
+                        <td style="font-size:11px;font-weight:700;color:${(item.colors || []).includes('green') ? '#10b981' : '#ef4444'}">${colorLabels}</td>
+                        <td><span class="tag-size ${sizeClass}">${String(item.size || '').toUpperCase()}</span></td>
+                        <td>₹${fmt(item.totalCollected || 0)}</td>
+                        <td>₹${fmt(item.totalPayout || 0)}</td>
+                        <td style="color:${pColor};font-weight:700;">${pSign}₹${fmt(Math.abs(profit))}</td>
+                        <td style="font-size:11px;color:#64748b;">${fmtDate(item.timestamp)}</td>
+                    </tr>
+                `;
+            }).join('');
+
+        const liveBody = document.getElementById('admLiveHistoryBody');
+        const fullBody = document.getElementById('admFullHistoryBody');
+        if (liveBody) liveBody.innerHTML = rowsHtml;
+        if (fullBody) fullBody.innerHTML = rowsHtml;
+    }
+
     function renderAdminAnalytics(data) {
         if (!data) return;
         latestAnalytics = data;
 
-        // Timer info & DB Status
         const pEl = document.getElementById('admPeriodNum');
         const tEl = document.getElementById('admTimeLeft');
         const sEl = document.getElementById('admRoundStatus');
+        const tcEl = document.getElementById('admTimingChip');
         const dbEl = document.getElementById('admDbStatus');
         if (pEl) pEl.textContent = data.period;
-        if (tEl) tEl.textContent = `00:${String(data.timeLeft).padStart(2, '0')}`;
-        if (sEl) sEl.textContent = data.status;
+        if (tEl) {
+            const m = Math.floor(data.timeLeft / 60);
+            const s = data.timeLeft % 60;
+            tEl.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }
+        if (sEl) {
+            sEl.textContent = data.status;
+            sEl.className = `status-chip ${data.status === 'LOCKED' ? 'chip-danger' : 'chip-ok'}`;
+        }
+        if (tcEl) {
+            tcEl.textContent = `${data.cycleDurationSeconds || 30}s / Close ${data.betCloseSeconds || 5}s`;
+        }
         if (dbEl) {
-            dbEl.textContent = data.mysqlConnected ? '🗄️ MySQL: gb_colors (Auto-Schema)' : '⚠️ Local H2 Mode (Add MySQL Pass in .env)';
+            dbEl.textContent = data.mysqlConnected ? '🗄️ MySQL: gb_colors' : '⚠️ Local H2 Mode';
             dbEl.className = `status-chip ${data.mysqlConnected ? 'chip-ok' : 'chip-warn'}`;
         }
 
@@ -193,11 +489,27 @@
         document.getElementById('kpiWithdrawPaidSub').textContent = `Withdrawals Paid: ₹${fmt(stats.totalWithdrawalsPaid)}`;
         document.getElementById('kpiUsersHolding').textContent = `₹${fmt(stats.totalUsersRealWallet)}`;
         document.getElementById('kpiTotalUsers').textContent = stats.totalRegisteredUsers;
-        document.getElementById('kpiPendingWithdrawTxt').textContent = `Pending Withdraws: ${stats.pendingWithdrawalsCount}`;
-        document.getElementById('admWithdrawBadge').textContent = stats.pendingWithdrawalsCount;
+        const pendingDep = stats.pendingDepositsCount || 0;
+        const pendingWth = stats.pendingWithdrawalsCount || 0;
+        const totalPendingPay = pendingDep + pendingWth;
+        document.getElementById('kpiPendingWithdrawTxt').textContent = `Pending: ${pendingDep} Dep | ${pendingWth} Wth`;
+        document.getElementById('admWithdrawBadge').textContent = totalPendingPay;
+        const drawerBadge = document.getElementById('admDrawerPayBadge');
+        if (drawerBadge) drawerBadge.textContent = totalPendingPay;
 
-        // Live Pools
-        document.getElementById('admTargetModeBadge').textContent = `Optimizing: ${data.targetMode} BETS`;
+        renderUpcomingPreview(data);
+
+        // Live Pools & Clear Mode Label
+        const modeBadgeEl = document.getElementById('admTargetModeBadge');
+        if (modeBadgeEl) {
+            if (data.targetMode === 'REAL') {
+                modeBadgeEl.textContent = `Optimizing: REAL MONEY (₹${fmt(data.liveTotals.realBetAmount)})`;
+            } else if (data.targetMode === 'DEMO') {
+                modeBadgeEl.textContent = `Demo Practice Pool Only (₹${fmt(data.liveTotals.demoBetAmount)})`;
+            } else {
+                modeBadgeEl.textContent = 'Waiting for Bets (No Active Pool)';
+            }
+        }
         document.getElementById('poolGreen').textContent = `₹${fmt(data.liveTotals.colors.GREEN)}`;
         document.getElementById('poolViolet').textContent = `₹${fmt(data.liveTotals.colors.VIOLET)}`;
         document.getElementById('poolRed').textContent = `₹${fmt(data.liveTotals.colors.RED)}`;
@@ -220,42 +532,83 @@
         if (data.outcomeMode === 'MANUAL') {
             engineStatusEl.textContent = `FORCED NEXT: #${data.forcedNextResult}`;
         } else if (data.outcomeMode === 'SMART_PROFIT') {
-            engineStatusEl.textContent = 'SMART AUTO-PROFIT ACTIVE';
+            engineStatusEl.textContent = `SMART PROFIT (MIN ${data.adminMinProfitPercent ?? 15}%)`;
         } else {
             engineStatusEl.textContent = 'FAIR RANDOM ACTIVE';
         }
 
-        // Candidate Projections Table
+        // Projections Table
+        const summaryLbl = document.getElementById('admProjSummaryLabel');
+        const hasAnyPool = data.liveTotals && data.liveTotals.totalBetAmount > 0;
+        if (summaryLbl) {
+            const activePool = data.targetMode === 'REAL' ? data.liveTotals.realBetAmount : data.liveTotals.totalBetAmount;
+            summaryLbl.textContent = hasAnyPool
+                ? `Candidate Projection (0–9) — Active Pool: ₹${fmt(activePool)} | Min Admin Target: ₹${fmt(data.requiredMinProfit || 0)} (${data.adminMinProfitPercent ?? 15}%)`
+                : 'Candidate Projection (0–9) — No bets placed yet';
+        }
+
         const projBody = document.getElementById('admProjectionBody');
         if (projBody && data.projections) {
             projBody.innerHTML = data.projections.map(p => {
                 const isBest = data.bestCandidates.includes(p.number);
+                const isForced = data.outcomeMode === 'MANUAL' && data.forcedNextResult === p.number;
                 const profitColor = p.houseProfit >= 0 ? '#10b981' : '#ef4444';
                 const sign = p.houseProfit >= 0 ? '+' : '-';
+
+                let statusBadge;
+                if (!hasAnyPool) {
+                    statusBadge = '<span class="badge-muted">Waiting for Bets</span>';
+                } else if (isForced) {
+                    statusBadge = '<span class="badge-optimal">🎯 FORCED MANUAL</span>';
+                } else if (isBest) {
+                    statusBadge = '<span class="badge-optimal">🏆 WILL PICK (Admin+User)</span>';
+                } else if (p.meetsMargin) {
+                    statusBadge = '<span class="badge-muted" style="color:#60a5fa;">✅ Meets Margin</span>';
+                } else if (p.houseProfit >= 0) {
+                    statusBadge = '<span class="badge-muted" style="color:#fbbf24;">⚠️ Below Margin</span>';
+                } else {
+                    statusBadge = '<span class="badge-muted" style="color:#f87171;">❌ House Loss</span>';
+                }
+
                 return `
-                    <tr class="${isBest ? 'row-optimal' : ''}">
+                    <tr class="${(hasAnyPool && isBest) || isForced ? 'row-optimal' : ''}">
                         <td><strong>#${p.number}</strong></td>
                         <td style="font-size:11px;">${p.colors.join('+').toUpperCase()}</td>
                         <td>₹${fmt(p.totalPayout)}</td>
                         <td style="color:${profitColor}; font-weight:700;">${sign}₹${fmt(Math.abs(p.houseProfit))}</td>
-                        <td>
-                            ${isBest
-                                ? '<span class="badge-optimal">🏆 BEST PROFIT</span>'
-                                : '<span class="badge-muted">Avoided</span>'
-                            }
-                        </td>
+                        <td>${statusBadge}</td>
                     </tr>
                 `;
             }).join('');
         }
 
-        // Withdraw Requests
-        renderWithdrawLists(data.withdrawRequests);
-
-        // Users Table
+        renderPaymentQueues(data.depositRequests, data.withdrawRequests);
         renderUsersTable(data.users);
 
-        // Populate SMTP config once
+        if (!gameConfigPopulated) {
+            gameConfigPopulated = true;
+            document.getElementById('cfgCycleSeconds').value = data.cycleDurationSeconds || 30;
+            document.getElementById('cfgBetCloseSeconds').value = data.betCloseSeconds || 5;
+            document.getElementById('cfgAdminMarginPct').value = data.adminMinProfitPercent ?? 15;
+            const inlineM = document.getElementById('admInlineMarginInput');
+            if (inlineM) inlineM.value = data.adminMinProfitPercent ?? 15;
+        }
+
+        if (!paymentConfigPopulated && data.paymentConfig) {
+            paymentConfigPopulated = true;
+            document.getElementById('cfgUpiId').value = data.paymentConfig.upiId || '';
+            document.getElementById('cfgUpiPayeeName').value = data.paymentConfig.upiPayeeName || '';
+            document.getElementById('cfgRzpKeyId').value = data.paymentConfig.razorpayKeyId || '';
+            if (data.paymentConfig.razorpayEnabled) {
+                document.getElementById('cfgRzpKeySecret').value = '********';
+            }
+        }
+        const rzpBadge = document.getElementById('admRzpStatusBadge');
+        if (rzpBadge && data.paymentConfig) {
+            rzpBadge.textContent = data.paymentConfig.razorpayEnabled ? 'Razorpay + UPI Live' : 'UPI QR Active (Add RZP Keys)';
+            rzpBadge.className = `status-chip ${data.paymentConfig.razorpayEnabled ? 'chip-ok' : 'chip-warn'}`;
+        }
+
         if (!smtpFormPopulated && data.smtpStatus) {
             smtpFormPopulated = true;
             document.getElementById('cfgAdminEmail').value = data.smtpStatus.adminEmail || '';
@@ -274,17 +627,58 @@
         }
     }
 
-    function renderWithdrawLists(requests) {
-        const pending = (requests || []).filter(r => r.status === 'PENDING');
-        const done = (requests || []).filter(r => r.status !== 'PENDING');
+    function renderPaymentQueues(deposits, withdrawals) {
+        const pendingDeps = (deposits || []).filter(d => d.status === 'PENDING' && d.method !== 'RAZORPAY');
+        const pendingWths = (withdrawals || []).filter(r => r.status === 'PENDING');
 
-        document.getElementById('pendingQueueCount').textContent = `${pending.length} Pending`;
+        const doneDeps = (deposits || []).filter(d => d.status !== 'PENDING').map(d => ({
+            kind: 'DEPOSIT',
+            email: d.email,
+            amount: d.amount,
+            detail: `${d.method} | UTR/ID: ${d.utrOrPaymentId || d.orderId || '—'}`,
+            status: d.status,
+            processedAt: d.processedAt || d.requestedAt
+        }));
+        const doneWths = (withdrawals || []).filter(w => w.status !== 'PENDING').map(w => ({
+            kind: 'WITHDRAW',
+            email: w.email,
+            amount: w.amount,
+            detail: `Account: ${w.accountDetails}`,
+            status: w.status,
+            processedAt: w.processedAt || w.requestedAt
+        }));
+        const allDone = [...doneDeps, ...doneWths].sort((a, b) => (b.processedAt || 0) - (a.processedAt || 0));
+
+        document.getElementById('pendingDepositQueueCount').textContent = `${pendingDeps.length} Pending`;
+        document.getElementById('pendingQueueCount').textContent = `${pendingWths.length} Pending`;
+
+        const depEl = document.getElementById('admPendingDepositList');
+        if (pendingDeps.length === 0) {
+            depEl.innerHTML = `<div class="empty-state">No pending UPI deposit verifications.</div>`;
+        } else {
+            depEl.innerHTML = pendingDeps.map(d => `
+                <div class="withdraw-req-card">
+                    <div class="wth-top">
+                        <div>
+                            <strong>${d.email}</strong> <small>(${d.userId})</small>
+                            <div class="wth-upi">${d.method} UTR: <strong>${d.utrOrPaymentId || '—'}</strong></div>
+                            <div class="wth-time">Requested: ${fmtDate(d.requestedAt)}</div>
+                        </div>
+                        <div class="wth-amt" style="color:#34d399;">+₹${fmt(d.amount)}</div>
+                    </div>
+                    <div class="wth-actions">
+                        <button class="btn-approve" onclick="processDepositAction('${d.id}', 'APPROVED')">✅ Verify &amp; Credit</button>
+                        <button class="btn-reject" onclick="processDepositAction('${d.id}', 'REJECTED')">❌ Reject</button>
+                    </div>
+                </div>
+            `).join('');
+        }
 
         const pendingEl = document.getElementById('admPendingWithdrawList');
-        if (pending.length === 0) {
+        if (pendingWths.length === 0) {
             pendingEl.innerHTML = `<div class="empty-state">No pending withdrawal requests.</div>`;
         } else {
-            pendingEl.innerHTML = pending.map(r => `
+            pendingEl.innerHTML = pendingWths.map(r => `
                 <div class="withdraw-req-card">
                     <div class="wth-top">
                         <div>
@@ -295,32 +689,36 @@
                         <div class="wth-amt">₹${fmt(r.amount)}</div>
                     </div>
                     <div class="wth-actions">
-                        <button class="btn-approve" onclick="processWithdrawAction('${r.id}', 'PAID')">✅ Mark Paid & Approve</button>
-                        <button class="btn-reject" onclick="processWithdrawAction('${r.id}', 'REJECTED')">❌ Reject & Refund</button>
+                        <button class="btn-approve" onclick="processWithdrawAction('${r.id}', 'PAID')">✅ Mark Paid &amp; Notify</button>
+                        <button class="btn-reject" onclick="processWithdrawAction('${r.id}', 'REJECTED')">❌ Reject &amp; Refund</button>
                     </div>
                 </div>
             `).join('');
         }
 
         const doneEl = document.getElementById('admDoneWithdrawList');
-        if (done.length === 0) {
-            doneEl.innerHTML = `<div class="empty-state">No completed withdrawal requests yet.</div>`;
+        if (allDone.length === 0) {
+            doneEl.innerHTML = `<div class="empty-state">No completed payment requests yet.</div>`;
         } else {
-            doneEl.innerHTML = done.map(r => `
-                <div class="withdraw-req-card done-card">
-                    <div class="wth-top">
-                        <div>
-                            <strong>${r.email}</strong>
-                            <div class="wth-upi">Account: ${r.accountDetails}</div>
-                            <div class="wth-time">Processed: ${fmtDate(r.processedAt)}</div>
-                        </div>
-                        <div style="text-align:right;">
-                            <div class="wth-amt">₹${fmt(r.amount)}</div>
-                            <span class="status-chip ${r.status === 'PAID' ? 'chip-ok' : 'chip-danger'}">${r.status}</span>
+            doneEl.innerHTML = allDone.slice(0, 40).map(r => {
+                const ok = r.status === 'PAID' || r.status === 'APPROVED';
+                return `
+                    <div class="withdraw-req-card done-card">
+                        <div class="wth-top">
+                            <div>
+                                <span class="status-chip" style="margin-right:6px;">${r.kind}</span>
+                                <strong>${r.email}</strong>
+                                <div class="wth-upi">${r.detail}</div>
+                                <div class="wth-time">Processed: ${fmtDate(r.processedAt)}</div>
+                            </div>
+                            <div style="text-align:right;">
+                                <div class="wth-amt">₹${fmt(r.amount)}</div>
+                                <span class="status-chip ${ok ? 'chip-ok' : 'chip-danger'}">${r.status}</span>
+                            </div>
                         </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
     }
 
@@ -339,27 +737,46 @@
             return;
         }
 
-        tbody.innerHTML = filtered.map(u => `
-            <tr>
-                <td>
-                    <strong>${u.email}</strong><br>
-                    <small style="color:#64748b;">${u.userId}</small>
-                </td>
-                <td style="color:#10b981; font-weight:700;">₹${fmt(u.realBalance)}</td>
-                <td style="color:#94a3b8;">₹${fmt(u.demoBalance)}</td>
-                <td style="color:#34d399;">+₹${fmt(u.totalWon)}</td>
-                <td style="color:#f87171;">-₹${fmt(u.totalLost)}</td>
-                <td>
-                    ${u.lastRechargeAmt ? `<strong>₹${fmt(u.lastRechargeAmt)}</strong><br><small style="color:#64748b;">${fmtDate(u.lastRechargeAt)}</small>` : '—'}
-                </td>
-                <td>
-                    ${u.lastWithdrawAmt ? `<strong>₹${fmt(u.lastWithdrawAmt)}</strong><br><small style="color:#64748b;">${fmtDate(u.lastWithdrawAt)}</small>` : '—'}
-                </td>
-                <td>
-                    <button class="mini-adj-btn add" onclick="adjustUserBalance('${u.email}', 500)">+₹500</button>
-                    <button class="mini-adj-btn sub" onclick="adjustUserBalance('${u.email}', -500)">-₹500</button>
-                </td>
-            </tr>
-        `).join('');
+        tbody.innerHTML = filtered.map(u => {
+            const isTemp = u.blockType === 'TEMPORARY';
+            const isPerm = u.blockType === 'PERMANENT';
+            const isBlocked = isTemp || isPerm;
+            const statusHtml = isPerm
+                ? `<span class="status-chip chip-danger" title="${u.blockReason || ''}">PERM BLOCKED</span>`
+                : (isTemp
+                    ? `<span class="status-chip chip-warn" title="${u.blockReason || ''}">TEMP BLOCKED<br><small>Until ${fmtDate(u.blockedUntil)}</small></span>`
+                    : `<span class="status-chip chip-ok">ACTIVE</span>`);
+
+            const blockBtnHtml = isBlocked
+                ? `<button class="mini-adj-btn add" onclick="unblockUser('${u.email}')">🔓 Unblock</button>`
+                : `<button class="mini-adj-btn sub" onclick="openBlockUserModal('${u.email}')">🚫 Block</button>`;
+
+            return `
+                <tr>
+                    <td>
+                        <strong>${u.email}</strong><br>
+                        <small style="color:#64748b;">${u.userId}</small>
+                    </td>
+                    <td>${statusHtml}</td>
+                    <td style="color:#10b981; font-weight:700;">₹${fmt(u.realBalance)}</td>
+                    <td style="color:#94a3b8;">₹${fmt(u.demoBalance)}</td>
+                    <td>
+                        <span style="color:#34d399;">+₹${fmt(u.totalWon)}</span><br>
+                        <span style="color:#f87171;">-₹${fmt(u.totalLost)}</span>
+                    </td>
+                    <td>
+                        ${u.lastRechargeAmt ? `<strong>₹${fmt(u.lastRechargeAmt)}</strong><br><small style="color:#64748b;">${fmtDate(u.lastRechargeAt)}</small>` : '—'}
+                    </td>
+                    <td>
+                        ${u.lastWithdrawAmt ? `<strong>₹${fmt(u.lastWithdrawAmt)}</strong><br><small style="color:#64748b;">${fmtDate(u.lastWithdrawAt)}</small>` : '—'}
+                    </td>
+                    <td style="white-space:nowrap;">
+                        <button class="mini-adj-btn add" onclick="adjustUserBalance('${u.email}', 500)">+₹500</button>
+                        <button class="mini-adj-btn sub" onclick="adjustUserBalance('${u.email}', -500)">-₹500</button>
+                        ${blockBtnHtml}
+                    </td>
+                </tr>
+            `;
+        }).join('');
     }
 })();

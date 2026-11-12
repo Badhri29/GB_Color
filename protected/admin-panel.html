@@ -1,7 +1,48 @@
 <div class="admin-dashboard-shell">
+    <!-- Admin Slide-Out Side Drawer Backdrop & Drawer -->
+    <div class="drawer-backdrop" id="admDrawerBackdrop"></div>
+    <aside class="side-drawer adm-side-drawer" id="admSideDrawer">
+        <div class="drawer-header">
+            <div class="brand">
+                <span class="brand-badge admin-badge-tag">ADMIN</span>
+                <span class="brand-name">GB_<span class="text-accent">Colors</span></span>
+            </div>
+            <button class="modal-close-btn" id="closeAdmDrawerBtn">&times;</button>
+        </div>
+        <div class="drawer-user-summary">
+            <div class="drawer-avatar">🛡️</div>
+            <div class="drawer-user-meta">
+                <strong>Administrator</strong>
+                <small id="admDrawerEmail">gbcolor.admin@gmail.com</small>
+            </div>
+        </div>
+        <nav class="drawer-nav-list">
+            <button class="drawer-nav-item active" data-admdrawer="admLiveTab">
+                <span>📊</span> <span>Live Monitor & Profit Engine</span>
+            </button>
+            <button class="drawer-nav-item" data-admdrawer="admHistoryTab">
+                <span>🏁</span> <span>Round Result History</span>
+            </button>
+            <button class="drawer-nav-item" data-admdrawer="admWithdrawTab">
+                <span>💸</span> <span>Payments Queue</span>
+                <span class="pending-badge-pill" id="admDrawerPayBadge">0</span>
+            </button>
+            <button class="drawer-nav-item" data-admdrawer="admUsersTab">
+                <span>👥</span> <span>Users Ledger & Block</span>
+            </button>
+            <button class="drawer-nav-item" data-admdrawer="admSettingsTab">
+                <span>⚙️</span> <span>Timer, Payments & Settings</span>
+            </button>
+        </nav>
+        <div class="drawer-footer">
+            <button class="btn-danger-confirm" id="admDrawerLogoutBtn" style="width:100%;">🚪 Sign Out Admin</button>
+        </div>
+    </aside>
+
     <!-- Top Admin Header -->
     <header class="app-header admin-header">
         <div class="header-left">
+            <button id="admMenuBtn" class="menu-hamburger-btn" aria-label="Open Admin Menu" title="Open Admin Menu">☰</button>
             <div class="brand">
                 <span class="brand-badge admin-badge-tag">ADMIN</span>
                 <span class="brand-name">GB_<span class="text-accent">Colors</span> <small class="admin-sub-label">COMMAND CENTER</small></span>
@@ -11,6 +52,7 @@
                 <span class="divider">|</span>
                 <span>Time: <strong id="admTimeLeft" class="text-yellow">00:30</strong></span>
                 <span id="admRoundStatus" class="status-chip">BETTING</span>
+                <span id="admTimingChip" class="status-chip">30s / Close 5s</span>
                 <span id="admDbStatus" class="status-chip chip-warn">DB: Checking...</span>
             </div>
         </div>
@@ -42,28 +84,40 @@
             <div class="kpi-card">
                 <span class="kpi-label">Registered Users</span>
                 <h2 class="kpi-value" id="kpiTotalUsers">0</h2>
-                <small class="kpi-sub text-danger" id="kpiPendingWithdrawTxt">Pending Withdraws: 0</small>
+                <small class="kpi-sub text-danger" id="kpiPendingWithdrawTxt">Pending: 0 Dep | 0 Wth</small>
             </div>
         </div>
 
         <!-- Admin Navigation Tabs -->
         <div class="admin-nav-tabs">
             <button class="adm-tab-btn active" data-admtab="admLiveTab">📊 Live Monitor & Profit Engine</button>
+            <button class="adm-tab-btn" data-admtab="admHistoryTab">🏁 Result History</button>
             <button class="adm-tab-btn" data-admtab="admWithdrawTab">
-                💸 Withdraw Requests <span class="pending-badge-pill" id="admWithdrawBadge">0</span>
+                💸 Deposits & Withdraws <span class="pending-badge-pill" id="admWithdrawBadge">0</span>
             </button>
-            <button class="adm-tab-btn" data-admtab="admUsersTab">👥 Users Ledger</button>
-            <button class="adm-tab-btn" data-admtab="admSettingsTab">📧 Email (SMTP) & Security</button>
+            <button class="adm-tab-btn" data-admtab="admUsersTab">👥 Users Ledger & Block</button>
+            <button class="adm-tab-btn" data-admtab="admSettingsTab">⚙️ Timer, Payments & Email</button>
         </div>
 
         <!-- Tab 1: Live Monitor & Smart Profit Engine -->
         <div class="adm-tab-panel active" id="admLiveTab">
+            <!-- Pre-Reveal Upcoming Cycle Result & Profit Preview -->
+            <div class="upcoming-preview-card" id="admUpcomingPreviewCard">
+                <div class="upcoming-preview-head">
+                    <span class="upcoming-title" id="admUpcomingTitle">🟢 BETTING OPEN — Live Forecast</span>
+                    <span class="upcoming-countdown-badge" id="admUpcomingCountdown">Betting Open</span>
+                </div>
+                <div class="upcoming-preview-body" id="admUpcomingBody">
+                    <span class="adm-help-txt">When betting closes (final seconds), the exact upcoming winning result and house profit for this cycle will lock and appear here BEFORE users see it.</span>
+                </div>
+            </div>
+
             <div class="adm-split-grid">
                 <!-- Left: Current Round Live Betting Pools -->
                 <div class="adm-card">
                     <div class="adm-card-header">
                         <h3>🔥 Live Current Round Bets</h3>
-                        <span class="badge-mode" id="admTargetModeBadge">Monitoring: DEMO / REAL</span>
+                        <span class="badge-mode" id="admTargetModeBadge">Waiting for Bets</span>
                     </div>
 
                     <div class="pool-section-label">Colors Betting Pool</div>
@@ -95,9 +149,7 @@
                     </div>
 
                     <div class="pool-section-label">Numbers (0–9) Betting Pool</div>
-                    <div class="pool-numbers-grid" id="poolNumbersGrid">
-                        <!-- Dynamically filled 0-9 -->
-                    </div>
+                    <div class="pool-numbers-grid" id="poolNumbersGrid"></div>
                 </div>
 
                 <!-- Right: Smart Profit Engine & Candidate Projections -->
@@ -105,6 +157,11 @@
                     <div class="adm-card-header">
                         <h3>🧠 Outcome Profit Engine</h3>
                         <span class="engine-status-pill" id="admEngineStatus">SMART PROFIT ACTIVE</span>
+                    </div>
+
+                    <div class="adm-info-banner">
+                        <strong>What is this table?</strong> It previews what the House (Admin) pays out &amp; earns if each number (0–9) wins this round.
+                        In <strong>Smart Auto-Profit</strong>, Priority 1 guarantees at least your <strong>Target Admin Margin %</strong>; Priority 2 picks the qualifying number that gives players the best win payout (e.g. 2x instead of forcing 0/5).
                     </div>
 
                     <div class="engine-mode-controls">
@@ -116,14 +173,20 @@
                         </button>
                     </div>
 
-                    <div class="manual-force-bar">
-                        <span>Force Next Number:</span>
-                        <div class="force-nums-row" id="forceNumsRow">
-                            <!-- 0..9 quick override buttons -->
+                    <div class="margin-inline-bar">
+                        <label for="admInlineMarginInput">1st Priority Min Admin Profit %:</label>
+                        <div class="margin-inline-controls">
+                            <input type="number" id="admInlineMarginInput" class="adm-mini-input" min="0" max="100" value="15">
+                            <button class="mini-adj-btn add" id="admSaveInlineMarginBtn">Apply %</button>
                         </div>
                     </div>
 
-                    <div class="pool-section-label">Live Profit Projection per Candidate (0–9)</div>
+                    <div class="manual-force-bar">
+                        <span>Force Next Number:</span>
+                        <div class="force-nums-row" id="forceNumsRow"></div>
+                    </div>
+
+                    <div class="pool-section-label" id="admProjSummaryLabel">Candidate Projection (0–9) — Pool: ₹0</div>
                     <div class="adm-table-scroll">
                         <table class="adm-table">
                             <thead>
@@ -132,7 +195,7 @@
                                     <th>Color</th>
                                     <th>Payout Owed</th>
                                     <th>House Profit</th>
-                                    <th>Status</th>
+                                    <th>Engine Decision</th>
                                 </tr>
                             </thead>
                             <tbody id="admProjectionBody"></tbody>
@@ -140,11 +203,73 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Live Round Result History Table directly on Live Tab -->
+            <div class="adm-card" style="margin-top: 18px;">
+                <div class="adm-card-header">
+                    <h3>🏁 Recent Round Results</h3>
+                    <span class="badge-mode">Latest 25 Cycles</span>
+                </div>
+                <div class="adm-table-scroll">
+                    <table class="adm-table">
+                        <thead>
+                            <tr>
+                                <th>Period</th>
+                                <th>Result #</th>
+                                <th>Color</th>
+                                <th>Size</th>
+                                <th>Real Pool</th>
+                                <th>Payout Paid</th>
+                                <th>House Profit</th>
+                                <th>Time</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admLiveHistoryBody"></tbody>
+                    </table>
+                </div>
+            </div>
         </div>
 
-        <!-- Tab 2: Withdraw Requests Queue -->
+        <!-- Tab 2: Dedicated Result History Table -->
+        <div class="adm-tab-panel" id="admHistoryTab">
+            <div class="adm-card">
+                <div class="adm-card-header">
+                    <h3>🏁 Complete Round Results Ledger</h3>
+                    <span class="badge-mode">Live Updated Every Round</span>
+                </div>
+                <div class="adm-table-scroll" style="max-height: 540px;">
+                    <table class="adm-table">
+                        <thead>
+                            <tr>
+                                <th>Period</th>
+                                <th>Winning #</th>
+                                <th>Color</th>
+                                <th>Size</th>
+                                <th>Real Pool</th>
+                                <th>Payout Paid</th>
+                                <th>House Profit</th>
+                                <th>Settled At</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admFullHistoryBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: Deposits & Withdrawals Queue -->
         <div class="adm-tab-panel" id="admWithdrawTab">
             <div class="adm-split-grid">
+                <div class="adm-card">
+                    <div class="adm-card-header">
+                        <h3>📥 Pending UPI Deposit Verifications</h3>
+                        <span class="badge-danger" id="pendingDepositQueueCount">0 Pending</span>
+                    </div>
+                    <div class="adm-list-scroll" id="admPendingDepositList">
+                        <div class="empty-state">No pending deposit requests.</div>
+                    </div>
+                </div>
+
                 <div class="adm-card">
                     <div class="adm-card-header">
                         <h3>⏳ Pending Withdraw Requests</h3>
@@ -154,37 +279,37 @@
                         <div class="empty-state">No pending withdrawal requests.</div>
                     </div>
                 </div>
+            </div>
 
-                <div class="adm-card">
-                    <div class="adm-card-header">
-                        <h3>✅ Completed / Done Requests</h3>
-                    </div>
-                    <div class="adm-list-scroll" id="admDoneWithdrawList">
-                        <div class="empty-state">No processed withdrawal requests yet.</div>
-                    </div>
+            <div class="adm-card" style="margin-top: 18px;">
+                <div class="adm-card-header">
+                    <h3>✅ Processed Deposits &amp; Withdrawals</h3>
+                </div>
+                <div class="adm-list-scroll" id="admDoneWithdrawList">
+                    <div class="empty-state">No processed payment requests yet.</div>
                 </div>
             </div>
         </div>
 
-        <!-- Tab 3: Users Ledger -->
+        <!-- Tab 4: Users Ledger & Block Controls -->
         <div class="adm-tab-panel" id="admUsersTab">
             <div class="adm-card full-height-card">
                 <div class="adm-card-header">
-                    <h3>👥 Registered Users Financial Ledger</h3>
+                    <h3>👥 Registered Users Ledger &amp; Access Control</h3>
                     <input type="text" id="admUserSearch" class="adm-search-input" placeholder="Search by Email or User ID...">
                 </div>
-                <div class="adm-table-scroll">
+                <div class="adm-table-scroll" style="max-height: 540px;">
                     <table class="adm-table">
                         <thead>
                             <tr>
                                 <th>User / Email</th>
+                                <th>Status</th>
                                 <th>Real Bal</th>
                                 <th>Demo Bal</th>
-                                <th>Total Won</th>
-                                <th>Total Lost</th>
+                                <th>Won / Lost</th>
                                 <th>Last Recharge</th>
                                 <th>Last Withdraw</th>
-                                <th>Quick Adjust</th>
+                                <th>Balance &amp; Block Actions</th>
                             </tr>
                         </thead>
                         <tbody id="admUsersTableBody"></tbody>
@@ -193,21 +318,76 @@
             </div>
         </div>
 
-        <!-- Tab 4: Email (SMTP) & Admin Security Settings -->
+        <!-- Tab 5: Game Timing, Payment Gateway, SMTP & Admin Security -->
         <div class="adm-tab-panel" id="admSettingsTab">
             <div class="adm-split-grid">
                 <div class="adm-card">
                     <div class="adm-card-header">
-                        <h3>📧 Admin Email & Real-Time OTP SMTP Setup</h3>
+                        <h3>⏱️ Round Cycle Time, Betting Close &amp; Margin</h3>
+                    </div>
+                    <p class="adm-help-txt">
+                        Configure how long each round lasts, how many seconds before round end betting locks, and the minimum House Profit % target.
+                    </p>
+                    <div class="chips-row" style="margin-bottom: 8px;">
+                        <button type="button" class="chip-btn" onclick="applyTimingPreset(30, 5)">30s / 5s</button>
+                        <button type="button" class="chip-btn" onclick="applyTimingPreset(60, 10)">60s / 10s</button>
+                        <button type="button" class="chip-btn" onclick="applyTimingPreset(90, 15)">90s / 15s</button>
+                        <button type="button" class="chip-btn" onclick="applyTimingPreset(120, 15)">2m / 15s</button>
+                    </div>
+                    <div class="dual-btn-row">
+                        <div>
+                            <label class="input-label">Cycle Time (Seconds, 15–300)</label>
+                            <input type="number" id="cfgCycleSeconds" class="form-input" min="15" max="300" value="30">
+                        </div>
+                        <div>
+                            <label class="input-label">Betting Close Time (Sec before end)</label>
+                            <input type="number" id="cfgBetCloseSeconds" class="form-input" min="3" max="120" value="5">
+                        </div>
+                    </div>
+                    <label class="input-label">Target Admin Min Profit Margin (%)</label>
+                    <input type="number" id="cfgAdminMarginPct" class="form-input" min="0" max="100" value="15">
+
+                    <button class="btn-confirm-bet" id="saveGameConfigBtn">Save Timer &amp; Profit Config</button>
+                </div>
+
+                <div class="adm-card">
+                    <div class="adm-card-header">
+                        <h3>💳 Real-Time Payment Setup (UPI &amp; Razorpay)</h3>
+                        <span id="admRzpStatusBadge" class="status-chip">UPI Ready</span>
+                    </div>
+                    <p class="adm-help-txt">
+                        Users see a live scannable QR code &amp; UPI App button for your UPI ID. Optionally add Razorpay Key ID &amp; Secret for instant auto-verified Checkout.
+                    </p>
+                    <div class="dual-btn-row">
+                        <div>
+                            <label class="input-label">Merchant UPI ID</label>
+                            <input type="text" id="cfgUpiId" class="form-input" placeholder="yourname@okaxis">
+                        </div>
+                        <div>
+                            <label class="input-label">UPI Payee Name</label>
+                            <input type="text" id="cfgUpiPayeeName" class="form-input" placeholder="GB_Colors">
+                        </div>
+                    </div>
+                    <label class="input-label">Razorpay Key ID (Optional Live/Test)</label>
+                    <input type="text" id="cfgRzpKeyId" class="form-input" placeholder="rzp_live_... or rzp_test_...">
+                    <label class="input-label">Razorpay Key Secret</label>
+                    <input type="password" id="cfgRzpKeySecret" class="form-input" placeholder="Enter Razorpay Key Secret">
+
+                    <button class="btn-confirm-bet" id="savePaymentConfigBtn">Save Payment Settings</button>
+                </div>
+            </div>
+
+            <div class="adm-split-grid" style="margin-top: 18px;">
+                <div class="adm-card">
+                    <div class="adm-card-header">
+                        <h3>📧 Admin Email &amp; Real-Time OTP SMTP Setup</h3>
                         <span id="smtpConfigStatusBadge" class="status-chip">Checking...</span>
                     </div>
                     <p class="adm-help-txt">
-                        Attach your Gmail / SMTP credentials here so registration OTPs are sent directly from your Admin email to new users. (For Gmail, use a 16-character <strong>App Password</strong>).
+                        Attach your Gmail / SMTP credentials here so registration OTPs are sent directly from your Admin email to new users.
                     </p>
-
                     <label class="input-label">Admin Login Email ID</label>
                     <input type="email" id="cfgAdminEmail" class="form-input" placeholder="gbcolor.admin@gmail.com">
-
                     <div class="dual-btn-row">
                         <div>
                             <label class="input-label">SMTP Host</label>
@@ -218,17 +398,13 @@
                             <input type="number" id="cfgSmtpPort" class="form-input" value="587">
                         </div>
                     </div>
-
                     <label class="input-label">Sender Gmail / SMTP Email</label>
                     <input type="email" id="cfgSmtpUser" class="form-input" placeholder="yourgmail@gmail.com">
-
                     <label class="input-label">SMTP / Gmail App Password</label>
                     <input type="password" id="cfgSmtpPass" class="form-input" placeholder="Enter 16-digit App Password">
-
                     <label class="input-label">Sender Display Name</label>
                     <input type="text" id="cfgFromName" class="form-input" value="GB_Colors">
-
-                    <button class="btn-confirm-bet" id="saveSmtpBtn">Save Email & SMTP Settings</button>
+                    <button class="btn-confirm-bet" id="saveSmtpBtn">Save Email &amp; SMTP Settings</button>
                 </div>
 
                 <div class="adm-card">
@@ -236,12 +412,52 @@
                         <h3>🔐 Admin Account Security</h3>
                     </div>
                     <p class="adm-help-txt">Update your temporary Admin password to a strong custom password.</p>
-
                     <label class="input-label">New Admin Password</label>
                     <input type="password" id="cfgNewAdminPass" class="form-input" placeholder="Min 8 chars, Upper, Lower, Num, Symbol">
-
                     <button class="btn-confirm-bet" id="changeAdminPassBtn">Update Admin Password</button>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Admin Block User Modal -->
+<div class="modal-backdrop" id="admBlockModal">
+    <div class="modal-sheet modal-danger">
+        <div class="modal-header">
+            <div class="modal-title-group">
+                <span class="modal-sub text-danger">User Access Control</span>
+                <h3 class="modal-title">Block User Account</h3>
+            </div>
+            <button class="modal-close-btn" id="closeAdmBlockModal">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p class="cancel-warning-txt">Target Account: <strong id="admBlockTargetEmail">user@example.com</strong></p>
+
+            <label class="input-label">Block Type</label>
+            <div class="subtab-row">
+                <button type="button" class="subtab-btn active" id="admBlockTypeTempBtn">⏳ Temporary Block</button>
+                <button type="button" class="subtab-btn" id="admBlockTypePermBtn">🚫 Permanent Block</button>
+            </div>
+
+            <div id="admTempDurationWrap">
+                <label class="input-label">Temporary Duration (Hours)</label>
+                <div class="chips-row">
+                    <button type="button" class="chip-btn" onclick="setBlockHours(1)">1h</button>
+                    <button type="button" class="chip-btn" onclick="setBlockHours(6)">6h</button>
+                    <button type="button" class="chip-btn active" onclick="setBlockHours(24)">24h</button>
+                    <button type="button" class="chip-btn" onclick="setBlockHours(168)">7 Days</button>
+                    <button type="button" class="chip-btn" onclick="setBlockHours(720)">30 Days</button>
+                </div>
+                <input type="number" id="admBlockHoursInput" class="form-input" min="1" max="8760" value="24" placeholder="Duration in hours">
+            </div>
+
+            <label class="input-label">Reason (Shown to User)</label>
+            <input type="text" id="admBlockReasonInput" class="form-input" placeholder="e.g. Suspicious betting or policy violation">
+
+            <div class="dual-btn-row">
+                <button type="button" class="btn-secondary" id="cancelAdmBlockBtn">Cancel</button>
+                <button type="button" class="btn-danger-confirm" id="confirmAdmBlockBtn">Confirm Block</button>
             </div>
         </div>
     </div>

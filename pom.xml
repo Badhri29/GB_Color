@@ -45,6 +45,13 @@
             <artifactId>spring-security-crypto</artifactId>
         </dependency>
 
+        <!-- QR Code matrix generation for live UPI QR SVG -->
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>core</artifactId>
+            <version>3.5.3</version>
+        </dependency>
+
         <dependency>
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
