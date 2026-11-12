@@ -2085,6 +2085,8 @@ html, body {
 .n-green { background: linear-gradient(135deg, #10b981, #059669); }
 .n-red { background: linear-gradient(135deg, #ef4444, #dc2626); }
 .n-violet { background: linear-gradient(135deg, #8b5cf6, #6d28d9); }
+.n-red-violet { background: linear-gradient(135deg, #ef4444 50%, #8b5cf6 50%); }
+.n-green-violet { background: linear-gradient(135deg, #10b981 50%, #8b5cf6 50%); }
 
 /* Betting Console */
 .betting-section {
@@ -2256,17 +2258,36 @@ html, body {
 }
 .records-table th { color: #94a3b8; font-size: 0.75rem; text-transform: uppercase; }
 
+.color-chips-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
 .color-dot-pill {
-  display: inline-block;
-  padding: 2px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
   border-radius: 999px;
   font-size: 0.72rem;
   font-weight: 700;
   color: #fff;
+  white-space: nowrap;
+}
+.color-circle-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
 }
 .color-dot-pill.green { background: rgba(16, 185, 129, 0.28); color: #34d399; }
+.color-dot-pill.green .color-circle-dot { background: #10b981; }
 .color-dot-pill.red { background: rgba(239, 68, 68, 0.28); color: #f87171; }
+.color-dot-pill.red .color-circle-dot { background: #ef4444; }
 .color-dot-pill.violet { background: rgba(139, 92, 246, 0.32); color: #c4b5fd; }
+.color-dot-pill.violet .color-circle-dot { background: #8b5cf6; }
 
 .size-tag { font-size: 0.75rem; font-weight: 700; padding: 2px 7px; border-radius: 6px; }
 .size-tag.big { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
@@ -2353,20 +2374,23 @@ html, body {
 .pw-stat-card.accent-red strong { color: #f87171; }
 
 .pay-subtabs-bar {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
-  flex-wrap: wrap;
   margin-bottom: 14px;
+  max-width: 680px;
 }
 .pay-subtab-btn {
   background: var(--card-bg, #111a30);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #cbd5e1;
-  padding: 9px 15px;
-  border-radius: 10px;
-  font-weight: 600;
-  font-size: 0.86rem;
+  padding: 11px 10px;
+  border-radius: 11px;
+  font-weight: 700;
+  font-size: 0.85rem;
   cursor: pointer;
+  text-align: center;
+  min-height: 44px;
 }
 .pay-subtab-btn.active {
   background: linear-gradient(135deg, #10b981, #059669);
@@ -2374,35 +2398,159 @@ html, body {
   color: #fff;
 }
 
-.payment-amount-card {
-  background: var(--card-bg, #111a30);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  padding: 15px;
-  margin-bottom: 14px;
+.pay-flow-card {
+  max-width: 680px;
 }
-.pac-top {
+.pay-step-head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 10px;
-  flex-wrap: wrap;
   margin-bottom: 10px;
 }
-.pac-top label { display: block; font-weight: 600; font-size: 0.9rem; }
-.pac-top small { color: #94a3b8; font-size: 0.78rem; }
+.pay-step-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.22);
+  color: #34d399;
+  font-size: 0.82rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.pay-step-title {
+  display: block;
+  font-weight: 700;
+  font-size: 0.94rem;
+  color: #f1f5f9;
+}
+.pay-limit-hint {
+  display: block;
+  font-size: 0.76rem;
+  color: #94a3b8;
+}
+.pay-input-prefix-wrap {
+  display: flex;
+  align-items: center;
+  background: var(--card-inner, #192440);
+  border: 1.5px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  padding: 0 12px;
+  margin-bottom: 10px;
+}
+.pay-input-prefix-wrap:focus-within {
+  border-color: #10b981;
+}
+.pay-currency-prefix {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: #34d399;
+  margin-right: 8px;
+}
+.big-touch-input {
+  width: 100%;
+  background: transparent !important;
+  border: none !important;
+  outline: none;
+  color: #fff !important;
+  font-size: 1.25rem !important;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', monospace;
+  min-height: 48px;
+  padding: 8px 0 !important;
+}
+.big-touch-field {
+  min-height: 46px;
+  font-size: 0.95rem !important;
+  padding: 10px 12px !important;
+}
+.touch-cta-btn {
+  min-height: 46px;
+  font-size: 0.94rem !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.chips-4-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
 .quick-chips-row { display: flex; gap: 7px; flex-wrap: wrap; }
 .chip-amt-btn {
   background: var(--card-inner, #192440);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: #e2e8f0;
-  padding: 6px 11px;
-  border-radius: 8px;
-  font-weight: 600;
-  font-size: 0.8rem;
+  padding: 9px 6px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.82rem;
   cursor: pointer;
+  min-height: 40px;
+  text-align: center;
 }
-.chip-amt-btn:hover { border-color: #10b981; color: #34d399; }
+.chip-amt-btn:hover,
+.chip-amt-btn.active {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+.chip-max-btn {
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.pay-method-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.pay-method-btn {
+  background: var(--card-inner, #192440);
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 11px;
+  padding: 10px;
+  color: #e2e8f0;
+  font-weight: 700;
+  font-size: 0.84rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 54px;
+}
+.pay-method-btn.active {
+  border-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.14);
+}
+.withdraw-bal-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 12px;
+  padding: 11px 13px;
+  margin-bottom: 14px;
+}
+.withdraw-bal-banner span {
+  display: block;
+  font-size: 0.74rem;
+  color: #94a3b8;
+}
+.withdraw-bal-banner strong {
+  font-size: 1.2rem;
+  font-family: 'JetBrains Mono', monospace;
+  color: #34d399;
+}
 
 .payment-grid {
   display: grid;
@@ -2868,11 +3016,36 @@ html, body {
   .pool-numbers-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   }
+  .records-table th,
+  .records-table td {
+    padding: 8px 4px;
+    font-size: 0.78rem;
+  }
+  .upi-qr-box {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .upi-details-col {
+    width: 100%;
+    align-items: center;
+  }
 }
 
 @media (max-width: 420px) {
   .pay-wallet-summary-grid {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .pw-stat-card {
+    padding: 9px 10px;
+  }
+  .pw-stat-card strong {
+    font-size: 0.96rem;
+  }
+  .pay-subtab-btn {
+    padding: 9px 6px;
+    font-size: 0.78rem;
   }
   .header-right-group {
     gap: 6px;

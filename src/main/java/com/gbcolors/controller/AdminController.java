@@ -174,8 +174,15 @@ public class AdminController {
         String payeeName = str(body, "upiPayeeName");
         String rzpKeyId = str(body, "razorpayKeyId");
         String rzpKeySecret = str(body, "razorpayKeySecret");
-        Map<String, Object> res = gameLoopService.updatePaymentConfig(upiId, payeeName, rzpKeyId, rzpKeySecret);
-        return ResponseEntity.ok(res);
+        Integer minDeposit = parseInt(body == null ? null : body.get("minDeposit"));
+        Integer maxDeposit = parseInt(body == null ? null : body.get("maxDeposit"));
+        Integer minWithdraw = parseInt(body == null ? null : body.get("minWithdraw"));
+        Integer maxWithdraw = parseInt(body == null ? null : body.get("maxWithdraw"));
+        Map<String, Object> res = gameLoopService.updatePaymentConfig(
+                upiId, payeeName, rzpKeyId, rzpKeySecret, minDeposit, maxDeposit, minWithdraw, maxWithdraw
+        );
+        int status = Boolean.TRUE.equals(res.get("success")) ? 200 : 400;
+        return ResponseEntity.status(status).body(res);
     }
 
     @PostMapping("/deposit/action")

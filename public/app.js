@@ -19,7 +19,9 @@
     upiId: '',
     upiPayeeName: 'GB Colors',
     minDeposit: 100,
-    minWithdraw: 100
+    maxDeposit: 50000,
+    minWithdraw: 200,
+    maxWithdraw: 50000
   };
   let gameState = {
     period: '--------',
@@ -31,7 +33,6 @@
   };
   let pendingBet = { type: null, choice: null, unit: 10, mult: 1 };
   let pendingCancelBetId = null;
-  let resultAutoCloseTimer = null;
 
   // Settings
   let userSettings = loadSettings();
@@ -42,11 +43,10 @@
       return {
         sfx: raw.sfx !== false,
         bgm: Boolean(raw.bgm),
-        autoClose: raw.autoClose !== false,
         vibrate: raw.vibrate !== false
       };
     } catch {
-      return { sfx: true, bgm: false, autoClose: true, vibrate: true };
+      return { sfx: true, bgm: false, vibrate: true };
     }
   }
 
@@ -579,35 +579,89 @@
   // =========================================================
   // PAYMENT CENTER (RAZORPAY + LIVE UPI QR + WITHDRAW)
   // =========================================================
-  async function loadPaymentConfig() {
-    const res = await apiFetch('/api/payment/config', { method: 'GET' });
-    if (!res.ok || !res.data.success) return;
-    paymentConfig = Object.assign(paymentConfig, res.data);
+  function applyPaymentConfigToUi(cfg) {
+    if (!cfg) return;
+    paymentConfig = Object.assign(paymentConfig, cfg);
 
-    if ($('minDepositHint')) $('minDepositHint').textContent = `Minimum deposit: ₹${paymentConfig.minDeposit || 100}`;
-    if ($('minWithdrawHint')) $('minWithdrawHint').textContent = `Min ₹${paymentConfig.minWithdraw || 100}`;
-    if ($('rechargeAmountInput')) $('rechargeAmountInput').min = String(paymentConfig.minDeposit || 100);
-    if ($('withdrawAmountInput')) $('withdrawAmountInput').min = String(paymentConfig.minWithdraw || 100);
+    const minDep = Number(paymentConfig.minDeposit || 100);
+    const maxDep = Number(paymentConfig.maxDeposit || 50000);
+    const minWth = Number(paymentConfig.minWithdraw || 200);
+    const maxWth = Number(paymentConfig.maxWithdraw || 50000);
+
+    if ($('minDepositHint')) $('minDepositHint').textContent = `Limit: ₹${minDep.toLocaleString('en-IN')} – ₹${maxDep.toLocaleString('en-IN')}`;
+    if ($('minWithdrawHint')) $('minWithdrawHint').textContent = `Limit: ₹${minWth.toLocaleString('en-IN')} – ₹${maxWth.toLocaleString('en-IN')}`;
+    if ($('rechargeAmountInput')) {
+      $('rechargeAmountInput').min = String(minDep);
+      $('rechargeAmountInput').max = String(maxDep);
+    }
+    if ($('withdrawAmountInput')) {
+      $('withdrawAmountInput').min = String(minWth);
+      $('withdrawAmountInput').max = String(maxWth);
+    }
+
+    const depFirstChip = document.querySelector('#rechargeQuickChips .chip-amt-btn');
+    if (depFirstChip) {
+      depFirstChip.dataset.val = String(minDep);
+      depFirstChip.textContent = `₹${minDep.toLocaleString('en-IN')}`;
+    }
+    const wthFirstChip = document.querySelector('#withdrawQuickChips .chip-amt-btn');
+    if (wthFirstChip) {
+      wthFirstChip.dataset.val = String(minWth);
+      wthFirstChip.textContent = `₹${minWth.toLocaleString('en-IN')}`;
+    }
 
     const badge = $('rzpStatusBadge');
     const note = $('rzpFallbackNote');
     const rzpBtn = $('rzpPayBtn');
     if (paymentConfig.razorpayEnabled) {
-      if (badge) { badge.textContent = 'LIVE GATEWAY'; badge.className = 'status-pill good'; }
+      if (badge) { badge.textContent = 'INSTANT'; badge.className = 'status-pill good'; }
       if (note) note.style.display = 'none';
       if (rzpBtn) rzpBtn.disabled = false;
     } else {
-      if (badge) { badge.textContent = 'UPI QR MODE'; badge.className = 'status-pill amber'; }
+      if (badge) { badge.textContent = 'SETUP NEEDED'; badge.className = 'status-pill amber'; }
       if (note) note.style.display = '';
-      if (rzpBtn) rzpBtn.disabled = false; // show clear guidance toast if clicked
+      if (rzpBtn) rzpBtn.disabled = false;
     }
+  }
+
+  function switchRechargeMethod(method) {
+    const target = method === 'razorpay' ? 'razorpay' : 'upi';
+    document.querySelectorAll('.pay-method-btn').forEach((btn) => {
+      btn.classList.toggle('active', btn.dataset.paymethod === target);
+    });
+    ['upi', 'razorpay'].forEach((m) => {
+      const panel = $('payMethodPanel-' + m);
+      if (panel) {
+        panel.style.display = (m === target) ? '' : 'none';
+        panel.classList.toggle('active', m === target);
+      }
+    });
+  }
+
+  function validatePayAmount(amt, isWithdraw) {
+    const min = Number(isWithdraw ? (paymentConfig.minWithdraw || 200) : (paymentConfig.minDeposit || 100));
+    const max = Number(isWithdraw ? (paymentConfig.maxWithdraw || 50000) : (paymentConfig.maxDeposit || 50000));
+    const label = isWithdraw ? 'withdrawal' : 'recharge';
+    if (!Number.isFinite(amt) || amt < min) {
+      return `Minimum ${label} amount is ₹${min.toLocaleString('en-IN')}`;
+    }
+    if (amt > max) {
+      return `Maximum ${label} amount is ₹${max.toLocaleString('en-IN')}`;
+    }
+    return null;
+  }
+
+  async function loadPaymentConfig() {
+    const res = await apiFetch('/api/payment/config', { method: 'GET' });
+    if (!res.ok || !res.data.success) return;
+    applyPaymentConfigToUi(res.data);
   }
 
   async function handleGenerateUpiQr() {
     const amt = Number(($('rechargeAmountInput') && $('rechargeAmountInput').value) || 0);
-    const min = Number(paymentConfig.minDeposit || 100);
-    if (!Number.isFinite(amt) || amt < min) {
-      showToast(`Minimum recharge amount is ₹${min}`, 'error');
+    const err = validatePayAmount(amt, false);
+    if (err) {
+      showToast(err, 'error');
       return;
     }
     const btn = $('generateUpiQrBtn');
@@ -628,16 +682,16 @@
       if ($('upiQrPreviewBox')) $('upiQrPreviewBox').style.display = '';
       showToast(`Live UPI QR generated for ${formatShortINR(amt)}`, 'success');
     } finally {
-      if (btn) { btn.disabled = false; btn.textContent = 'Generate Live UPI QR for Amount'; }
+      if (btn) { btn.disabled = false; btn.textContent = '📱 Show Live UPI QR & Pay App'; }
     }
   }
 
   async function handleSubmitUtr() {
     const amt = Number(($('rechargeAmountInput') && $('rechargeAmountInput').value) || 0);
     const utr = String(($('depositUtrInput') && $('depositUtrInput').value) || '').trim();
-    const min = Number(paymentConfig.minDeposit || 100);
-    if (!Number.isFinite(amt) || amt < min) {
-      showToast(`Enter valid amount (minimum ₹${min})`, 'error');
+    const err = validatePayAmount(amt, false);
+    if (err) {
+      showToast(err, 'error');
       return;
     }
     if (!utr || utr.length < 6) {
@@ -659,19 +713,19 @@
       showToast(res.data.message || 'UTR submitted for verification', 'success');
       switchPaymentSubTab('status');
     } finally {
-      if (btn) { btn.disabled = false; btn.textContent = '✅ Submit UTR for Admin Verification'; }
+      if (btn) { btn.disabled = false; btn.textContent = '✅ Submit UTR for Verification'; }
     }
   }
 
   async function handleRazorpayPay() {
     const amt = Number(($('rechargeAmountInput') && $('rechargeAmountInput').value) || 0);
-    const min = Number(paymentConfig.minDeposit || 100);
-    if (!Number.isFinite(amt) || amt < min) {
-      showToast(`Minimum recharge amount is ₹${min}`, 'error');
+    const err = validatePayAmount(amt, false);
+    if (err) {
+      showToast(err, 'error');
       return;
     }
     if (typeof window.Razorpay === 'undefined') {
-      showToast('Razorpay SDK blocked or offline — please use Direct UPI QR & UTR below.', 'error');
+      showToast('Razorpay SDK blocked or offline — please use UPI QR / App.', 'error');
       return;
     }
     const btn = $('rzpPayBtn');
@@ -682,7 +736,7 @@
         body: JSON.stringify({ amount: amt })
       });
       if (!res.ok || !res.data.success) {
-        showToast(res.data.message || res.data.error || 'Razorpay checkout unavailable — use Direct UPI QR', 'error');
+        showToast(res.data.message || res.data.error || 'Razorpay checkout unavailable — use UPI QR / App', 'error');
         return;
       }
       const d = res.data;
@@ -722,16 +776,16 @@
       });
       rzp.open();
     } finally {
-      if (btn) { btn.disabled = false; btn.textContent = 'Pay Instantly via Razorpay'; }
+      if (btn) { btn.disabled = false; btn.textContent = '⚡ Pay Instantly via Razorpay'; }
     }
   }
 
   async function handleSubmitWithdraw() {
     const amt = Number(($('withdrawAmountInput') && $('withdrawAmountInput').value) || 0);
     const upiOrBank = String(($('withdrawAccountInput') && $('withdrawAccountInput').value) || '').trim();
-    const min = Number(paymentConfig.minWithdraw || 100);
-    if (!Number.isFinite(amt) || amt < min) {
-      showToast(`Minimum withdrawal is ₹${min}`, 'error');
+    const err = validatePayAmount(amt, true);
+    if (err) {
+      showToast(err, 'error');
       return;
     }
     if (!upiOrBank || upiOrBank.length < 4) {
@@ -754,18 +808,43 @@
       showToast(res.data.message || 'Withdrawal requested!', 'success');
       switchPaymentSubTab('status');
     } finally {
-      if (btn) { btn.disabled = false; btn.textContent = 'Submit Withdrawal Request'; }
+      if (btn) { btn.disabled = false; btn.textContent = '🏦 Submit Withdrawal Request'; }
     }
   }
 
   // =========================================================
   // RENDERING HELPERS
   // =========================================================
-  function colorChipsHtml(colorStr) {
-    return String(colorStr || '').split('+').map((c) => {
-      const cls = c.trim().toLowerCase();
-      return `<span class="color-dot-pill ${cls}">${escapeHtml(c.trim())}</span>`;
-    }).join(' ');
+  function getRoundColors(round) {
+    if (!round) return [];
+    if (Array.isArray(round.colors) && round.colors.length) {
+      return round.colors.map((c) => String(c).trim().toLowerCase()).filter(Boolean);
+    }
+    return String(round.color || '')
+      .split(/[+,]/)
+      .map((c) => c.trim().toLowerCase())
+      .filter(Boolean);
+  }
+
+  function getRoundBallClass(round) {
+    const cols = getRoundColors(round);
+    const hasGreen = cols.includes('green');
+    const hasRed = cols.includes('red');
+    const hasViolet = cols.includes('violet');
+    if (hasRed && hasViolet) return 'n-red-violet';
+    if (hasGreen && hasViolet) return 'n-green-violet';
+    if (hasGreen) return 'n-green';
+    if (hasRed) return 'n-red';
+    return 'n-violet';
+  }
+
+  function colorChipsHtml(round) {
+    const cols = getRoundColors(round);
+    if (!cols.length) return '<span class="color-dot-pill">—</span>';
+    return `<span class="color-chips-wrap">${cols.map((cls) => {
+      const label = cls.charAt(0).toUpperCase() + cls.slice(1);
+      return `<span class="color-dot-pill ${escapeHtml(cls)}"><span class="color-circle-dot"></span>${escapeHtml(label)}</span>`;
+    }).join('')}</span>`;
   }
 
   function renderUserSummary() {
@@ -827,14 +906,13 @@
       return '<tr><td colspan="4" class="empty-cell">No rounds completed yet.</td></tr>';
     }
     return history.slice(0, 30).map((r) => {
-      const numCls = (r.color || '').toLowerCase().includes('green') ? 'n-green'
-        : (r.color || '').toLowerCase().includes('red') ? 'n-red' : 'n-violet';
+      const numCls = getRoundBallClass(r);
       return `
         <tr>
           <td class="mono">${escapeHtml(r.period)}</td>
           <td><span class="hist-num-pill ${numCls}">${escapeHtml(r.number)}</span></td>
           <td><span class="size-tag ${(r.size || '').toLowerCase()}">${escapeHtml(r.size)}</span></td>
-          <td>${colorChipsHtml(r.color)}</td>
+          <td>${colorChipsHtml(r)}</td>
         </tr>
       `;
     }).join('');
@@ -845,8 +923,7 @@
     const dotsEl = $('recentDotsList');
     if (dotsEl) {
       dotsEl.innerHTML = history.slice(0, 14).map((r) => {
-        const cls = (r.color || '').toLowerCase().includes('green') ? 'n-green'
-          : (r.color || '').toLowerCase().includes('red') ? 'n-red' : 'n-violet';
+        const cls = getRoundBallClass(r);
         return `<span class="recent-dot-ball ${cls}" title="Period ${escapeHtml(r.period)}">${escapeHtml(r.number)}</span>`;
       }).join('');
     }
@@ -1061,54 +1138,6 @@
     SoundEngine.click();
   }
 
-  function showOutcomePopup(data) {
-    const res = data.result || {};
-    const bets = Array.isArray(data.settledBets) ? data.settledBets : [];
-    let netProfit = 0;
-    let totalStake = 0;
-    let totalPayout = 0;
-    bets.forEach((b) => {
-      totalStake += Number(b.amount || 0);
-      totalPayout += Number(b.payout || 0);
-    });
-    netProfit = totalPayout - totalStake;
-
-    const ball = $('resultNumberBall');
-    if (ball) {
-      ball.textContent = String(res.number != null ? res.number : '?');
-      const col = String(res.color || '').toLowerCase();
-      ball.className = 'result-ball ' + (col.includes('green') ? 'n-green' : col.includes('red') ? 'n-red' : 'n-violet');
-    }
-    if ($('resultPeriodTxt')) $('resultPeriodTxt').textContent = `Period ${res.period || ''} • ${res.size || ''} • ${res.color || ''}`;
-
-    if (bets.length > 0) {
-      const won = totalPayout > 0;
-      if ($('resultIcon')) $('resultIcon').textContent = won ? '🏆' : '📉';
-      if ($('resultHeading')) $('resultHeading').textContent = won ? 'CONGRATULATIONS!' : 'BETTER LUCK NEXT ROUND';
-      if ($('resultProfitAmt')) {
-        $('resultProfitAmt').textContent = won ? `+${formatShortINR(totalPayout)} Won` : `-${formatShortINR(totalStake)}`;
-        $('resultProfitAmt').className = 'result-profit ' + (won ? 'win' : 'loss');
-      }
-      if (won) SoundEngine.win();
-      else SoundEngine.loss();
-    } else {
-      if ($('resultIcon')) $('resultIcon').textContent = '🎲';
-      if ($('resultHeading')) $('resultHeading').textContent = 'ROUND RESULT';
-      if ($('resultProfitAmt')) {
-        $('resultProfitAmt').textContent = `${res.color || ''} • ${res.size || ''}`;
-        $('resultProfitAmt').className = 'result-profit neutral';
-      }
-    }
-
-    if ($('resultPopup')) $('resultPopup').style.display = 'flex';
-    if (resultAutoCloseTimer) clearTimeout(resultAutoCloseTimer);
-    if (userSettings.autoClose) {
-      resultAutoCloseTimer = setTimeout(() => {
-        if ($('resultPopup')) $('resultPopup').style.display = 'none';
-      }, 4000);
-    }
-  }
-
   // =========================================================
   // WEBSOCKET CONNECTION
   // =========================================================
@@ -1189,7 +1218,22 @@
 
       const settled = lastPeriodSettledBets.slice();
       lastPeriodSettledBets = [];
-      showOutcomePopup({ result: data.result, settledBets: settled });
+      if (settled.length > 0) {
+        const totalPayout = settled.reduce((s, b) => s + Number(b.payout || 0), 0);
+        const totalStake = settled.reduce((s, b) => s + Number(b.amount || 0), 0);
+        const res = data.result || {};
+        if (totalPayout > 0) {
+          SoundEngine.win();
+          showToast(`🏆 #${res.number != null ? res.number : '?'} — Won +${formatShortINR(totalPayout)}!`, 'success');
+        } else {
+          SoundEngine.loss();
+          showToast(`Result #${res.number != null ? res.number : '?'} — -${formatShortINR(totalStake)}`, 'info');
+        }
+      }
+    });
+
+    socket.on('payment_config_updated', (cfg) => {
+      applyPaymentConfigToUi(cfg);
     });
 
     socket.on('ticker_event', (ev) => {
@@ -1551,19 +1595,17 @@
     const syncSettingsUi = () => {
       if ($('settingSfx')) $('settingSfx').checked = userSettings.sfx;
       if ($('settingBgm')) $('settingBgm').checked = userSettings.bgm;
-      if ($('settingAutoClose')) $('settingAutoClose').checked = userSettings.autoClose;
       if ($('settingVibrate')) $('settingVibrate').checked = userSettings.vibrate;
       if ($('soundToggleBtn')) $('soundToggleBtn').textContent = userSettings.sfx ? '🔊' : '🔇';
     };
     syncSettingsUi();
 
-    ['settingSfx', 'settingBgm', 'settingAutoClose', 'settingVibrate'].forEach((id) => {
+    ['settingSfx', 'settingBgm', 'settingVibrate'].forEach((id) => {
       const el = $(id);
       if (!el) return;
       el.addEventListener('change', () => {
         userSettings.sfx = $('settingSfx').checked;
         userSettings.bgm = $('settingBgm').checked;
-        userSettings.autoClose = $('settingAutoClose').checked;
         userSettings.vibrate = $('settingVibrate').checked;
         saveSettings();
         syncSettingsUi();
@@ -1584,14 +1626,29 @@
       });
     });
 
-    // Payment Sub-tabs & Quick Chips
+    // Payment Sub-tabs, Method Switcher & Quick Chips
     document.querySelectorAll('.pay-subtab-btn').forEach((btn) => {
       btn.addEventListener('click', () => switchPaymentSubTab(btn.dataset.paytab));
     });
+    document.querySelectorAll('.pay-method-btn').forEach((btn) => {
+      btn.addEventListener('click', () => switchRechargeMethod(btn.dataset.paymethod));
+    });
     document.querySelectorAll('.chip-amt-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
-        const input = $(btn.dataset.target);
-        if (input) input.value = btn.dataset.val;
+        const targetId = btn.dataset.target;
+        const input = $(targetId);
+        const rawVal = btn.dataset.val;
+        if (input) {
+          if (rawVal === 'ALL') {
+            const avail = Math.floor(Number((currentUser && currentUser.realBalance) || 0));
+            const maxW = Number(paymentConfig.maxWithdraw || 50000);
+            input.value = String(Math.max(0, Math.min(avail, maxW)));
+          } else {
+            input.value = rawVal;
+          }
+        }
+        const row = btn.closest('.quick-chips-row');
+        if (row) row.querySelectorAll('.chip-amt-btn').forEach((b) => b.classList.toggle('active', b === btn));
         SoundEngine.click();
       });
     });
@@ -1694,9 +1751,6 @@
         });
       });
     }
-
-    // Outcome Popup Close
-    if ($('closeResultBtn')) $('closeResultBtn').addEventListener('click', () => { $('resultPopup').style.display = 'none'; });
 
     // Notifications Modals
     if ($('notifModalAckBtn')) $('notifModalAckBtn').addEventListener('click', () => acknowledgeActivePopup(false));

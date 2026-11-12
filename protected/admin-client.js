@@ -124,7 +124,11 @@
                 upiId: document.getElementById('cfgUpiId').value,
                 upiPayeeName: document.getElementById('cfgUpiPayeeName').value,
                 razorpayKeyId: document.getElementById('cfgRzpKeyId').value,
-                razorpayKeySecret: document.getElementById('cfgRzpKeySecret').value
+                razorpayKeySecret: document.getElementById('cfgRzpKeySecret').value,
+                minDeposit: parseInt(document.getElementById('cfgMinDeposit').value, 10),
+                maxDeposit: parseInt(document.getElementById('cfgMaxDeposit').value, 10),
+                minWithdraw: parseInt(document.getElementById('cfgMinWithdraw').value, 10),
+                maxWithdraw: parseInt(document.getElementById('cfgMaxWithdraw').value, 10)
             };
             const res = await fetch(window.apiUrl('/api/admin/payment-config'), {
                 method: 'POST',
@@ -135,7 +139,7 @@
                 body: JSON.stringify(payload)
             });
             const data = await res.json();
-            window.showToast(data.message);
+            window.showToast(data.message || (res.ok ? 'Saved!' : 'Invalid payment config'));
         });
 
         // Save SMTP settings
@@ -599,6 +603,10 @@
             document.getElementById('cfgUpiId').value = data.paymentConfig.upiId || '';
             document.getElementById('cfgUpiPayeeName').value = data.paymentConfig.upiPayeeName || '';
             document.getElementById('cfgRzpKeyId').value = data.paymentConfig.razorpayKeyId || '';
+            document.getElementById('cfgMinDeposit').value = data.paymentConfig.minDeposit ?? 100;
+            document.getElementById('cfgMaxDeposit').value = data.paymentConfig.maxDeposit ?? 50000;
+            document.getElementById('cfgMinWithdraw').value = data.paymentConfig.minWithdraw ?? 200;
+            document.getElementById('cfgMaxWithdraw').value = data.paymentConfig.maxWithdraw ?? 50000;
             if (data.paymentConfig.razorpayEnabled) {
                 document.getElementById('cfgRzpKeySecret').value = '********';
             }

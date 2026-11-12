@@ -373,6 +373,27 @@
                     <label class="input-label">Razorpay Key Secret</label>
                     <input type="password" id="cfgRzpKeySecret" class="form-input" placeholder="Enter Razorpay Key Secret">
 
+                    <div class="dual-btn-row">
+                        <div>
+                            <label class="input-label">Min Recharge (₹)</label>
+                            <input type="number" id="cfgMinDeposit" class="form-input" min="10" value="100">
+                        </div>
+                        <div>
+                            <label class="input-label">Max Recharge (₹)</label>
+                            <input type="number" id="cfgMaxDeposit" class="form-input" min="10" value="50000">
+                        </div>
+                    </div>
+                    <div class="dual-btn-row">
+                        <div>
+                            <label class="input-label">Min Withdraw (₹)</label>
+                            <input type="number" id="cfgMinWithdraw" class="form-input" min="10" value="200">
+                        </div>
+                        <div>
+                            <label class="input-label">Max Withdraw (₹)</label>
+                            <input type="number" id="cfgMaxWithdraw" class="form-input" min="10" value="50000">
+                        </div>
+                    </div>
+
                     <button class="btn-confirm-bet" id="savePaymentConfigBtn">Save Payment Settings</button>
                 </div>
             </div>

@@ -84,6 +84,18 @@ public class PlatformSettingsEntity {
     @Column(name = "razorpay_key_secret", length = 255)
     private String razorpayKeySecret;
 
+    @Column(name = "min_deposit_amount")
+    private Integer minDepositAmount = 100;
+
+    @Column(name = "max_deposit_amount")
+    private Integer maxDepositAmount = 50000;
+
+    @Column(name = "min_withdraw_amount")
+    private Integer minWithdrawAmount = 200;
+
+    @Column(name = "max_withdraw_amount")
+    private Integer maxWithdrawAmount = 50000;
+
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
 
@@ -170,4 +182,36 @@ public class PlatformSettingsEntity {
 
     public String getRazorpayKeySecret() { return razorpayKeySecret; }
     public void setRazorpayKeySecret(String razorpayKeySecret) { this.razorpayKeySecret = razorpayKeySecret; }
+
+    public int getMinDepositAmount() {
+        return minDepositAmount != null && minDepositAmount >= 10 ? minDepositAmount : 100;
+    }
+    public void setMinDepositAmount(Integer minDepositAmount) {
+        this.minDepositAmount = minDepositAmount != null && minDepositAmount >= 10 ? minDepositAmount : 100;
+    }
+
+    public int getMaxDepositAmount() {
+        int min = getMinDepositAmount();
+        return maxDepositAmount != null && maxDepositAmount >= min ? maxDepositAmount : Math.max(min, 50000);
+    }
+    public void setMaxDepositAmount(Integer maxDepositAmount) {
+        int min = getMinDepositAmount();
+        this.maxDepositAmount = maxDepositAmount != null && maxDepositAmount >= min ? maxDepositAmount : Math.max(min, 50000);
+    }
+
+    public int getMinWithdrawAmount() {
+        return minWithdrawAmount != null && minWithdrawAmount >= 10 ? minWithdrawAmount : 200;
+    }
+    public void setMinWithdrawAmount(Integer minWithdrawAmount) {
+        this.minWithdrawAmount = minWithdrawAmount != null && minWithdrawAmount >= 10 ? minWithdrawAmount : 200;
+    }
+
+    public int getMaxWithdrawAmount() {
+        int min = getMinWithdrawAmount();
+        return maxWithdrawAmount != null && maxWithdrawAmount >= min ? maxWithdrawAmount : Math.max(min, 50000);
+    }
+    public void setMaxWithdrawAmount(Integer maxWithdrawAmount) {
+        int min = getMinWithdrawAmount();
+        this.maxWithdrawAmount = maxWithdrawAmount != null && maxWithdrawAmount >= min ? maxWithdrawAmount : Math.max(min, 50000);
+    }
 }

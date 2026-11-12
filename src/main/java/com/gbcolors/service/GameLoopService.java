@@ -684,8 +684,9 @@ public class GameLoopService {
      * Submits a manual UPI UTR deposit request into the Admin Verification Queue.
      */
     public Map<String, Object> submitDeposit(String email, Integer amount, String utr, String method) {
-        if (amount == null || amount < 100) {
-            return Map.of("success", false, "message", "Minimum deposit is ₹100.");
+        String amtErr = validateDepositAmount(amount);
+        if (amtErr != null) {
+            return Map.of("success", false, "message", amtErr);
         }
         String cleanUtr = utr == null ? "" : utr.trim();
         if (cleanUtr.length() < 8) {
@@ -903,8 +904,9 @@ public class GameLoopService {
     }
 
     public Map<String, Object> submitWithdrawal(String email, Integer amount, String upiOrBank) {
-        if (amount == null || amount < 200) {
-            return Map.of("success", false, "message", "Minimum withdrawal is ₹200.");
+        String amtErr = validateWithdrawAmount(amount);
+        if (amtErr != null) {
+            return Map.of("success", false, "message", amtErr);
         }
         String cleanAcct = upiOrBank == null ? "" : upiOrBank.trim();
         if (cleanAcct.length() < 4) {
@@ -1077,10 +1079,72 @@ public class GameLoopService {
         );
     }
 
+    public String validateDepositAmount(Integer amount) {
+        PlatformSettingsEntity s = loadOrInitSettings();
+        return validateAmountRange(amount, s.getMinDepositAmount(), s.getMaxDepositAmount(), "deposit");
+    }
+
+    public String validateWithdrawAmount(Integer amount) {
+        PlatformSettingsEntity s = loadOrInitSettings();
+        return validateAmountRange(amount, s.getMinWithdrawAmount(), s.getMaxWithdrawAmount(), "withdrawal");
+    }
+
+    private String validateAmountRange(Integer amount, int min, int max, String label) {
+        if (amount == null || amount < min) {
+            return "Minimum " + label + " amount is ₹" + min + ".";
+        }
+        if (amount > max) {
+            return "Maximum " + label + " amount is ₹" + max + ".";
+        }
+        return null;
+    }
+
+    private String validateMinMaxConfig(int minVal, int maxVal, String label) {
+        if (minVal < 10) {
+            return "Minimum " + label + " amount must be at least ₹10.";
+        }
+        if (maxVal < minVal) {
+            return "Maximum " + label + " amount (₹" + maxVal + ") cannot be less than Minimum (₹" + minVal + ").";
+        }
+        if (maxVal > 10_000_000) {
+            return "Maximum " + label + " amount cannot exceed ₹10,000,000.";
+        }
+        return null;
+    }
+
     public Map<String, Object> updatePaymentConfig(String upiId, String payeeName, String rzpKeyId, String rzpKeySecret) {
+        return updatePaymentConfig(upiId, payeeName, rzpKeyId, rzpKeySecret, null, null, null, null);
+    }
+
+    public Map<String, Object> updatePaymentConfig(
+            String upiId,
+            String payeeName,
+            String rzpKeyId,
+            String rzpKeySecret,
+            Integer minDeposit,
+            Integer maxDeposit,
+            Integer minWithdraw,
+            Integer maxWithdraw
+    ) {
         Map<String, Object> adminSnapshot;
+        Map<String, Object> publicPayCfg = new LinkedHashMap<>();
+        String validationError = null;
         stateLock.lock();
         try {
+            PlatformSettingsEntity current = loadOrInitSettings();
+            int nextMinDep = minDeposit != null ? minDeposit : current.getMinDepositAmount();
+            int nextMaxDep = maxDeposit != null ? maxDeposit : current.getMaxDepositAmount();
+            int nextMinWth = minWithdraw != null ? minWithdraw : current.getMinWithdrawAmount();
+            int nextMaxWth = maxWithdraw != null ? maxWithdraw : current.getMaxWithdrawAmount();
+
+            validationError = validateMinMaxConfig(nextMinDep, nextMaxDep, "recharge");
+            if (validationError == null) {
+                validationError = validateMinMaxConfig(nextMinWth, nextMaxWth, "withdraw");
+            }
+            if (validationError != null) {
+                return Map.of("success", false, "message", validationError);
+            }
+
             txTemplate.executeWithoutResult(status -> {
                 PlatformSettingsEntity s = loadOrInitSettings();
                 if (upiId != null && !upiId.isBlank()) {
@@ -1093,14 +1157,31 @@ public class GameLoopService {
                 if (rzpKeySecret != null && !"********".equals(rzpKeySecret.trim())) {
                     s.setRazorpayKeySecret(rzpKeySecret.trim());
                 }
+                s.setMinDepositAmount(nextMinDep);
+                s.setMaxDepositAmount(nextMaxDep);
+                s.setMinWithdrawAmount(nextMinWth);
+                s.setMaxWithdrawAmount(nextMaxWth);
                 settingsRepo.save(s);
+
+                boolean rzpEnabled = s.getRazorpayKeyId() != null && !s.getRazorpayKeyId().isBlank()
+                        && s.getRazorpayKeySecret() != null && !s.getRazorpayKeySecret().isBlank();
+                publicPayCfg.put("success", true);
+                publicPayCfg.put("razorpayEnabled", rzpEnabled);
+                publicPayCfg.put("razorpayKeyId", rzpEnabled ? s.getRazorpayKeyId().trim() : "");
+                publicPayCfg.put("upiId", s.getUpiId());
+                publicPayCfg.put("upiPayeeName", s.getUpiPayeeName());
+                publicPayCfg.put("minDeposit", s.getMinDepositAmount());
+                publicPayCfg.put("maxDeposit", s.getMaxDepositAmount());
+                publicPayCfg.put("minWithdraw", s.getMinWithdrawAmount());
+                publicPayCfg.put("maxWithdraw", s.getMaxWithdrawAmount());
             });
             adminSnapshot = buildAdminAnalyticsSnapshot();
         } finally {
             stateLock.unlock();
         }
         wsHub.emitToAdmin("admin_live_update", adminSnapshot);
-        return Map.of("success", true, "message", "Payment gateway & UPI settings saved!");
+        wsHub.emitAll("payment_config_updated", publicPayCfg);
+        return Map.of("success", true, "message", "Payment gateway, UPI & Min/Max limits saved!");
     }
 
     public void updateSmtpConfig(String adminEmail, String host, Integer port, String authUser, String authPass, String fromName) {

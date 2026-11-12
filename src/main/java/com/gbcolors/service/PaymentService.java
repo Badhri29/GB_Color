@@ -61,14 +61,17 @@ public class PaymentService {
         out.put("razorpayKeyId", razorpayEnabled ? s.getRazorpayKeyId().trim() : "");
         out.put("upiId", s.getUpiId());
         out.put("upiPayeeName", s.getUpiPayeeName());
-        out.put("minDeposit", 100);
-        out.put("minWithdraw", 200);
+        out.put("minDeposit", s.getMinDepositAmount());
+        out.put("maxDeposit", s.getMaxDepositAmount());
+        out.put("minWithdraw", s.getMinWithdrawAmount());
+        out.put("maxWithdraw", s.getMaxWithdrawAmount());
         return out;
     }
 
     public Map<String, Object> initiateUpiPayment(String email, Integer amount) {
-        if (amount == null || amount < 100) {
-            return Map.of("success", false, "message", "Minimum deposit amount is ₹100.");
+        String amtErr = gameLoopService.validateDepositAmount(amount);
+        if (amtErr != null) {
+            return Map.of("success", false, "message", amtErr);
         }
         UserEntity user = userRepo.findByEmail(email).orElse(null);
         if (user == null) {
@@ -104,8 +107,9 @@ public class PaymentService {
     }
 
     public Map<String, Object> createRazorpayOrder(String email, Integer amount) {
-        if (amount == null || amount < 100) {
-            return Map.of("success", false, "message", "Minimum deposit amount is ₹100.");
+        String amtErr = gameLoopService.validateDepositAmount(amount);
+        if (amtErr != null) {
+            return Map.of("success", false, "message", amtErr);
         }
         UserEntity user = userRepo.findByEmail(email).orElse(null);
         if (user == null) {

@@ -111,6 +111,7 @@ public class GamePayloadBuilder {
         map.put("period", r.getPeriod());
         map.put("number", r.getWinningNumber());
         map.put("colors", colorList);
+        map.put("color", String.join("+", colorList));
         map.put("size", r.getSize());
         map.put("totalCollected", toLong(r.getTotalCollected()));
         map.put("totalPayout", toLong(r.getTotalPayout()));
@@ -297,6 +298,10 @@ public class GamePayloadBuilder {
         paymentConfig.put("upiPayeeName", settings.getUpiPayeeName());
         paymentConfig.put("razorpayKeyId", settings.getRazorpayKeyId() != null ? settings.getRazorpayKeyId() : "");
         paymentConfig.put("razorpayEnabled", razorpayEnabled);
+        paymentConfig.put("minDeposit", settings.getMinDepositAmount());
+        paymentConfig.put("maxDeposit", settings.getMaxDepositAmount());
+        paymentConfig.put("minWithdraw", settings.getMinWithdrawAmount());
+        paymentConfig.put("maxWithdraw", settings.getMaxWithdrawAmount());
 
         Map<String, Object> upcomingResult = null;
         if ("LOCKED".equals(status) && lockedWinningNumber != null) {

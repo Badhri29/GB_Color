@@ -357,7 +357,7 @@
         <div class="page-header-bar">
           <div>
             <h2>💳 Payment Center</h2>
-            <p class="page-subtitle">Real-time Razorpay checkout, live UPI QR deposits, and withdrawal status tracking</p>
+            <p class="page-subtitle">Instant Recharge via UPI QR / Razorpay &amp; Fast Withdrawals</p>
           </div>
           <button type="button" class="btn-secondary-nav" data-nav="game">← Back to Game</button>
         </div>
@@ -381,54 +381,57 @@
           </div>
         </div>
 
-        <div class="pay-subtabs-bar">
-          <button type="button" class="pay-subtab-btn active" data-paytab="recharge">⚡ Recharge Wallet</button>
-          <button type="button" class="pay-subtab-btn" data-paytab="withdraw">🏦 Withdraw Winnings</button>
-          <button type="button" class="pay-subtab-btn" data-paytab="status">📋 Payment Status &amp; History</button>
+        <div class="pay-subtabs-bar" role="tablist" aria-label="Payment Sections">
+          <button type="button" class="pay-subtab-btn active" data-paytab="recharge">⚡ Recharge</button>
+          <button type="button" class="pay-subtab-btn" data-paytab="withdraw">🏦 Withdraw</button>
+          <button type="button" class="pay-subtab-btn" data-paytab="status">📋 Status</button>
         </div>
 
         <!-- PAY SUB-TAB 1: RECHARGE -->
         <div id="payTab-recharge" class="pay-tab-panel active">
-          <div class="payment-amount-card">
-            <div class="pac-top">
+          <div class="payment-card single-col-card pay-flow-card">
+            <div class="pay-step-head">
+              <span class="pay-step-num">1</span>
               <div>
-                <label for="rechargeAmountInput">Enter Recharge Amount (₹)</label>
-                <small id="minDepositHint">Minimum deposit: ₹100</small>
-              </div>
-              <div class="quick-chips-row">
-                <button type="button" class="chip-amt-btn" data-target="rechargeAmountInput" data-val="100">₹100</button>
-                <button type="button" class="chip-amt-btn" data-target="rechargeAmountInput" data-val="500">₹500</button>
-                <button type="button" class="chip-amt-btn" data-target="rechargeAmountInput" data-val="1000">₹1000</button>
-                <button type="button" class="chip-amt-btn" data-target="rechargeAmountInput" data-val="5000">₹5000</button>
+                <label for="rechargeAmountInput" class="pay-step-title">Choose Recharge Amount</label>
+                <small id="minDepositHint" class="pay-limit-hint">Limit: ₹100 – ₹50,000</small>
               </div>
             </div>
-            <input id="rechargeAmountInput" type="number" min="100" step="10" value="500" class="pay-amount-input" />
-          </div>
 
-          <div class="payment-grid">
-            <!-- RAZORPAY GATEWAY -->
-            <div class="payment-card">
-              <div class="pay-card-head">
-                <h3>⚡ Instant Checkout (Razorpay)</h3>
-                <span id="rzpStatusBadge" class="status-pill neutral">Checking...</span>
-              </div>
-              <p class="pay-card-desc">Instant automated wallet credit via UPI Apps, Credit/Debit Cards, NetBanking &amp; Wallets.</p>
-              <div class="method-badges-row">
-                <span>UPI</span><span>GPay</span><span>PhonePe</span><span>Cards</span><span>NetBanking</span>
-              </div>
-              <button id="rzpPayBtn" type="button" class="btn-primary-glow full-w">Pay Instantly via Razorpay</button>
-              <small id="rzpFallbackNote" class="pay-card-note" style="display:none;">Razorpay keys are not configured by Admin yet. Use Direct UPI QR &amp; UTR on the right.</small>
+            <div class="pay-input-prefix-wrap">
+              <span class="pay-currency-prefix">₹</span>
+              <input id="rechargeAmountInput" type="number" inputmode="numeric" min="100" max="50000" step="10" value="500" class="pay-amount-input big-touch-input" placeholder="Enter amount" />
             </div>
 
-            <!-- DYNAMIC UPI QR + UTR -->
-            <div class="payment-card">
-              <div class="pay-card-head">
-                <h3>📱 Direct UPI QR &amp; App Pay</h3>
-                <span class="status-pill info">LIVE QR</span>
-              </div>
-              <p class="pay-card-desc">Generate a live amount-locked UPI QR code, pay in your UPI app, then submit the 12-digit UTR for verification.</p>
+            <div id="rechargeQuickChips" class="quick-chips-row chips-4-grid">
+              <button type="button" class="chip-amt-btn" data-target="rechargeAmountInput" data-val="100">₹100</button>
+              <button type="button" class="chip-amt-btn active" data-target="rechargeAmountInput" data-val="500">₹500</button>
+              <button type="button" class="chip-amt-btn" data-target="rechargeAmountInput" data-val="1000">₹1,000</button>
+              <button type="button" class="chip-amt-btn" data-target="rechargeAmountInput" data-val="5000">₹5,000</button>
+            </div>
 
-              <button id="generateUpiQrBtn" type="button" class="btn-accent-outline full-w">Generate Live UPI QR for Amount</button>
+            <div class="pay-step-head" style="margin-top:16px;">
+              <span class="pay-step-num">2</span>
+              <div>
+                <div class="pay-step-title">Select Payment Method</div>
+                <small class="pay-limit-hint">Tap UPI QR / App or Razorpay Checkout</small>
+              </div>
+            </div>
+
+            <div class="pay-method-switch">
+              <button type="button" id="methodBtnUpi" class="pay-method-btn active" data-paymethod="upi">
+                <span>📱 UPI QR / App</span>
+                <small class="status-pill info">LIVE QR</small>
+              </button>
+              <button type="button" id="methodBtnRazorpay" class="pay-method-btn" data-paymethod="razorpay">
+                <span>⚡ Razorpay</span>
+                <small id="rzpStatusBadge" class="status-pill neutral">Checking</small>
+              </button>
+            </div>
+
+            <!-- METHOD A: DIRECT UPI QR + UTR -->
+            <div id="payMethodPanel-upi" class="pay-method-panel active">
+              <button id="generateUpiQrBtn" type="button" class="btn-accent-outline full-w touch-cta-btn">📱 Show Live UPI QR &amp; Pay App</button>
 
               <div id="upiQrPreviewBox" class="upi-qr-box" style="display:none;">
                 <div id="upiQrSvgWrap" class="qr-svg-wrap"></div>
@@ -439,23 +442,33 @@
                     <strong id="upiIdDisplay">—</strong>
                     <button id="copyUpiIdBtn" type="button" class="btn-copy-mini">Copy</button>
                   </div>
-                  <a id="upiAppDeepLink" href="#" class="btn-upi-app">📲 Pay via Installed UPI App</a>
+                  <a id="upiAppDeepLink" href="#" class="btn-upi-app touch-cta-btn">📲 Open Installed UPI App</a>
                 </div>
               </div>
 
               <div class="form-group" style="margin-top:12px;">
-                <label for="depositUtrInput">12-Digit UPI UTR / Transaction Reference ID</label>
-                <input id="depositUtrInput" type="text" maxlength="32" placeholder="e.g. 431209876543" />
+                <label for="depositUtrInput">Step 3: Enter 12-Digit UPI UTR / Ref ID</label>
+                <input id="depositUtrInput" type="text" inputmode="numeric" maxlength="32" class="big-touch-field" placeholder="e.g. 431209876543" />
               </div>
-              <button id="submitDepositBtn" type="button" class="btn-primary-glow full-w">✅ Submit UTR for Admin Verification</button>
+              <button id="submitDepositBtn" type="button" class="btn-primary-glow full-w touch-cta-btn">✅ Submit UTR for Verification</button>
+            </div>
+
+            <!-- METHOD B: RAZORPAY GATEWAY -->
+            <div id="payMethodPanel-razorpay" class="pay-method-panel" style="display:none;">
+              <p class="pay-card-desc">Instant auto-credited checkout via GPay, PhonePe, Paytm, Cards &amp; NetBanking.</p>
+              <div class="method-badges-row">
+                <span>UPI</span><span>GPay</span><span>PhonePe</span><span>Cards</span><span>NetBanking</span>
+              </div>
+              <button id="rzpPayBtn" type="button" class="btn-primary-glow full-w touch-cta-btn">⚡ Pay Instantly via Razorpay</button>
+              <small id="rzpFallbackNote" class="pay-card-note" style="display:none;">Razorpay keys are not configured by Admin yet. Switch to <strong>UPI QR / App</strong> above to recharge.</small>
             </div>
           </div>
 
           <!-- PRACTICE DEMO RELOAD -->
-          <div class="demo-reload-strip">
+          <div class="demo-reload-strip single-col-card">
             <div>
               <strong>🎯 Practice Demo Coins Top-Up</strong>
-              <small>Free play money for learning the game rules (separate from Real Cash)</small>
+              <small>Free play coins for learning rules (separate from Real Cash)</small>
             </div>
             <div class="demo-chip-actions">
               <button type="button" class="btn-demo-add" data-demoamt="1000">+₹1,000</button>
@@ -467,31 +480,37 @@
 
         <!-- PAY SUB-TAB 2: WITHDRAW -->
         <div id="payTab-withdraw" class="pay-tab-panel" style="display:none;">
-          <div class="payment-card single-col-card">
-            <div class="pay-card-head">
-              <h3>🏦 Withdraw Real Winnings</h3>
-              <span class="status-pill good">Available: <strong id="withdrawAvailableBal">₹0.00</strong></span>
+          <div class="payment-card single-col-card pay-flow-card">
+            <div class="withdraw-bal-banner">
+              <div>
+                <span>Available Real Winnings</span>
+                <strong id="withdrawAvailableBal">₹0.00</strong>
+              </div>
+              <span id="minWithdrawHint" class="status-pill good">Limit: ₹200 – ₹50,000</span>
             </div>
-            <p class="pay-card-desc">Withdrawals are transferred directly to your verified UPI ID or Bank Account. You will receive an instant notification as soon as Admin settles your payout.</p>
 
-            <div class="quick-chips-row" style="margin-bottom:10px;">
-              <button type="button" class="chip-amt-btn" data-target="withdrawAmountInput" data-val="100">₹100</button>
+            <div class="form-group">
+              <label for="withdrawAmountInput">1. Withdrawal Amount (₹)</label>
+              <div class="pay-input-prefix-wrap">
+                <span class="pay-currency-prefix">₹</span>
+                <input id="withdrawAmountInput" type="number" inputmode="numeric" min="200" max="50000" step="10" class="pay-amount-input big-touch-input" placeholder="Enter amount" />
+              </div>
+            </div>
+
+            <div id="withdrawQuickChips" class="quick-chips-row chips-4-grid" style="margin-bottom:14px;">
+              <button type="button" class="chip-amt-btn" data-target="withdrawAmountInput" data-val="200">₹200</button>
               <button type="button" class="chip-amt-btn" data-target="withdrawAmountInput" data-val="500">₹500</button>
-              <button type="button" class="chip-amt-btn" data-target="withdrawAmountInput" data-val="1000">₹1000</button>
-              <button type="button" class="chip-amt-btn" data-target="withdrawAmountInput" data-val="2000">₹2000</button>
+              <button type="button" class="chip-amt-btn" data-target="withdrawAmountInput" data-val="1000">₹1,000</button>
+              <button type="button" class="chip-amt-btn chip-max-btn" data-target="withdrawAmountInput" data-val="ALL">MAX</button>
             </div>
 
             <div class="form-group">
-              <label for="withdrawAmountInput">Withdrawal Amount (₹) — <span id="minWithdrawHint">Min ₹100</span></label>
-              <input id="withdrawAmountInput" type="number" min="100" step="10" placeholder="Enter amount to withdraw" />
+              <label for="withdrawAccountInput">2. Your UPI ID or Bank A/C + IFSC</label>
+              <input id="withdrawAccountInput" type="text" class="big-touch-field" placeholder="e.g. yourname@okicici or A/C + IFSC" />
             </div>
 
-            <div class="form-group">
-              <label for="withdrawAccountInput">Destination UPI ID or Bank Account + IFSC</label>
-              <input id="withdrawAccountInput" type="text" placeholder="e.g. yourname@okicici or A/C 1234567890 IFSC SBIN0001234" />
-            </div>
-
-            <button id="submitWithdrawBtn" type="button" class="btn-primary-glow full-w">Submit Withdrawal Request</button>
+            <button id="submitWithdrawBtn" type="button" class="btn-primary-glow full-w touch-cta-btn">🏦 Submit Withdrawal Request</button>
+            <small class="pay-card-note" style="color:#94a3b8;">You will get a live alert as soon as Admin approves &amp; pays your withdrawal.</small>
           </div>
         </div>
 
@@ -508,7 +527,7 @@
 
             <div class="payment-card">
               <div class="pay-card-head">
-                <h3>💳 My Recharge / Deposit Requests</h3>
+                <h3>💳 My Recharge Requests</h3>
                 <span class="status-pill neutral">UTR &amp; RAZORPAY</span>
               </div>
               <div id="userDepositStatusList" class="status-cards-stack"></div>
@@ -658,14 +677,6 @@
 
           <div class="setting-toggle-row">
             <div>
-              <strong>⏱ Auto-Close Result Popup (4s)</strong>
-              <small>Automatically dismiss the round outcome popup after 4 seconds</small>
-            </div>
-            <label class="switch-toggle"><input type="checkbox" id="settingAutoClose" checked /><span class="slider-round"></span></label>
-          </div>
-
-          <div class="setting-toggle-row">
-            <div>
               <strong>📳 Haptic Vibration (Mobile)</strong>
               <small>Gentle vibration feedback when placing bets or winning</small>
             </div>
@@ -739,20 +750,6 @@
           <button id="executeCancelBtn" type="button" class="btn-danger-solid">Yes, Cancel &amp; Refund</button>
         </div>
       </div>
-    </div>
-  </div>
-
-  <!-- =========================
-       ROUND OUTCOME POPUP
-  ========================== -->
-  <div id="resultPopup" class="modal-overlay" style="display:none;">
-    <div id="resultCard" class="result-popup-card">
-      <div id="resultIcon" class="result-emoji">🎉</div>
-      <h2 id="resultHeading">ROUND SETTLED</h2>
-      <div id="resultNumberBall" class="result-ball">0</div>
-      <p id="resultPeriodTxt">Period #----</p>
-      <div id="resultProfitAmt" class="result-profit">+₹0</div>
-      <button id="closeResultBtn" type="button" class="btn-primary-glow full-w">Continue</button>
     </div>
   </div>
 

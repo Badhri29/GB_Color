@@ -136,4 +136,74 @@ class AuthAndAdminSecurityTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
     }
+
+    @Test
+    void adminCanConfigureAndEnforcePaymentMinMaxLimits() throws Exception {
+        MvcResult adminLogin = mockMvc.perform(post("/api/auth/signin")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"gbcolor.admin@gmail.com\",\"password\":\"Admin@123\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        String adminToken = adminLogin.getResponse().getContentAsString().replaceAll(".*\"token\":\"([^\"]+)\".*", "$1");
+
+        MvcResult userLogin = mockMvc.perform(post("/api/auth/signin")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"user1@gb.com\",\"password\":\"User@123\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        String userToken = userLogin.getResponse().getContentAsString().replaceAll(".*\"token\":\"([^\"]+)\".*", "$1");
+
+        // Invalid range (min > max) must fail cleanly
+        mockMvc.perform(post("/api/admin/payment-config")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"minDeposit\":5000,\"maxDeposit\":100}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+
+        // Update limits
+        mockMvc.perform(post("/api/admin/payment-config")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"minDeposit\":150,\"maxDeposit\":2000,\"minWithdraw\":300,\"maxWithdraw\":3000}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        // Verify payment config returns updated limits
+        mockMvc.perform(get("/api/payment/config")
+                        .header("Authorization", "Bearer " + userToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.minDeposit").value(150))
+                .andExpect(jsonPath("$.maxDeposit").value(2000))
+                .andExpect(jsonPath("$.minWithdraw").value(300))
+                .andExpect(jsonPath("$.maxWithdraw").value(3000));
+
+        // Enforce deposit min/max
+        mockMvc.perform(post("/api/payment/upi/initiate")
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"amount\":100}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+        mockMvc.perform(post("/api/payment/upi/initiate")
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"amount\":2500}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+
+        // Enforce withdraw min/max
+        mockMvc.perform(post("/api/payment/withdraw")
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"amount\":250,\"upiOrBank\":\"player1@upi\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+        mockMvc.perform(post("/api/payment/withdraw")
+                        .header("Authorization", "Bearer " + userToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"amount\":3500,\"upiOrBank\":\"player1@upi\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false));
+    }
 }

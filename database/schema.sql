@@ -127,7 +127,11 @@ CREATE TABLE IF NOT EXISTS `platform_settings` (
   `upi_id` VARCHAR(120) NULL DEFAULT 'gbcolors.pay@upi',
   `upi_payee_name` VARCHAR(120) NULL DEFAULT 'GB_Colors',
   `razorpay_key_id` VARCHAR(128) NULL,
-  `razorpay_key_secret` VARCHAR(255) NULL
+  `razorpay_key_secret` VARCHAR(255) NULL,
+  `min_deposit_amount` INT NULL DEFAULT 100,
+  `max_deposit_amount` INT NULL DEFAULT 50000,
+  `min_withdraw_amount` INT NULL DEFAULT 200,
+  `max_withdraw_amount` INT NULL DEFAULT 50000
 ) ENGINE=InnoDB;
 
 -- 8. Deposit Requests (UPI UTR Queue & Razorpay Orders)
