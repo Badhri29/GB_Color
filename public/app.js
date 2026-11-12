@@ -880,6 +880,10 @@
     renderHistoryView();
   }
 
+  function isBetActive(b) {
+    return Boolean(b && (b.status === 'ACTIVE' || b.status === 'PENDING'));
+  }
+
   function renderActiveBetBadges() {
     document.querySelectorAll('.bet-badge').forEach((b) => {
       b.style.display = 'none';
@@ -888,7 +892,7 @@
     if (!currentUser || !Array.isArray(currentUser.activeBets)) return;
     const totals = {};
     currentUser.activeBets.forEach((b) => {
-      if (b.period === gameState.period && b.status === 'PENDING') {
+      if (b.period === gameState.period && isBetActive(b)) {
         totals[b.choice] = (totals[b.choice] || 0) + Number(b.amount || 0);
       }
     });
@@ -933,7 +937,7 @@
 
   function renderUserBetAndTxLists() {
     if (!currentUser) return;
-    const activeBets = (currentUser.activeBets || []).filter((b) => b.status === 'PENDING');
+    const activeBets = (currentUser.activeBets || []).filter(isBetActive);
     if ($('activeBetsCountBadge')) $('activeBetsCountBadge').textContent = String(activeBets.length);
 
     const activeEl = $('activeBetsList');

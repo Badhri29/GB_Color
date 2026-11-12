@@ -54,9 +54,11 @@
             }
 
             ws.onopen = function () {
+                client.connected = true;
                 while (sendQueue.length > 0 && ws && ws.readyState === WebSocket.OPEN) {
                     ws.send(sendQueue.shift());
                 }
+                dispatch('connect');
             };
 
             ws.onmessage = function (ev) {
@@ -80,7 +82,9 @@
             };
 
             ws.onclose = function (ev) {
+                client.connected = false;
                 if (manuallyDisconnected) return;
+                dispatch('disconnect', ev);
                 if (ev && ev.code === 4001) {
                     if (!authFailedNotified) {
                         authFailedNotified = true;
@@ -93,6 +97,7 @@
         }
 
         const client = {
+            connected: false,
             on: function (eventName, fn) {
                 if (!listeners[eventName]) {
                     listeners[eventName] = [];
@@ -120,6 +125,7 @@
             },
             disconnect: function () {
                 manuallyDisconnected = true;
+                client.connected = false;
                 if (reconnectTimer) {
                     clearTimeout(reconnectTimer);
                     reconnectTimer = null;
