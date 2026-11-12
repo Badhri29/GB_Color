@@ -24,34 +24,11 @@
             document.querySelectorAll('.adm-tab-panel').forEach(p => {
                 p.classList.toggle('active', p.id === tabId);
             });
-            document.querySelectorAll('#admSideDrawer .drawer-nav-item').forEach(b => {
-                b.classList.toggle('active', b.getAttribute('data-admdrawer') === tabId);
-            });
         }
+        window.switchAdminTab = switchAdminTab;
 
         document.querySelectorAll('.adm-tab-btn').forEach(btn => {
             btn.addEventListener('click', () => switchAdminTab(btn.getAttribute('data-admtab')));
-        });
-
-        // Side Drawer Controls (PC & Mobile)
-        const drawer = document.getElementById('admSideDrawer');
-        const backdrop = document.getElementById('admDrawerBackdrop');
-        function openAdmDrawer() {
-            drawer?.classList.add('open');
-            backdrop?.classList.add('active');
-        }
-        function closeAdmDrawer() {
-            drawer?.classList.remove('open');
-            backdrop?.classList.remove('active');
-        }
-        document.getElementById('admMenuBtn')?.addEventListener('click', openAdmDrawer);
-        document.getElementById('closeAdmDrawerBtn')?.addEventListener('click', closeAdmDrawer);
-        backdrop?.addEventListener('click', closeAdmDrawer);
-        document.querySelectorAll('#admSideDrawer .drawer-nav-item').forEach(btn => {
-            btn.addEventListener('click', () => {
-                switchAdminTab(btn.getAttribute('data-admdrawer'));
-                closeAdmDrawer();
-            });
         });
 
         // Build 0-9 Force buttons
@@ -73,11 +50,74 @@
             `).join('');
         }
 
-        // Logout buttons
+        // Logout buttons (managed by unified header/drawer, fallback wired if present)
         document.getElementById('admLogoutBtn')?.addEventListener('click', () => window.performLogout());
-        document.getElementById('admDrawerLogoutBtn')?.addEventListener('click', () => {
-            closeAdmDrawer();
-            window.performLogout();
+        document.getElementById('admDrawerLogoutBtn')?.addEventListener('click', () => window.performLogout());
+
+        // Admin Notifications Chat Box Wiring
+        let notifScope = 'ALL';
+        const scopeAllBtn = document.getElementById('admNotifScopeAll');
+        const scopeUserBtn = document.getElementById('admNotifScopeUser');
+        const targetWrap = document.getElementById('admNotifTargetWrap');
+        scopeAllBtn?.addEventListener('click', () => {
+            notifScope = 'ALL';
+            scopeAllBtn.classList.add('active');
+            scopeUserBtn?.classList.remove('active');
+            if (targetWrap) targetWrap.style.display = 'none';
+        });
+        scopeUserBtn?.addEventListener('click', () => {
+            notifScope = 'USER';
+            scopeUserBtn.classList.add('active');
+            scopeAllBtn?.classList.remove('active');
+            if (targetWrap) targetWrap.style.display = 'block';
+        });
+
+        async function sendAdminChatNotification() {
+            const targetEmail = document.getElementById('admNotifTargetUser')?.value || '';
+            const title = document.getElementById('admNotifTitleInput')?.value?.trim() || '';
+            const msgInput = document.getElementById('admNotifMsgInput');
+            const message = msgInput?.value?.trim() || '';
+            if (!message) {
+                window.showToast('Please enter a notification message.', 'error');
+                return;
+            }
+            if (notifScope === 'USER' && !targetEmail) {
+                window.showToast('Please select a target verified user.', 'error');
+                return;
+            }
+            const sendBtn = document.getElementById('admNotifSendBtn');
+            if (sendBtn) sendBtn.disabled = true;
+            try {
+                const res = await fetch(window.apiUrl('/api/admin/notify'), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${adminToken}`
+                    },
+                    body: JSON.stringify({
+                        scope: notifScope,
+                        targetEmail,
+                        title,
+                        message
+                    })
+                });
+                const data = await res.json();
+                window.showToast(data.message || (res.ok ? 'Notification sent!' : 'Failed to send'), res.ok ? 'success' : 'error');
+                if (data.success) {
+                    if (msgInput) msgInput.value = '';
+                    const tIn = document.getElementById('admNotifTitleInput');
+                    if (tIn) tIn.value = '';
+                }
+            } finally {
+                if (sendBtn) sendBtn.disabled = false;
+            }
+        }
+        document.getElementById('admNotifSendBtn')?.addEventListener('click', sendAdminChatNotification);
+        document.getElementById('admNotifMsgInput')?.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                e.preventDefault();
+                sendAdminChatNotification();
+            }
         });
 
         // Search users filter
@@ -588,6 +628,18 @@
 
         renderPaymentQueues(data.depositRequests, data.withdrawRequests);
         renderUsersTable(data.users);
+        renderAdminNotificationsPanel(data.users, data.adminMessages);
+
+        const barForecast = document.getElementById('admBarForecastTxt');
+        if (barForecast) {
+            if (data.status === 'LOCKED' && data.upcomingResult) {
+                const u = data.upcomingResult;
+                barForecast.textContent = `LOCKED #${u.number} (${u.colors.join('+').toUpperCase()}) | Profit: ${u.houseProfit >= 0 ? '+' : '-'}₹${fmt(Math.abs(u.houseProfit))} | Reveals in ${u.revealInSeconds}s`;
+            } else {
+                const poolAmt = data.liveTotals ? data.liveTotals.realBetAmount : 0;
+                barForecast.textContent = `Real Pool: ₹${fmt(poolAmt)} | ${data.outcomeMode} (${data.adminMinProfitPercent ?? 15}% Min)`;
+            }
+        }
 
         if (!gameConfigPopulated) {
             gameConfigPopulated = true;
@@ -686,22 +738,38 @@
         if (pendingWths.length === 0) {
             pendingEl.innerHTML = `<div class="empty-state">No pending withdrawal requests.</div>`;
         } else {
-            pendingEl.innerHTML = pendingWths.map(r => `
-                <div class="withdraw-req-card">
-                    <div class="wth-top">
-                        <div>
-                            <strong>${r.email}</strong> <small>(${r.userId})</small>
-                            <div class="wth-upi">Account / UPI: <strong>${r.accountDetails}</strong></div>
-                            <div class="wth-time">Requested: ${fmtDate(r.requestedAt)}</div>
+            pendingEl.innerHTML = pendingWths.map(r => {
+                const isBank = r.withdrawMethod === 'BANK' || Boolean(r.bankAccountNumber);
+                const detailsHtml = isBank
+                    ? `<div class="wth-upi" style="display:flex;flex-direction:column;gap:3px;">
+                        <span><strong class="status-pill neutral">🏦 BANK IMPS/NEFT</strong> ${r.bankName ? `<strong>${esc(r.bankName)}</strong>` : ''}</span>
+                        <span>Holder: <strong>${esc(r.accountHolderName || '—')}</strong></span>
+                        <span>A/C: <strong>${esc(r.bankAccountNumber || '—')}</strong> <button type="button" class="btn-copy-mini" onclick="copyTextQuick('${esc(r.bankAccountNumber || '')}', 'Account No')">Copy</button></span>
+                        <span>IFSC: <strong>${esc(r.ifscCode || '—')}</strong> <button type="button" class="btn-copy-mini" onclick="copyTextQuick('${esc(r.ifscCode || '')}', 'IFSC')">Copy</button></span>
+                       </div>`
+                    : `<div class="wth-upi">
+                        <span class="status-pill info">📱 UPI</span>
+                        <strong>${esc(r.upiId || r.accountDetails)}</strong>
+                        ${r.upiId ? `<button type="button" class="btn-copy-mini" onclick="copyTextQuick('${esc(r.upiId)}', 'UPI ID')">Copy</button>` : ''}
+                        ${r.accountHolderName ? `<div>Name: <strong>${esc(r.accountHolderName)}</strong></div>` : ''}
+                       </div>`;
+                return `
+                    <div class="withdraw-req-card">
+                        <div class="wth-top">
+                            <div>
+                                <strong>${esc(r.email)}</strong> <small>(${esc(r.userId)})</small>
+                                ${detailsHtml}
+                                <div class="wth-time">Requested: ${fmtDate(r.requestedAt)}</div>
+                            </div>
+                            <div class="wth-amt">₹${fmt(r.amount)}</div>
                         </div>
-                        <div class="wth-amt">₹${fmt(r.amount)}</div>
+                        <div class="wth-actions">
+                            <button class="btn-approve" onclick="processWithdrawAction('${r.id}', 'PAID')">✅ Mark Paid &amp; Notify</button>
+                            <button class="btn-reject" onclick="processWithdrawAction('${r.id}', 'REJECTED')">❌ Reject &amp; Refund</button>
+                        </div>
                     </div>
-                    <div class="wth-actions">
-                        <button class="btn-approve" onclick="processWithdrawAction('${r.id}', 'PAID')">✅ Mark Paid &amp; Notify</button>
-                        <button class="btn-reject" onclick="processWithdrawAction('${r.id}', 'REJECTED')">❌ Reject &amp; Refund</button>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         const doneEl = document.getElementById('admDoneWithdrawList');
@@ -762,8 +830,8 @@
             return `
                 <tr>
                     <td>
-                        <strong>${u.email}</strong><br>
-                        <small style="color:#64748b;">${u.userId}</small>
+                        <strong>${esc(u.email)}</strong> <span class="status-chip chip-ok" style="font-size:9px;padding:1px 5px;">Verified</span><br>
+                        <small style="color:#64748b;">${esc(u.userId)}</small>
                     </td>
                     <td>${statusHtml}</td>
                     <td style="color:#10b981; font-weight:700;">₹${fmt(u.realBalance)}</td>
@@ -784,6 +852,66 @@
                         ${blockBtnHtml}
                     </td>
                 </tr>
+            `;
+        }).join('');
+    }
+
+    function esc(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    window.copyTextQuick = async function (txt, label) {
+        if (!txt) return;
+        try {
+            await navigator.clipboard.writeText(txt);
+            window.showToast(`${label || 'Copied'}: ${txt}`, 'success');
+        } catch {
+            window.showToast(`${label || 'Value'}: ${txt}`, 'info');
+        }
+    };
+
+    function renderAdminNotificationsPanel(usersList, messages) {
+        const selectEl = document.getElementById('admNotifTargetUser');
+        if (selectEl && Array.isArray(usersList)) {
+            const currentVal = selectEl.value;
+            const optionsHtml = ['<option value="">-- Choose a verified user --</option>']
+                .concat(usersList.map(u => `<option value="${esc(u.email)}">${esc(u.email)} (${esc(u.userId)})</option>`))
+                .join('');
+            if (selectEl.innerHTML !== optionsHtml) {
+                selectEl.innerHTML = optionsHtml;
+                if (currentVal && usersList.some(u => u.email === currentVal)) {
+                    selectEl.value = currentVal;
+                }
+            }
+        }
+
+        const feedEl = document.getElementById('admSentNotifsFeed');
+        if (!feedEl) return;
+        if (!Array.isArray(messages) || messages.length === 0) {
+            feedEl.innerHTML = '<div class="empty-state">No Admin notifications sent yet.</div>';
+            return;
+        }
+        feedEl.innerHTML = messages.map(m => {
+            const isDirect = m.scope === 'USER';
+            const badge = isDirect
+                ? `<span class="status-chip chip-warn">👤 Direct → ${esc(m.targetEmail)}</span>`
+                : `<span class="status-chip chip-ok">📢 Broadcast → ${m.recipientCount} User(s)</span>`;
+            return `
+                <div class="withdraw-req-card" style="border-left-color:${isDirect ? '#38bdf8' : '#10b981'};">
+                    <div class="wth-top">
+                        <div>
+                            ${badge}
+                            <div style="font-weight:700;margin-top:6px;">${esc(m.title)}</div>
+                            <div style="font-size:13px;color:#cbd5e1;margin-top:3px;">${esc(m.message)}</div>
+                            <div class="wth-time">${fmtDate(m.createdAt)}</div>
+                        </div>
+                    </div>
+                </div>
             `;
         }).join('');
     }

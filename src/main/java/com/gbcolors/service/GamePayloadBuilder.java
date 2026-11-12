@@ -26,13 +26,16 @@ public class GamePayloadBuilder {
             List<TransactionEntity> txs,
             List<WithdrawRequestEntity> withdrawRequests,
             List<DepositRequestEntity> depositRequests,
-            List<NotificationEntity> unreadNotifications
+            List<NotificationEntity> unreadNotifications,
+            List<NotificationEntity> recentNotifications
     ) {
         Map<String, Object> map = new LinkedHashMap<>();
         map.put("userId", u.getUserId());
         map.put("email", u.getEmail());
         map.put("username", u.getUsername());
         map.put("vipLevel", u.getVipLevel());
+        map.put("emailVerified", u.isEmailVerified());
+        map.put("mustChangePassword", u.isMustChangePassword());
         map.put("demoBalance", toLong(u.getDemoBalance()));
         map.put("realBalance", toLong(u.getRealBalance()));
         map.put("mode", u.getActiveMode().name());
@@ -48,6 +51,7 @@ public class GamePayloadBuilder {
         map.put("withdrawRequests", withdrawRequests.stream().map(this::toWithdrawReqMap).toList());
         map.put("depositRequests", depositRequests.stream().map(this::toDepositReqMap).toList());
         map.put("unreadNotifications", unreadNotifications.stream().map(this::toNotificationMap).toList());
+        map.put("recentNotifications", recentNotifications.stream().map(this::toNotificationMap).toList());
         return map;
     }
 
@@ -128,6 +132,12 @@ public class GamePayloadBuilder {
         map.put("username", w.getUsername());
         map.put("amount", toLong(w.getAmount()));
         map.put("accountDetails", w.getAccountDetails());
+        map.put("withdrawMethod", w.getWithdrawMethod());
+        map.put("upiId", w.getUpiId());
+        map.put("accountHolderName", w.getAccountHolderName());
+        map.put("bankAccountNumber", w.getBankAccountNumber());
+        map.put("ifscCode", w.getIfscCode());
+        map.put("bankName", w.getBankName());
         map.put("status", w.getStatus().name());
         map.put("requestedAt", toEpoch(w.getRequestedAt()));
         map.put("processedAt", w.getProcessedAt() != null ? w.getProcessedAt().toEpochMilli() : null);
@@ -164,6 +174,19 @@ public class GamePayloadBuilder {
         return map;
     }
 
+    public Map<String, Object> toAdminMessageLogMap(AdminMessageLogEntity m) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("id", m.getId());
+        map.put("scope", m.getScope());
+        map.put("targetEmail", m.getTargetEmail());
+        map.put("recipientCount", m.getRecipientCount());
+        map.put("title", m.getTitle());
+        map.put("message", m.getMessage());
+        map.put("sentByEmail", m.getSentByEmail());
+        map.put("createdAt", toEpoch(m.getCreatedAt()));
+        return map;
+    }
+
     public Map<String, Object> buildAdminAnalyticsPayload(
             String currentPeriod,
             int timeLeft,
@@ -175,6 +198,7 @@ public class GamePayloadBuilder {
             List<UserEntity> allUsers,
             List<WithdrawRequestEntity> withdrawRequests,
             List<DepositRequestEntity> depositRequests,
+            List<AdminMessageLogEntity> adminMessages,
             List<Map<String, Object>> roundHistory
     ) {
         Map<String, Long> colorTotals = new LinkedHashMap<>();
@@ -218,9 +242,13 @@ public class GamePayloadBuilder {
         );
 
         Instant now = Instant.now();
+        String adminEmailLower = settings.getAdminEmail() == null ? "" : settings.getAdminEmail().trim().toLowerCase();
         List<Map<String, Object>> usersList = new ArrayList<>();
         long totalUsersRealWallet = 0L;
         for (UserEntity u : allUsers) {
+            if (adminEmailLower.equalsIgnoreCase(u.getEmail()) || !u.isEmailVerified()) {
+                continue;
+            }
             long realBal = toLong(u.getRealBalance());
             totalUsersRealWallet += realBal;
 
@@ -234,6 +262,7 @@ public class GamePayloadBuilder {
             uMap.put("userId", u.getUserId());
             uMap.put("email", u.getEmail());
             uMap.put("username", u.getUsername());
+            uMap.put("emailVerified", u.isEmailVerified());
             uMap.put("realBalance", realBal);
             uMap.put("demoBalance", toLong(u.getDemoBalance()));
             uMap.put("totalWon", toLong(u.getTotalWon()));
@@ -367,6 +396,7 @@ public class GamePayloadBuilder {
         payload.put("users", usersList);
         payload.put("withdrawRequests", withdrawRequests.stream().map(this::toWithdrawReqMap).toList());
         payload.put("depositRequests", depositRequests.stream().map(this::toDepositReqMap).toList());
+        payload.put("adminMessages", adminMessages.stream().map(this::toAdminMessageLogMap).toList());
         payload.put("history", roundHistory);
         payload.put("smtpStatus", smtpStatus);
         payload.put("paymentConfig", paymentConfig);

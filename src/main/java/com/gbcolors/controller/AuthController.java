@@ -67,4 +67,22 @@ public class AuthController {
         authService.logout(authHeader);
         return ResponseEntity.ok(Map.of("success", true, "message", "Logged out successfully."));
     }
+
+    @PostMapping("/api/auth/forgot-password")
+    public ResponseEntity<Map<String, Object>> forgotPassword(@RequestBody Map<String, Object> body) {
+        String email = body == null ? "" : String.valueOf(body.getOrDefault("email", ""));
+        AuthService.AuthResult result = authService.forgotPassword(email);
+        return ResponseEntity.status(result.statusCode()).body(result.body());
+    }
+
+    @PostMapping("/api/auth/change-password")
+    public ResponseEntity<Map<String, Object>> changePassword(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody Map<String, Object> body
+    ) {
+        String currentPassword = body == null ? "" : String.valueOf(body.getOrDefault("currentPassword", ""));
+        String newPassword = body == null ? "" : String.valueOf(body.getOrDefault("newPassword", ""));
+        AuthService.AuthResult result = authService.changePassword(authHeader, currentPassword, newPassword);
+        return ResponseEntity.status(result.statusCode()).body(result.body());
+    }
 }

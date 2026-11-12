@@ -31,7 +31,7 @@ public class NotificationController {
             @RequestBody(required = false) Map<String, Object> body
     ) {
         SessionEntity sess = authService.resolveSession(authHeader)
-                .filter(s -> s.getRole() == GameEnums.SessionRole.USER)
+                .filter(s -> s.getRole() == GameEnums.SessionRole.USER || s.getRole() == GameEnums.SessionRole.ADMIN)
                 .orElse(null);
         if (sess == null) {
             return ResponseEntity.status(401).body(Map.of("success", false, "message", "Not authenticated."));

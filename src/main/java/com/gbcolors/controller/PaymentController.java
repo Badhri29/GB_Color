@@ -107,14 +107,30 @@ public class PaymentController {
             return ResponseEntity.status(401).body(Map.of("success", false, "message", "Not authenticated."));
         }
         Integer amount = parseInt(body == null ? null : body.get("amount"));
+        String withdrawMethod = str(body, "withdrawMethod");
+        String upiId = str(body, "upiId");
+        String accountHolderName = str(body, "accountHolderName");
+        String bankAccountNumber = str(body, "bankAccountNumber");
+        String ifscCode = str(body, "ifscCode");
+        String bankName = str(body, "bankName");
         String upiOrBank = str(body, "upiOrBank");
-        Map<String, Object> res = gameLoopService.submitWithdrawal(sess.getEmail(), amount, upiOrBank);
+        Map<String, Object> res = gameLoopService.submitWithdrawal(
+                sess.getEmail(),
+                amount,
+                withdrawMethod,
+                upiId,
+                accountHolderName,
+                bankAccountNumber,
+                ifscCode,
+                bankName,
+                upiOrBank
+        );
         return ResponseEntity.status(Boolean.TRUE.equals(res.get("success")) ? 200 : 400).body(res);
     }
 
     private SessionEntity resolveUserSession(String authHeader) {
         return authService.resolveSession(authHeader)
-                .filter(s -> s.getRole() == GameEnums.SessionRole.USER)
+                .filter(s -> s.getRole() == GameEnums.SessionRole.USER || s.getRole() == GameEnums.SessionRole.ADMIN)
                 .orElse(null);
     }
 

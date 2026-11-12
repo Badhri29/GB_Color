@@ -29,8 +29,26 @@ public class WithdrawRequestEntity {
     @Column(name = "amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
 
-    @Column(name = "account_details", nullable = false, length = 255)
+    @Column(name = "account_details", nullable = false, length = 500)
     private String accountDetails;
+
+    @Column(name = "withdraw_method", length = 16)
+    private String withdrawMethod = "UPI";
+
+    @Column(name = "upi_id", length = 120)
+    private String upiId;
+
+    @Column(name = "account_holder_name", length = 120)
+    private String accountHolderName;
+
+    @Column(name = "bank_account_number", length = 40)
+    private String bankAccountNumber;
+
+    @Column(name = "ifsc_code", length = 20)
+    private String ifscCode;
+
+    @Column(name = "bank_name", length = 100)
+    private String bankName;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 16)
@@ -59,6 +77,24 @@ public class WithdrawRequestEntity {
 
     public String getAccountDetails() { return accountDetails; }
     public void setAccountDetails(String accountDetails) { this.accountDetails = accountDetails; }
+
+    public String getWithdrawMethod() { return withdrawMethod != null && !withdrawMethod.isBlank() ? withdrawMethod : "UPI"; }
+    public void setWithdrawMethod(String withdrawMethod) { this.withdrawMethod = withdrawMethod; }
+
+    public String getUpiId() { return upiId; }
+    public void setUpiId(String upiId) { this.upiId = upiId; }
+
+    public String getAccountHolderName() { return accountHolderName; }
+    public void setAccountHolderName(String accountHolderName) { this.accountHolderName = accountHolderName; }
+
+    public String getBankAccountNumber() { return bankAccountNumber; }
+    public void setBankAccountNumber(String bankAccountNumber) { this.bankAccountNumber = bankAccountNumber; }
+
+    public String getIfscCode() { return ifscCode; }
+    public void setIfscCode(String ifscCode) { this.ifscCode = ifscCode; }
+
+    public String getBankName() { return bankName; }
+    public void setBankName(String bankName) { this.bankName = bankName; }
 
     public GameEnums.WithdrawStatus getStatus() { return status; }
     public void setStatus(GameEnums.WithdrawStatus status) { this.status = status; }

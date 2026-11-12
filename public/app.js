@@ -12,6 +12,10 @@
   // State
   let authToken = localStorage.getItem(AUTH_TOKEN_KEY) || '';
   let currentUser = null;
+  let isAdminSession = false;
+  let currentAdminInfo = null;
+  let selectedWithdrawMethod = 'UPI';
+  let selectedWithdrawUpiApp = 'Any UPI';
   let socket = null;
   let paymentConfig = {
     razorpayEnabled: false,
@@ -421,17 +425,26 @@
 
   function navigateToView(viewName, subOpt) {
     const views = ['game', 'payment', 'history', 'profile', 'rules', 'settings'];
+    if (isAdminSession) views.push('admin');
     const target = views.includes(viewName) ? viewName : 'game';
-    views.forEach((v) => {
+
+    ['game', 'payment', 'history', 'profile', 'rules', 'settings', 'admin'].forEach((v) => {
       const el = $('view-' + v);
       if (el) {
-        el.style.display = (v === target) ? '' : 'none';
-        el.classList.toggle('active', v === target);
+        const show = (v === target);
+        el.style.display = show ? '' : 'none';
+        el.classList.toggle('active', show);
       }
     });
+
     document.querySelectorAll('#userSideDrawer .drawer-nav-item[data-view]').forEach((btn) => {
-      btn.classList.toggle('active', btn.dataset.view === target);
+      const matchView = btn.dataset.view === target;
+      const matchTab = target === 'admin' && subOpt ? btn.dataset.admtab === subOpt : true;
+      btn.classList.toggle('active', matchView && matchTab);
     });
+    if ($('adminHeaderToggleBtn')) {
+      $('adminHeaderToggleBtn').classList.toggle('active', target === 'admin');
+    }
     closeUserDrawer();
 
     if (target === 'payment') {
@@ -442,9 +455,12 @@
       renderHistoryView();
     } else if (target === 'profile') {
       renderProfileView();
+    } else if (target === 'admin' && subOpt && typeof window.switchAdminTab === 'function') {
+      window.switchAdminTab(subOpt);
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+  window.gbNavToGame = () => navigateToView('game');
 
   // =========================================================
   // NOTIFICATIONS (LIVE + LOGIN-FIRST QUEUE)
@@ -454,7 +470,15 @@
   let activePopupNotif = null;
 
   function prioritizeNotifications(list) {
-    const weight = { WITHDRAW_PAID: 1, WITHDRAW_REJECTED: 2, DEPOSIT_APPROVED: 3, DEPOSIT_REJECTED: 4, INFO: 5 };
+    const weight = {
+      WITHDRAW_PAID: 1,
+      WITHDRAW_REJECTED: 2,
+      DEPOSIT_APPROVED: 3,
+      DEPOSIT_REJECTED: 4,
+      ADMIN_DIRECT: 5,
+      ADMIN_BROADCAST: 6,
+      INFO: 7
+    };
     return (list || []).slice().sort((a, b) => {
       const wa = weight[a.type] || 9;
       const wb = weight[b.type] || 9;
@@ -504,6 +528,8 @@
       WITHDRAW_REJECTED: '⚠️',
       DEPOSIT_APPROVED: '💳',
       DEPOSIT_REJECTED: '❌',
+      ADMIN_DIRECT: '📩',
+      ADMIN_BROADCAST: '📣',
       INFO: '🔔'
     };
 
@@ -621,6 +647,41 @@
       if (badge) { badge.textContent = 'SETUP NEEDED'; badge.className = 'status-pill amber'; }
       if (note) note.style.display = '';
       if (rzpBtn) rzpBtn.disabled = false;
+    }
+    refreshStaticUpiBox();
+  }
+
+  function refreshStaticUpiBox() {
+    const upiId = (paymentConfig.upiId || 'badhrinarayanan79-3@okhdfcbank').trim();
+    const payee = (paymentConfig.upiPayeeName || 'Badhri Narayanan').trim();
+    if ($('staticUpiIdDisplay')) $('staticUpiIdDisplay').textContent = upiId;
+    if ($('staticUpiPayeeDisplay')) $('staticUpiPayeeDisplay').textContent = payee;
+
+    const amtVal = Number(($('rechargeAmountInput') && $('rechargeAmountInput').value) || 0);
+    const params = new URLSearchParams({ pa: upiId, pn: payee, cu: 'INR' });
+    if (Number.isFinite(amtVal) && amtVal >= 1) {
+      params.set('am', amtVal.toFixed(2));
+    }
+    if ($('staticUpiAppLink')) $('staticUpiAppLink').href = 'upi://pay?' + params.toString();
+
+    const qrImg = $('merchantStaticQrImg');
+    if (qrImg) {
+      const isDefaultUpi = upiId.toLowerCase() === 'badhrinarayanan79-3@okhdfcbank';
+      qrImg.style.display = isDefaultUpi ? '' : 'none';
+    }
+  }
+
+  function switchWithdrawMethod(method) {
+    selectedWithdrawMethod = method === 'BANK' ? 'BANK' : 'UPI';
+    if ($('wthMethodBtnUpi')) $('wthMethodBtnUpi').classList.toggle('active', selectedWithdrawMethod === 'UPI');
+    if ($('wthMethodBtnBank')) $('wthMethodBtnBank').classList.toggle('active', selectedWithdrawMethod === 'BANK');
+    if ($('wthMethodPanel-upi')) {
+      $('wthMethodPanel-upi').style.display = selectedWithdrawMethod === 'UPI' ? '' : 'none';
+      $('wthMethodPanel-upi').classList.toggle('active', selectedWithdrawMethod === 'UPI');
+    }
+    if ($('wthMethodPanel-bank')) {
+      $('wthMethodPanel-bank').style.display = selectedWithdrawMethod === 'BANK' ? '' : 'none';
+      $('wthMethodPanel-bank').classList.toggle('active', selectedWithdrawMethod === 'BANK');
     }
   }
 
@@ -782,28 +843,66 @@
 
   async function handleSubmitWithdraw() {
     const amt = Number(($('withdrawAmountInput') && $('withdrawAmountInput').value) || 0);
-    const upiOrBank = String(($('withdrawAccountInput') && $('withdrawAccountInput').value) || '').trim();
     const err = validatePayAmount(amt, true);
     if (err) {
       showToast(err, 'error');
       return;
     }
-    if (!upiOrBank || upiOrBank.length < 4) {
-      showToast('Enter a valid UPI ID or Bank Account details', 'error');
-      return;
+
+    const payload = { amount: amt, withdrawMethod: selectedWithdrawMethod };
+    if (selectedWithdrawMethod === 'BANK') {
+      const holder = String(($('withdrawBankHolderInput') && $('withdrawBankHolderInput').value) || '').trim();
+      const accNo = String(($('withdrawBankAccNoInput') && $('withdrawBankAccNoInput').value) || '').replace(/\s+/g, '');
+      const accConf = String(($('withdrawBankAccConfirmInput') && $('withdrawBankAccConfirmInput').value) || '').replace(/\s+/g, '');
+      const ifsc = String(($('withdrawBankIfscInput') && $('withdrawBankIfscInput').value) || '').trim().toUpperCase();
+      const bankName = String(($('withdrawBankNameInput') && $('withdrawBankNameInput').value) || '').trim();
+
+      if (holder.length < 2) {
+        showToast('Enter Account Holder Name as per bank records', 'error');
+        return;
+      }
+      if (!/^\d{9,18}$/.test(accNo)) {
+        showToast('Enter a valid 9 to 18 digit Bank Account Number', 'error');
+        return;
+      }
+      if (accNo !== accConf) {
+        showToast('Bank Account Number and Confirm Account Number do not match', 'error');
+        return;
+      }
+      if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(ifsc)) {
+        showToast('Enter a valid 11-character IFSC Code (e.g. HDFC0001234)', 'error');
+        return;
+      }
+      payload.accountHolderName = holder;
+      payload.bankAccountNumber = accNo;
+      payload.ifscCode = ifsc;
+      payload.bankName = bankName;
+    } else {
+      const upiId = String(($('withdrawUpiIdInput') && $('withdrawUpiIdInput').value) || '').trim();
+      const holder = String(($('withdrawUpiHolderInput') && $('withdrawUpiHolderInput').value) || '').trim();
+      if (!/^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z0-9]{2,}$/.test(upiId)) {
+        showToast('Enter a valid UPI ID (e.g. name@okhdfcbank or 98xxxx@ybl)', 'error');
+        return;
+      }
+      payload.upiId = upiId;
+      payload.accountHolderName = holder || selectedWithdrawUpiApp;
     }
+
     const btn = $('submitWithdrawBtn');
     if (btn) { btn.disabled = true; btn.textContent = 'Submitting Request...'; }
     try {
       const res = await apiFetch('/api/payment/withdraw', {
         method: 'POST',
-        body: JSON.stringify({ amount: amt, upiOrBank })
+        body: JSON.stringify(payload)
       });
       if (!res.ok || !res.data.success) {
         showToast(res.data.message || res.data.error || 'Could not submit withdrawal request', 'error');
         return;
       }
       if ($('withdrawAmountInput')) $('withdrawAmountInput').value = '';
+      if ($('withdrawUpiIdInput')) $('withdrawUpiIdInput').value = '';
+      if ($('withdrawBankAccNoInput')) $('withdrawBankAccNoInput').value = '';
+      if ($('withdrawBankAccConfirmInput')) $('withdrawBankAccConfirmInput').value = '';
       SoundEngine.notify();
       showToast(res.data.message || 'Withdrawal requested!', 'success');
       switchPaymentSubTab('status');
@@ -1061,7 +1160,18 @@
     if ($('profUsername')) $('profUsername').textContent = uname;
     if ($('profEmail')) $('profEmail').textContent = currentUser.email || '';
     if ($('profUserId')) $('profUserId').textContent = `UID: ${currentUser.userId || '—'}`;
-    if ($('profVipBadge')) $('profVipBadge').textContent = `VIP ${currentUser.vipLevel || 1}`;
+    if ($('profVipBadge')) $('profVipBadge').textContent = isAdminSession ? 'ADMIN PLAY' : `VIP ${currentUser.vipLevel || 1}`;
+    if ($('profVerifiedBadge')) {
+      const verified = currentUser.emailVerified !== false;
+      $('profVerifiedBadge').textContent = verified ? '✅ Verified Email' : '⏳ Pending Email';
+      $('profVerifiedBadge').className = `status-pill ${verified ? 'good' : 'amber'}`;
+    }
+    if ($('tempPassAlertBadge')) {
+      $('tempPassAlertBadge').style.display = currentUser.mustChangePassword ? '' : 'none';
+    }
+    if ($('changePasswordCard')) {
+      $('changePasswordCard').style.display = isAdminSession ? 'none' : '';
+    }
     if ($('profStatusBadge')) $('profStatusBadge').textContent = currentUser.blockType && currentUser.blockType !== 'NONE' ? currentUser.blockType : 'ACTIVE';
     if ($('profRealBal')) $('profRealBal').textContent = formatINR(currentUser.realBalance);
     if ($('profDemoBal')) $('profDemoBal').textContent = formatINR(currentUser.demoBalance);
@@ -1145,7 +1255,7 @@
   // =========================================================
   // WEBSOCKET CONNECTION
   // =========================================================
-  function connectUserSocket() {
+  function connectUserSocket(isAdmin, adminInfo) {
     if (socket) {
       try { socket.disconnect(); } catch {}
       socket = null;
@@ -1156,6 +1266,10 @@
     }
 
     socket = window.io(getWsBaseUrl(), { auth: { token: authToken } });
+
+    if (isAdmin && typeof window.initAdminDashboard === 'function') {
+      window.initAdminDashboard(authToken, socket, adminInfo || {});
+    }
 
     socket.on('init_state', (payload) => {
       if (!payload) return;
@@ -1171,8 +1285,11 @@
       updateClockAndLock();
       LiveTickerEngine.start();
 
-      if (currentUser && Array.isArray(currentUser.unreadNotifications)) {
-        ingestUnreadNotifications(currentUser.unreadNotifications, true);
+      if (currentUser) {
+        const merged = []
+          .concat(Array.isArray(currentUser.recentNotifications) ? currentUser.recentNotifications : [])
+          .concat(Array.isArray(currentUser.unreadNotifications) ? currentUser.unreadNotifications : []);
+        if (merged.length) ingestUnreadNotifications(merged, true);
       }
     });
 
@@ -1192,6 +1309,10 @@
       currentUser = Object.assign({}, currentUser || {}, u);
       if (!u.activeBets) currentUser.activeBets = keepActiveBets;
       renderUserSummary();
+      const merged = []
+        .concat(Array.isArray(u.recentNotifications) ? u.recentNotifications : [])
+        .concat(Array.isArray(u.unreadNotifications) ? u.unreadNotifications : []);
+      if (merged.length) ingestUnreadNotifications(merged, false);
     });
 
     socket.on('active_bets_updated', (bets) => {
@@ -1284,38 +1405,25 @@
   // =========================================================
   // AUTHENTICATION & PORTAL ROUTING
   // =========================================================
-  function enterUserArena(user) {
-    currentUser = user;
-    if ($('authScreen')) $('authScreen').style.display = 'none';
-    if ($('adminPortalRoot')) $('adminPortalRoot').style.display = 'none';
-    if ($('gameAppRoot')) $('gameAppRoot').style.display = 'block';
-    renderUserSummary();
-    navigateToView('game');
-    loadPaymentConfig();
-    connectUserSocket();
+  function toggleAdminShellUi(enabled) {
+    isAdminSession = Boolean(enabled);
+    if ($('adminHeaderToggleBtn')) $('adminHeaderToggleBtn').style.display = isAdminSession ? '' : 'none';
+    if ($('adminDrawerSection')) $('adminDrawerSection').style.display = isAdminSession ? '' : 'none';
+    if ($('adminArenaShortcutBar')) $('adminArenaShortcutBar').style.display = isAdminSession ? '' : 'none';
   }
 
-  async function enterAdminPortal(adminInfo) {
-    if ($('authScreen')) $('authScreen').style.display = 'none';
-    if ($('gameAppRoot')) $('gameAppRoot').style.display = 'none';
-    if (socket) {
-      try { socket.disconnect(); } catch {}
-      socket = null;
-    }
+  async function mountAdminToolkit(adminInfo) {
     const root = $('adminPortalRoot');
-    if (!root) return;
-    root.style.display = 'block';
-    root.innerHTML = '<div class="admin-loading-box">Loading Admin Command Center...</div>';
-
+    if (!root) return false;
+    root.innerHTML = '<div class="admin-loading-box">Loading Admin Tools...</div>';
     try {
       const [htmlRes, jsRes] = await Promise.all([
         fetch(getApiUrl('/api/admin/view'), { headers: { Authorization: 'Bearer ' + authToken } }),
         fetch(getApiUrl('/api/admin/script'), { headers: { Authorization: 'Bearer ' + authToken } })
       ]);
       if (!htmlRes.ok || !jsRes.ok) {
-        performLogout();
         showToast('Admin authorization failed', 'error');
-        return;
+        return false;
       }
       root.innerHTML = await htmlRes.text();
       const prevScript = document.getElementById('gbAdminRuntimeScript');
@@ -1325,28 +1433,51 @@
       s.id = 'gbAdminRuntimeScript';
       s.textContent = scriptText;
       document.body.appendChild(s);
-
-      if (typeof window.io === 'function') {
-        socket = window.io(getWsBaseUrl(), { auth: { token: authToken } });
-        socket.on('connect_error', (err) => {
-          if (err && err.message === 'AUTH_REQUIRED') {
-            performLogout();
-            showToast('Admin session expired — please sign in again', 'error');
-          }
-        });
-      }
-      if (typeof window.initAdminDashboard === 'function') {
-        window.initAdminDashboard(authToken, socket, adminInfo || {});
-      }
+      return true;
     } catch (err) {
-      root.innerHTML = `<div class="admin-loading-box">Failed to load Admin Portal: ${escapeHtml(err.message)}</div>`;
+      root.innerHTML = `<div class="admin-loading-box">Failed to load Admin Tools: ${escapeHtml(err.message)}</div>`;
+      return false;
     }
+  }
+
+  async function enterUnifiedPortal(user, isAdmin, adminInfo) {
+    currentUser = user || {
+      username: (adminInfo && adminInfo.username) || 'Admin',
+      email: (adminInfo && adminInfo.email) || '',
+      userId: 'ADMIN-PLAY',
+      mode: 'DEMO',
+      demoBalance: 10000,
+      realBalance: 0,
+      emailVerified: true
+    };
+    currentAdminInfo = isAdmin ? (adminInfo || {}) : null;
+    toggleAdminShellUi(isAdmin);
+
+    if ($('authScreen')) $('authScreen').style.display = 'none';
+    if ($('gameAppRoot')) $('gameAppRoot').style.display = 'block';
+    renderUserSummary();
+    navigateToView('game');
+    loadPaymentConfig();
+
+    if (isAdmin) {
+      const mounted = await mountAdminToolkit(adminInfo);
+      if (!mounted) {
+        performLogout();
+        return;
+      }
+    } else if ($('adminPortalRoot')) {
+      $('adminPortalRoot').innerHTML = '';
+    }
+
+    connectUserSocket(Boolean(isAdmin), adminInfo);
   }
 
   function performLogout(preserveError) {
     localStorage.removeItem(AUTH_TOKEN_KEY);
     authToken = '';
     currentUser = null;
+    currentAdminInfo = null;
+    toggleAdminShellUi(false);
     sessionNotifications = [];
     popupQueue = [];
     activePopupNotif = null;
@@ -1356,7 +1487,6 @@
       socket = null;
     }
     if ($('adminPortalRoot')) {
-      $('adminPortalRoot').style.display = 'none';
       $('adminPortalRoot').innerHTML = '';
     }
     if ($('gameAppRoot')) $('gameAppRoot').style.display = 'none';
@@ -1383,9 +1513,9 @@
       return;
     }
     if (res.data.role === 'ADMIN') {
-      enterAdminPortal(res.data.admin);
+      await enterUnifiedPortal(res.data.user, true, res.data.admin);
     } else {
-      enterUserArena(res.data.user);
+      await enterUnifiedPortal(res.data.user, false, null);
     }
   }
 
@@ -1411,21 +1541,60 @@
   // EVENT BINDINGS
   // =========================================================
   function bindEvents() {
-    // Auth Tabs
-    if ($('showSignInTab')) {
-      $('showSignInTab').addEventListener('click', () => {
-        $('showSignInTab').classList.add('active');
-        $('showSignUpTab').classList.remove('active');
-        $('signInForm').style.display = '';
-        $('signUpForm').style.display = 'none';
+    // Auth Tabs & Forgot Password
+    const showAuthPanel = (panel) => {
+      if ($('showSignInTab')) $('showSignInTab').classList.toggle('active', panel !== 'signup');
+      if ($('showSignUpTab')) $('showSignUpTab').classList.toggle('active', panel === 'signup');
+      if ($('signInForm')) $('signInForm').style.display = panel === 'signin' ? '' : 'none';
+      if ($('forgotPassForm')) $('forgotPassForm').style.display = panel === 'forgot' ? '' : 'none';
+      if ($('signUpForm')) $('signUpForm').style.display = panel === 'signup' ? '' : 'none';
+    };
+
+    if ($('showSignInTab')) $('showSignInTab').addEventListener('click', () => showAuthPanel('signin'));
+    if ($('showSignUpTab')) $('showSignUpTab').addEventListener('click', () => showAuthPanel('signup'));
+    if ($('openForgotPassBtn')) {
+      $('openForgotPassBtn').addEventListener('click', () => {
+        if ($('forgotEmail') && $('loginEmail')) $('forgotEmail').value = $('loginEmail').value || '';
+        if ($('forgotErrorMsg')) $('forgotErrorMsg').style.display = 'none';
+        if ($('forgotNoticeBox')) $('forgotNoticeBox').style.display = 'none';
+        showAuthPanel('forgot');
       });
     }
-    if ($('showSignUpTab')) {
-      $('showSignUpTab').addEventListener('click', () => {
-        $('showSignUpTab').classList.add('active');
-        $('showSignInTab').classList.remove('active');
-        $('signUpForm').style.display = '';
-        $('signInForm').style.display = 'none';
+    if ($('backToSignInBtn')) {
+      $('backToSignInBtn').addEventListener('click', () => showAuthPanel('signin'));
+    }
+    if ($('forgotPassForm')) {
+      $('forgotPassForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = String(($('forgotEmail') && $('forgotEmail').value) || '').trim();
+        const errBox = $('forgotErrorMsg');
+        const noticeBox = $('forgotNoticeBox');
+        if (errBox) errBox.style.display = 'none';
+        if (noticeBox) noticeBox.style.display = 'none';
+        const btn = $('forgotSubmitBtn');
+        if (btn) { btn.disabled = true; btn.textContent = 'Sending Temp Password...'; }
+        try {
+          const res = await apiFetch('/api/auth/forgot-password', {
+            method: 'POST',
+            body: JSON.stringify({ email })
+          });
+          if (!res.ok || !res.data.success) {
+            if (errBox) {
+              errBox.textContent = res.data.message || res.data.error || 'Could not send temporary password';
+              errBox.style.display = 'block';
+            }
+            return;
+          }
+          if (noticeBox) {
+            noticeBox.textContent = res.data.devTempPassword
+              ? `${res.data.message} (Dev Temp Password: ${res.data.devTempPassword})`
+              : (res.data.message || 'Temporary password sent via SMTP email.');
+            noticeBox.style.display = 'block';
+          }
+          showToast('Temporary password dispatched via SMTP!', 'success');
+        } finally {
+          if (btn) { btn.disabled = false; btn.textContent = '📧 Send Temporary Password'; }
+        }
       });
     }
 
@@ -1501,7 +1670,7 @@
           }
           authToken = res.data.token;
           localStorage.setItem(AUTH_TOKEN_KEY, authToken);
-          enterUserArena(res.data.user);
+          await enterUnifiedPortal(res.data.user, false, null);
         } finally {
           btn.disabled = false;
         }
@@ -1531,9 +1700,9 @@
           authToken = res.data.token;
           localStorage.setItem(AUTH_TOKEN_KEY, authToken);
           if (res.data.role === 'ADMIN') {
-            enterAdminPortal(res.data.admin);
+            await enterUnifiedPortal(res.data.user, true, res.data.admin);
           } else {
-            enterUserArena(res.data.user);
+            await enterUnifiedPortal(res.data.user, false, null);
           }
         } finally {
           btn.disabled = false;
@@ -1548,16 +1717,22 @@
     if ($('brandHomeBtn')) $('brandHomeBtn').addEventListener('click', () => navigateToView('game'));
     if ($('headerRechargeBtn')) $('headerRechargeBtn').addEventListener('click', () => navigateToView('payment', 'recharge'));
     if ($('paymentNavBtn')) $('paymentNavBtn').addEventListener('click', () => navigateToView('payment', 'recharge'));
+    if ($('adminHeaderToggleBtn')) {
+      $('adminHeaderToggleBtn').addEventListener('click', () => {
+        const adminActive = $('view-admin') && $('view-admin').classList.contains('active');
+        navigateToView(adminActive ? 'game' : 'admin');
+      });
+    }
 
     document.addEventListener('click', (e) => {
       const navBtn = e.target.closest('[data-view]');
       if (navBtn && navBtn.closest('#userSideDrawer')) {
-        navigateToView(navBtn.dataset.view);
+        navigateToView(navBtn.dataset.view, navBtn.dataset.admtab || null);
         return;
       }
       const goNav = e.target.closest('[data-nav]');
       if (goNav) {
-        navigateToView(goNav.dataset.nav, goNav.dataset.paytab || null);
+        navigateToView(goNav.dataset.nav, goNav.dataset.admtab || goNav.dataset.paytab || null);
       }
     });
 
@@ -1639,6 +1814,13 @@
     });
     document.querySelectorAll('.chip-amt-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
+        if (btn.dataset.upiapp) {
+          selectedWithdrawUpiApp = btn.dataset.upiapp;
+          const pills = btn.closest('.upi-app-pills');
+          if (pills) pills.querySelectorAll('.chip-amt-btn').forEach((b) => b.classList.toggle('active', b === btn));
+          SoundEngine.click();
+          return;
+        }
         const targetId = btn.dataset.target;
         const input = $(targetId);
         const rawVal = btn.dataset.val;
@@ -1650,12 +1832,66 @@
           } else {
             input.value = rawVal;
           }
+          if (targetId === 'rechargeAmountInput') refreshStaticUpiBox();
         }
         const row = btn.closest('.quick-chips-row');
         if (row) row.querySelectorAll('.chip-amt-btn').forEach((b) => b.classList.toggle('active', b === btn));
         SoundEngine.click();
       });
     });
+    if ($('rechargeAmountInput')) {
+      $('rechargeAmountInput').addEventListener('input', refreshStaticUpiBox);
+    }
+    if ($('wthMethodBtnUpi')) $('wthMethodBtnUpi').addEventListener('click', () => switchWithdrawMethod('UPI'));
+    if ($('wthMethodBtnBank')) $('wthMethodBtnBank').addEventListener('click', () => switchWithdrawMethod('BANK'));
+    if ($('withdrawBankIfscInput')) {
+      $('withdrawBankIfscInput').addEventListener('input', (e) => {
+        e.target.value = String(e.target.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+      });
+    }
+    if ($('copyStaticUpiIdBtn')) {
+      $('copyStaticUpiIdBtn').addEventListener('click', async () => {
+        const text = ($('staticUpiIdDisplay') && $('staticUpiIdDisplay').textContent) || '';
+        if (!text) return;
+        try {
+          await navigator.clipboard.writeText(text);
+          showToast('UPI ID copied!', 'success');
+        } catch {
+          showToast('UPI ID: ' + text, 'info');
+        }
+      });
+    }
+    if ($('profChangePassBtn')) {
+      $('profChangePassBtn').addEventListener('click', async () => {
+        const currentPassword = String(($('profCurPassword') && $('profCurPassword').value) || '');
+        const newPassword = String(($('profNewPassword') && $('profNewPassword').value) || '');
+        if (!currentPassword || !newPassword) {
+          showToast('Enter current and new password', 'error');
+          return;
+        }
+        const btn = $('profChangePassBtn');
+        btn.disabled = true;
+        btn.textContent = 'Updating...';
+        try {
+          const res = await apiFetch('/api/auth/change-password', {
+            method: 'POST',
+            body: JSON.stringify({ currentPassword, newPassword })
+          });
+          if (!res.ok || !res.data.success) {
+            showToast(res.data.message || res.data.error || 'Could not update password', 'error');
+            return;
+          }
+          if ($('profCurPassword')) $('profCurPassword').value = '';
+          if ($('profNewPassword')) $('profNewPassword').value = '';
+          if (currentUser) currentUser.mustChangePassword = false;
+          renderProfileView();
+          showToast(res.data.message || 'Password updated successfully!', 'success');
+        } finally {
+          btn.disabled = false;
+          btn.textContent = 'Update Password';
+        }
+      });
+    }
     document.querySelectorAll('.btn-demo-add').forEach((btn) => {
       btn.addEventListener('click', () => {
         const amt = Number(btn.dataset.demoamt || 0);

@@ -240,6 +240,30 @@ public class AdminController {
         return ResponseEntity.status(status).body(res);
     }
 
+    @PostMapping("/notify")
+    public ResponseEntity<Map<String, Object>> sendNotification(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody Map<String, Object> body
+    ) {
+        var adminSess = authService.resolveAdminSession(authHeader).orElse(null);
+        if (adminSess == null) {
+            return ResponseEntity.status(403).body(FORBIDDEN_BODY);
+        }
+        String scope = str(body, "scope");
+        String targetEmail = str(body, "targetEmail");
+        String title = str(body, "title");
+        String message = str(body, "message");
+        Map<String, Object> res = gameLoopService.sendAdminNotification(
+                scope,
+                targetEmail,
+                title,
+                message,
+                adminSess.getEmail()
+        );
+        int status = Boolean.TRUE.equals(res.get("success")) ? 200 : 400;
+        return ResponseEntity.status(status).body(res);
+    }
+
     private String readProtectedFile(String filename) {
         Path fsPath = Path.of("protected", filename);
         if (Files.exists(fsPath)) {

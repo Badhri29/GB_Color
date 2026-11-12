@@ -19,6 +19,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.regex.Pattern;
 
 /**
  * Coordinates the configurable game countdown loop, round settlement, bet lifecycle,
@@ -29,6 +30,7 @@ public class GameLoopService {
 
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final int MAX_TICKER_HISTORY = 40;
+    private static final Pattern IFSC_PATTERN = Pattern.compile("^[A-Z]{4}0[A-Z0-9]{6}$");
 
     private final ReentrantLock stateLock = new ReentrantLock();
     private final TransactionTemplate txTemplate;
@@ -39,6 +41,7 @@ public class GameLoopService {
     private final WithdrawRequestRepository withdrawRepo;
     private final DepositRequestRepository depositRepo;
     private final NotificationRepository notificationRepo;
+    private final AdminMessageLogRepository adminMsgLogRepo;
     private final SessionRepository sessionRepo;
     private final PlatformSettingsRepository settingsRepo;
     private final GameRuleEngine ruleEngine;
@@ -72,10 +75,10 @@ public class GameLoopService {
     @Value("${gbcolors.smtp.from-name:GB_Colors}")
     private String envSmtpFromName;
 
-    @Value("${gbcolors.upi-id:gbcolors.pay@upi}")
+    @Value("${gbcolors.upi-id:badhrinarayanan79-3@okhdfcbank}")
     private String envUpiId;
 
-    @Value("${gbcolors.upi-payee-name:GB_Colors}")
+    @Value("${gbcolors.upi-payee-name:Badhri Narayanan}")
     private String envUpiPayeeName;
 
     @Value("${gbcolors.razorpay.key-id:}")
@@ -83,6 +86,9 @@ public class GameLoopService {
 
     @Value("${gbcolors.razorpay.key-secret:}")
     private String envRazorpayKeySecret;
+
+    @Value("${gbcolors.seed-sample-users:false}")
+    private boolean seedSampleUsers;
 
     private int timeLeft = 30;
     private String currentStatus = "BETTING";
@@ -100,6 +106,7 @@ public class GameLoopService {
             WithdrawRequestRepository withdrawRepo,
             DepositRequestRepository depositRepo,
             NotificationRepository notificationRepo,
+            AdminMessageLogRepository adminMsgLogRepo,
             SessionRepository sessionRepo,
             PlatformSettingsRepository settingsRepo,
             GameRuleEngine ruleEngine,
@@ -115,6 +122,7 @@ public class GameLoopService {
         this.withdrawRepo = withdrawRepo;
         this.depositRepo = depositRepo;
         this.notificationRepo = notificationRepo;
+        this.adminMsgLogRepo = adminMsgLogRepo;
         this.sessionRepo = sessionRepo;
         this.settingsRepo = settingsRepo;
         this.ruleEngine = ruleEngine;
@@ -152,8 +160,12 @@ public class GameLoopService {
                 if (envSmtpPass != null && !envSmtpPass.isBlank()) s.setSmtpPass(envSmtpPass.replaceAll("\\s+", "").trim());
                 if (envSmtpFromName != null && !envSmtpFromName.isBlank()) s.setSmtpFromName(envSmtpFromName.trim());
 
-                if (s.getUpiId() == null || s.getUpiId().isBlank()) s.setUpiId(envUpiId);
-                if (s.getUpiPayeeName() == null || s.getUpiPayeeName().isBlank()) s.setUpiPayeeName(envUpiPayeeName);
+                if (s.getUpiId() == null || s.getUpiId().isBlank() || "gbcolors.pay@upi".equalsIgnoreCase(s.getUpiId().trim())) {
+                    s.setUpiId(envUpiId);
+                }
+                if (s.getUpiPayeeName() == null || s.getUpiPayeeName().isBlank() || "GB_Colors".equalsIgnoreCase(s.getUpiPayeeName().trim())) {
+                    s.setUpiPayeeName(envUpiPayeeName);
+                }
                 if ((s.getRazorpayKeyId() == null || s.getRazorpayKeyId().isBlank()) && envRazorpayKeyId != null && !envRazorpayKeyId.isBlank()) {
                     s.setRazorpayKeyId(envRazorpayKeyId.trim());
                 }
@@ -180,7 +192,10 @@ public class GameLoopService {
                         }
                     }
                 }
-                seedSampleTestUsers();
+                ensureAdminPlayWallet(s.getAdminEmail());
+                if (seedSampleUsers) {
+                    seedSampleTestUsers();
+                }
                 return s;
             });
 
@@ -848,6 +863,7 @@ public class GameLoopService {
      */
     public Map<String, Object> completeRazorpayDeposit(String email, String orderId, String paymentId) {
         Map<String, Object> updatedUserMap;
+        Map<String, Object> notificationMap;
         Map<String, Object> adminSnapshot;
         long creditedAmt;
 
@@ -861,6 +877,7 @@ public class GameLoopService {
                 return Map.of("success", true, "message", "Payment already credited.", "alreadyProcessed", true);
             }
             creditedAmt = existing.getAmount().longValue();
+            AtomicReference<Map<String, Object>> notifRef = new AtomicReference<>();
 
             updatedUserMap = txTemplate.execute(status -> {
                 DepositRequestEntity dr = depositRepo.findById(existing.getId()).orElseThrow();
@@ -891,26 +908,86 @@ public class GameLoopService {
                 tx.setCreatedAt(Instant.now());
                 txRepo.save(tx);
 
+                NotificationEntity n = createNotification(
+                        email,
+                        GameEnums.NotificationType.DEPOSIT_APPROVED,
+                        "Recharge Successful!",
+                        "₹" + dr.getAmount().longValue() + " added via Razorpay (" + paymentId + ") to your Real Balance.",
+                        dr.getAmount(),
+                        dr.getId()
+                );
+                notifRef.set(payloadBuilder.toNotificationMap(n));
+
                 return buildSanitizedUser(u);
             });
+            notificationMap = notifRef.get();
             adminSnapshot = buildAdminAnalyticsSnapshot();
         } finally {
             stateLock.unlock();
         }
 
         wsHub.emitToUser(email, "user_updated", updatedUserMap);
+        if (notificationMap != null) {
+            wsHub.emitToUser(email, "notification", notificationMap);
+        }
         wsHub.emitToAdmin("admin_live_update", adminSnapshot);
         return Map.of("success", true, "message", "Razorpay payment verified! ₹" + creditedAmt + " credited to Real Balance.");
     }
 
     public Map<String, Object> submitWithdrawal(String email, Integer amount, String upiOrBank) {
+        return submitWithdrawal(email, amount, "AUTO", null, null, null, null, null, upiOrBank);
+    }
+
+    public Map<String, Object> submitWithdrawal(
+            String email,
+            Integer amount,
+            String withdrawMethod,
+            String upiId,
+            String accountHolderName,
+            String bankAccountNumber,
+            String ifscCode,
+            String bankName,
+            String fallbackUpiOrBank
+    ) {
         String amtErr = validateWithdrawAmount(amount);
         if (amtErr != null) {
             return Map.of("success", false, "message", amtErr);
         }
-        String cleanAcct = upiOrBank == null ? "" : upiOrBank.trim();
-        if (cleanAcct.length() < 4) {
-            return Map.of("success", false, "message", "Please enter a valid UPI ID or Bank details.");
+
+        String reqMethod = withdrawMethod == null ? "AUTO" : withdrawMethod.trim().toUpperCase();
+        String cleanHolder = accountHolderName == null ? "" : accountHolderName.trim();
+        String cleanUpi = upiId == null ? "" : upiId.trim();
+        String cleanAccNo = bankAccountNumber == null ? "" : bankAccountNumber.replaceAll("\\s+", "").trim();
+        String cleanIfsc = ifscCode == null ? "" : ifscCode.trim().toUpperCase();
+        String cleanBank = bankName == null ? "" : bankName.trim();
+
+        String resolvedMethod;
+        String cleanAcct;
+        if ("BANK".equals(reqMethod)) {
+            if (cleanHolder.length() < 2) {
+                return Map.of("success", false, "message", "Please enter the Bank Account Holder Name.");
+            }
+            if (!cleanAccNo.matches("^\\d{9,18}$")) {
+                return Map.of("success", false, "message", "Please enter a valid Bank Account Number (9 to 18 digits).");
+            }
+            if (!IFSC_PATTERN.matcher(cleanIfsc).matches()) {
+                return Map.of("success", false, "message", "Please enter a valid 11-character IFSC Code (e.g. HDFC0001234).");
+            }
+            resolvedMethod = "BANK";
+            cleanAcct = "BANK | Holder: " + cleanHolder + " | A/C: " + cleanAccNo + " | IFSC: " + cleanIfsc
+                    + (cleanBank.isEmpty() ? "" : " | Bank: " + cleanBank);
+        } else if ("UPI".equals(reqMethod)) {
+            if (cleanUpi.length() < 5 || !cleanUpi.contains("@") || cleanUpi.contains(" ")) {
+                return Map.of("success", false, "message", "Please enter a valid UPI ID (e.g. name@okhdfcbank).");
+            }
+            resolvedMethod = "UPI";
+            cleanAcct = "UPI: " + cleanUpi + (cleanHolder.isEmpty() ? "" : " | Name: " + cleanHolder);
+        } else {
+            cleanAcct = fallbackUpiOrBank == null ? "" : fallbackUpiOrBank.trim();
+            if (cleanAcct.length() < 4) {
+                return Map.of("success", false, "message", "Please enter a valid UPI ID or Bank details.");
+            }
+            resolvedMethod = cleanAcct.toUpperCase().contains("IFSC") ? "BANK" : "UPI";
         }
 
         Map<String, Object> userMap;
@@ -946,6 +1023,12 @@ public class GameLoopService {
                 wr.setUsername(u.getUsername());
                 wr.setAmount(wthBd);
                 wr.setAccountDetails(cleanAcct);
+                wr.setWithdrawMethod(resolvedMethod);
+                wr.setUpiId(cleanUpi.isEmpty() ? null : cleanUpi);
+                wr.setAccountHolderName(cleanHolder.isEmpty() ? null : cleanHolder);
+                wr.setBankAccountNumber(cleanAccNo.isEmpty() ? null : cleanAccNo);
+                wr.setIfscCode(cleanIfsc.isEmpty() ? null : cleanIfsc);
+                wr.setBankName(cleanBank.isEmpty() ? null : cleanBank);
                 wr.setStatus(GameEnums.WithdrawStatus.PENDING);
                 wr.setRequestedAt(Instant.now());
                 withdrawRepo.save(wr);
@@ -954,6 +1037,7 @@ public class GameLoopService {
                 tx.setId(reqId);
                 tx.setEmail(email);
                 tx.setTxType(GameEnums.TxType.WITHDRAWAL);
+                tx.setMethod(resolvedMethod);
                 tx.setAccountOrUtr(cleanAcct);
                 tx.setAmount(wthBd);
                 tx.setStatus("PENDING (Admin Review)");
@@ -972,7 +1056,7 @@ public class GameLoopService {
         return Map.of(
                 "success", true,
                 "requestId", reqId,
-                "message", "Withdrawal request for ₹" + amount + " sent to Admin! Status: Pending."
+                "message", "Withdrawal request for ₹" + amount + " (" + resolvedMethod + ") sent to Admin! Status: Pending."
         );
     }
 
@@ -1540,6 +1624,155 @@ public class GameLoopService {
         });
     }
 
+    public void ensureAdminPlayWalletExists() {
+        stateLock.lock();
+        try {
+            txTemplate.executeWithoutResult(status -> {
+                PlatformSettingsEntity s = loadOrInitSettings();
+                ensureAdminPlayWallet(s.getAdminEmail());
+            });
+        } finally {
+            stateLock.unlock();
+        }
+    }
+
+    private void ensureAdminPlayWallet(String adminEmail) {
+        if (adminEmail == null || adminEmail.isBlank()) return;
+        String cleanEmail = adminEmail.trim().toLowerCase();
+        if (userRepo.existsByEmail(cleanEmail)) return;
+
+        UserEntity adminPlay = new UserEntity();
+        adminPlay.setUserId("ADMIN001");
+        adminPlay.setEmail(cleanEmail);
+        adminPlay.setUsername("Admin");
+        adminPlay.setPasswordHash(passwordService.hashPassword(envAdminPass));
+        adminPlay.setVipLevel(99);
+        adminPlay.setEmailVerified(true);
+        adminPlay.setDemoBalance(BigDecimal.valueOf(5000));
+        adminPlay.setRealBalance(BigDecimal.ZERO);
+        adminPlay.setActiveMode(GameEnums.ActiveMode.DEMO);
+        adminPlay.setCreatedAt(Instant.now());
+        userRepo.save(adminPlay);
+    }
+
+    public Map<String, Object> sendAdminNotification(
+            String scopeStr,
+            String rawTargetEmail,
+            String rawTitle,
+            String rawMessage,
+            String sentByEmail
+    ) {
+        String cleanMsg = rawMessage == null ? "" : rawMessage.trim();
+        if (cleanMsg.isEmpty()) {
+            return Map.of("success", false, "message", "Notification message cannot be empty.");
+        }
+        if (cleanMsg.length() > 480) {
+            cleanMsg = cleanMsg.substring(0, 480);
+        }
+
+        boolean isUserSpecific = "USER".equalsIgnoreCase(scopeStr);
+        String cleanTarget = rawTargetEmail == null ? "" : rawTargetEmail.trim().toLowerCase();
+        String defaultTitle = isUserSpecific ? "Message from Admin" : "Admin Announcement";
+        String cleanTitle = (rawTitle == null || rawTitle.isBlank()) ? defaultTitle : rawTitle.trim();
+        if (cleanTitle.length() > 140) {
+            cleanTitle = cleanTitle.substring(0, 140);
+        }
+
+        List<Map.Entry<String, Map<String, Object>>> outbound = new ArrayList<>();
+        Map<String, Object> adminSnapshot;
+        int recipientCount;
+
+        stateLock.lock();
+        try {
+            PlatformSettingsEntity settings = loadOrInitSettings();
+            String adminEmail = settings.getAdminEmail() == null ? "" : settings.getAdminEmail().trim().toLowerCase();
+            final String fTitle = cleanTitle;
+            final String fMsg = cleanMsg;
+            final String fSender = (sentByEmail == null || sentByEmail.isBlank()) ? adminEmail : sentByEmail.trim().toLowerCase();
+
+            if (isUserSpecific) {
+                UserEntity targetUser = userRepo.findByEmail(cleanTarget).orElse(null);
+                if (targetUser == null || !targetUser.isEmailVerified() || adminEmail.equalsIgnoreCase(targetUser.getEmail())) {
+                    return Map.of("success", false, "message", "Please select a valid verified user.");
+                }
+                NotificationEntity n = txTemplate.execute(status -> {
+                    NotificationEntity created = createNotification(
+                            targetUser.getEmail(),
+                            GameEnums.NotificationType.ADMIN_DIRECT,
+                            fTitle,
+                            fMsg,
+                            null,
+                            null
+                    );
+                    saveAdminMessageLog("USER", targetUser.getEmail(), 1, fTitle, fMsg, fSender);
+                    return created;
+                });
+                if (n != null) {
+                    outbound.add(Map.entry(targetUser.getEmail(), payloadBuilder.toNotificationMap(n)));
+                }
+                recipientCount = 1;
+            } else {
+                List<UserEntity> allVerified = userRepo.findAll().stream()
+                        .filter(u -> u.isEmailVerified() && !adminEmail.equalsIgnoreCase(u.getEmail()))
+                        .toList();
+                if (allVerified.isEmpty()) {
+                    return Map.of("success", false, "message", "No verified users available to receive notifications yet.");
+                }
+                txTemplate.executeWithoutResult(status -> {
+                    for (UserEntity u : allVerified) {
+                        NotificationEntity created = createNotification(
+                                u.getEmail(),
+                                GameEnums.NotificationType.ADMIN_BROADCAST,
+                                fTitle,
+                                fMsg,
+                                null,
+                                null
+                        );
+                        outbound.add(Map.entry(u.getEmail(), payloadBuilder.toNotificationMap(created)));
+                    }
+                    saveAdminMessageLog("ALL", null, allVerified.size(), fTitle, fMsg, fSender);
+                });
+                recipientCount = allVerified.size();
+            }
+            adminSnapshot = buildAdminAnalyticsSnapshot();
+        } finally {
+            stateLock.unlock();
+        }
+
+        for (var entry : outbound) {
+            wsHub.emitToUser(entry.getKey(), "notification", entry.getValue());
+        }
+        wsHub.emitToAdmin("admin_live_update", adminSnapshot);
+
+        return Map.of(
+                "success", true,
+                "recipientCount", recipientCount,
+                "message", isUserSpecific
+                        ? "Notification sent to " + cleanTarget + "!"
+                        : "Broadcast sent to " + recipientCount + " verified user(s)!"
+        );
+    }
+
+    private void saveAdminMessageLog(
+            String scope,
+            String targetEmail,
+            int recipientCount,
+            String title,
+            String message,
+            String sentByEmail
+    ) {
+        AdminMessageLogEntity log = new AdminMessageLogEntity();
+        log.setId("ADM_MSG_" + System.currentTimeMillis() + Integer.toHexString(RANDOM.nextInt(0xFFFF)));
+        log.setScope(scope);
+        log.setTargetEmail(targetEmail);
+        log.setRecipientCount(recipientCount);
+        log.setTitle(title);
+        log.setMessage(message);
+        log.setSentByEmail(sentByEmail);
+        log.setCreatedAt(Instant.now());
+        adminMsgLogRepo.save(log);
+    }
+
     private Map<String, Object> buildSanitizedUser(UserEntity user) {
         List<BetEntity> bets = betRepo.findTop60ByEmailAndStatusNotOrderByCreatedAtDesc(
                 user.getEmail(), GameEnums.BetStatus.ACTIVE
@@ -1548,7 +1781,8 @@ public class GameLoopService {
         List<WithdrawRequestEntity> withdrawals = withdrawRepo.findTop50ByEmailOrderByRequestedAtDesc(user.getEmail());
         List<DepositRequestEntity> deposits = depositRepo.findTop50ByEmailOrderByRequestedAtDesc(user.getEmail());
         List<NotificationEntity> unreadNotifications = notificationRepo.findByEmailAndIsReadFalseOrderByCreatedAtAsc(user.getEmail());
-        return payloadBuilder.sanitizeUser(user, bets, txs, withdrawals, deposits, unreadNotifications);
+        List<NotificationEntity> recentNotifications = notificationRepo.findTop30ByEmailOrderByCreatedAtDesc(user.getEmail());
+        return payloadBuilder.sanitizeUser(user, bets, txs, withdrawals, deposits, unreadNotifications, recentNotifications);
     }
 
     private List<Map<String, Object>> getHistoryTop25() {
@@ -1562,6 +1796,7 @@ public class GameLoopService {
         List<UserEntity> users = userRepo.findAll();
         List<WithdrawRequestEntity> withdrawals = withdrawRepo.findAllByOrderByRequestedAtDesc();
         List<DepositRequestEntity> deposits = depositRepo.findAllByOrderByRequestedAtDesc();
+        List<AdminMessageLogEntity> adminMsgs = adminMsgLogRepo.findTop50ByOrderByCreatedAtDesc();
         List<Map<String, Object>> roundHistory = getHistoryTop25();
         return payloadBuilder.buildAdminAnalyticsPayload(
                 currentPeriod,
@@ -1574,6 +1809,7 @@ public class GameLoopService {
                 users,
                 withdrawals,
                 deposits,
+                adminMsgs,
                 roundHistory
         );
     }

@@ -35,11 +35,14 @@
       <!-- SIGN IN FORM -->
       <form id="signInForm" class="auth-form" autocomplete="on">
         <div class="form-group">
-          <label for="loginEmail">Email Address</label>
+          <label for="loginEmail">Verified Email ID</label>
           <input id="loginEmail" type="email" placeholder="you@example.com" required autocomplete="email" />
         </div>
         <div class="form-group">
-          <label for="loginPassword">Password</label>
+          <div class="label-split-row">
+            <label for="loginPassword">Password</label>
+            <button id="openForgotPassBtn" type="button" class="link-inline-btn">Forgot Password?</button>
+          </div>
           <div class="password-input-wrap">
             <input id="loginPassword" type="password" placeholder="Enter your password" required autocomplete="current-password" />
             <button type="button" class="toggle-pass-btn" onclick="togglePassVis('loginPassword', this)" aria-label="Toggle password">👁</button>
@@ -49,10 +52,23 @@
         <button id="signInSubmitBtn" type="submit" class="btn-primary-glow full-w">Sign In to Arena</button>
       </form>
 
+      <!-- FORGOT PASSWORD FORM (Temporary Password via SMTP) -->
+      <form id="forgotPassForm" class="auth-form" style="display:none;" autocomplete="off">
+        <div class="form-group">
+          <label for="forgotEmail">Registered Verified Email ID</label>
+          <input id="forgotEmail" type="email" placeholder="you@example.com" required />
+        </div>
+        <p class="auth-helper-note">We will email a <strong>Temporary Password</strong> via SMTP so you can sign in immediately.</p>
+        <div id="forgotNoticeBox" class="auth-notice-box" style="display:none;"></div>
+        <div id="forgotErrorMsg" class="auth-error-box" style="display:none;"></div>
+        <button id="forgotSubmitBtn" type="submit" class="btn-primary-glow full-w">📧 Send Temporary Password</button>
+        <button id="backToSignInBtn" type="button" class="btn-secondary-nav full-w">← Back to Sign In</button>
+      </form>
+
       <!-- SIGN UP FORM -->
       <form id="signUpForm" class="auth-form" style="display:none;" autocomplete="off">
         <div class="form-group">
-          <label for="regEmail">Email Address</label>
+          <label for="regEmail">Email ID Only (Verified via SMTP OTP)</label>
           <div class="otp-row">
             <input id="regEmail" type="email" placeholder="you@example.com" required />
             <button id="sendOtpBtn" type="button" class="btn-accent-outline">Send OTP</button>
@@ -97,12 +113,7 @@
   </div>
 
   <!-- =========================
-       ADMIN PORTAL CONTAINER (Dynamic Load)
-  ========================== -->
-  <div id="adminPortalRoot" class="admin-dashboard-shell" style="display:none;"></div>
-
-  <!-- =========================
-       USER GAME & PAYMENT PORTAL
+       UNIFIED GAME & ADMIN PORTAL
   ========================== -->
   <div id="gameAppRoot" class="site-wrapper" style="display:none;">
 
@@ -141,6 +152,8 @@
         </div>
 
         <button id="paymentNavBtn" class="header-action-pill" type="button" title="Payments Page">💳 <span>Payments</span></button>
+
+        <button id="adminHeaderToggleBtn" class="header-action-pill admin-pill-btn" type="button" title="Admin Command Center" style="display:none;">🛡️ <span>Admin Tools</span></button>
 
         <button id="notifBellBtn" class="header-icon-btn" type="button" aria-label="Notifications" title="Notifications">
           🔔<span id="notifBellBadge" class="notif-badge-dot" style="display:none;">0</span>
@@ -192,6 +205,15 @@
           <span>🔔</span> Notifications
           <em id="drawerNotifBadge" class="drawer-pill-badge" style="display:none;">0</em>
         </button>
+
+        <div id="adminDrawerSection" class="drawer-admin-section" style="display:none;">
+          <div class="drawer-section-cap">🛡️ ADMIN EXTRA FEATURES</div>
+          <button type="button" class="drawer-nav-item admin-drawer-link" data-view="admin" data-admtab="admLiveTab"><span>📊</span> Profit Engine &amp; Preview</button>
+          <button type="button" class="drawer-nav-item admin-drawer-link" data-view="admin" data-admtab="admWithdrawTab"><span>💸</span> Deposits &amp; Withdraws Queue</button>
+          <button type="button" class="drawer-nav-item admin-drawer-link" data-view="admin" data-admtab="admNotifyTab"><span>📣</span> Notifications Chat Box</button>
+          <button type="button" class="drawer-nav-item admin-drawer-link" data-view="admin" data-admtab="admUsersTab"><span>👥</span> Users Ledger &amp; Block</button>
+          <button type="button" class="drawer-nav-item admin-drawer-link" data-view="admin" data-admtab="admSettingsTab"><span>🛠️</span> Timer, QR, Razorpay &amp; SMTP</button>
+        </div>
       </nav>
 
       <div class="drawer-footer">
@@ -204,6 +226,18 @@
 
       <!-- ========= VIEW 1: GAME ARENA ========= -->
       <section id="view-game" class="page-view active">
+        <div id="adminArenaShortcutBar" class="admin-arena-bar" style="display:none;">
+          <div class="adm-bar-left">
+            <span class="status-pill amber">🛡️ ADMIN MODE</span>
+            <span id="admBarForecastTxt" class="adm-bar-forecast">Same User Dashboard + Extra Admin Controls active</span>
+          </div>
+          <div class="adm-bar-actions">
+            <button type="button" class="btn-adm-mini" data-nav="admin" data-admtab="admLiveTab">📊 Profit Engine</button>
+            <button type="button" class="btn-adm-mini" data-nav="admin" data-admtab="admWithdrawTab">💸 Pay Queue</button>
+            <button type="button" class="btn-adm-mini" data-nav="admin" data-admtab="admNotifyTab">📣 Notify Chat</button>
+            <button type="button" class="btn-adm-mini" data-nav="admin" data-admtab="admSettingsTab">⚙️ Settings</button>
+          </div>
+        </div>
         <div class="dashboard-grid">
 
           <!-- LEFT: LIVE ARENA -->
@@ -431,7 +465,23 @@
 
             <!-- METHOD A: DIRECT UPI QR + UTR -->
             <div id="payMethodPanel-upi" class="pay-method-panel active">
-              <button id="generateUpiQrBtn" type="button" class="btn-accent-outline full-w touch-cta-btn">📱 Show Live UPI QR &amp; Pay App</button>
+              <div id="staticMerchantQrBox" class="upi-qr-box merchant-qr-card">
+                <div class="qr-img-wrap">
+                  <img id="merchantStaticQrImg" src="assets/merchant-upi-qr.jpg" alt="Scan to pay via UPI" class="merchant-qr-img" />
+                </div>
+                <div class="upi-details-col">
+                  <span class="status-pill good" style="align-self:flex-start;">SCAN &amp; PAY ANY UPI APP</span>
+                  <div class="upi-kv"><span>Payee:</span><strong id="staticUpiPayeeDisplay">Badhri Narayanan</strong></div>
+                  <div class="upi-kv">
+                    <span>UPI ID:</span>
+                    <strong id="staticUpiIdDisplay">badhrinarayanan79-3@okhdfcbank</strong>
+                    <button id="copyStaticUpiIdBtn" type="button" class="btn-copy-mini">Copy</button>
+                  </div>
+                  <a id="staticUpiAppLink" href="#" class="btn-upi-app touch-cta-btn">📲 Pay Now in GPay / PhonePe / Paytm</a>
+                </div>
+              </div>
+
+              <button id="generateUpiQrBtn" type="button" class="btn-accent-outline full-w touch-cta-btn" style="margin-top:10px;">🔄 Generate Amount-Locked QR for Entered ₹</button>
 
               <div id="upiQrPreviewBox" class="upi-qr-box" style="display:none;">
                 <div id="upiQrSvgWrap" class="qr-svg-wrap"></div>
@@ -447,7 +497,7 @@
               </div>
 
               <div class="form-group" style="margin-top:12px;">
-                <label for="depositUtrInput">Step 3: Enter 12-Digit UPI UTR / Ref ID</label>
+                <label for="depositUtrInput">Step 3: After Payment, Enter 12-Digit UPI UTR / Ref ID</label>
                 <input id="depositUtrInput" type="text" inputmode="numeric" maxlength="32" class="big-touch-field" placeholder="e.g. 431209876543" />
               </div>
               <button id="submitDepositBtn" type="button" class="btn-primary-glow full-w touch-cta-btn">✅ Submit UTR for Verification</button>
@@ -505,12 +555,65 @@
             </div>
 
             <div class="form-group">
-              <label for="withdrawAccountInput">2. Your UPI ID or Bank A/C + IFSC</label>
-              <input id="withdrawAccountInput" type="text" class="big-touch-field" placeholder="e.g. yourname@okicici or A/C + IFSC" />
+              <label>2. Choose Withdrawal Method</label>
+              <div class="pay-method-switch">
+                <button type="button" id="wthMethodBtnUpi" class="wth-method-btn active" data-wthmethod="UPI">
+                  <span>📱 UPI ID</span>
+                  <small class="status-pill info">GPay / PhonePe / Paytm</small>
+                </button>
+                <button type="button" id="wthMethodBtnBank" class="wth-method-btn" data-wthmethod="BANK">
+                  <span>🏦 Bank Account</span>
+                  <small class="status-pill neutral">IMPS / NEFT</small>
+                </button>
+              </div>
             </div>
 
-            <button id="submitWithdrawBtn" type="button" class="btn-primary-glow full-w touch-cta-btn">🏦 Submit Withdrawal Request</button>
-            <small class="pay-card-note" style="color:#94a3b8;">You will get a live alert as soon as Admin approves &amp; pays your withdrawal.</small>
+            <!-- WITHDRAW METHOD A: UPI -->
+            <div id="wthMethodPanel-upi" class="wth-method-panel active">
+              <div class="upi-app-pills" id="wthUpiAppPills">
+                <button type="button" class="chip-amt-btn active" data-upiapp="Any UPI">Any UPI</button>
+                <button type="button" class="chip-amt-btn" data-upiapp="Google Pay">GPay</button>
+                <button type="button" class="chip-amt-btn" data-upiapp="PhonePe">PhonePe</button>
+                <button type="button" class="chip-amt-btn" data-upiapp="Paytm">Paytm</button>
+              </div>
+              <div class="form-group" style="margin-top:10px;">
+                <label for="withdrawUpiIdInput">UPI ID *</label>
+                <input id="withdrawUpiIdInput" type="text" class="big-touch-field" placeholder="e.g. yourname@okhdfcbank / 98xxxx@ybl" />
+              </div>
+              <div class="form-group">
+                <label for="withdrawUpiHolderInput">Account Holder Name (Recommended)</label>
+                <input id="withdrawUpiHolderInput" type="text" class="big-touch-field" placeholder="Name registered on UPI" />
+              </div>
+            </div>
+
+            <!-- WITHDRAW METHOD B: BANK ACCOUNT -->
+            <div id="wthMethodPanel-bank" class="wth-method-panel" style="display:none;">
+              <div class="form-group">
+                <label for="withdrawBankHolderInput">Account Holder Name *</label>
+                <input id="withdrawBankHolderInput" type="text" class="big-touch-field" placeholder="Exact name as per bank passbook" />
+              </div>
+              <div class="form-group">
+                <label for="withdrawBankAccNoInput">Bank Account Number *</label>
+                <input id="withdrawBankAccNoInput" type="text" inputmode="numeric" maxlength="20" class="big-touch-field" placeholder="Enter 9–18 digit account number" />
+              </div>
+              <div class="form-group">
+                <label for="withdrawBankAccConfirmInput">Confirm Bank Account Number *</label>
+                <input id="withdrawBankAccConfirmInput" type="text" inputmode="numeric" maxlength="20" class="big-touch-field" placeholder="Re-enter account number" />
+              </div>
+              <div class="bank-dual-grid">
+                <div class="form-group">
+                  <label for="withdrawBankIfscInput">IFSC Code *</label>
+                  <input id="withdrawBankIfscInput" type="text" maxlength="11" class="big-touch-field uppercase-input" placeholder="e.g. HDFC0001234" />
+                </div>
+                <div class="form-group">
+                  <label for="withdrawBankNameInput">Bank Name (Optional)</label>
+                  <input id="withdrawBankNameInput" type="text" class="big-touch-field" placeholder="e.g. HDFC / SBI / ICICI" />
+                </div>
+              </div>
+            </div>
+
+            <button id="submitWithdrawBtn" type="button" class="btn-primary-glow full-w touch-cta-btn" style="margin-top:8px;">🏦 Submit Withdrawal Request</button>
+            <small class="pay-card-note" style="color:#94a3b8;">You will get a live Bell 🔔 notification when Admin approves or rejects your withdrawal.</small>
           </div>
         </div>
 
@@ -596,6 +699,7 @@
               <p id="profEmail">user@example.com</p>
               <div class="profile-badges-row">
                 <span class="status-pill info" id="profUserId">UID: —</span>
+                <span class="status-pill good" id="profVerifiedBadge">✅ Verified Email</span>
                 <span class="status-pill amber" id="profVipBadge">VIP 1</span>
                 <span class="status-pill good" id="profStatusBadge">ACTIVE</span>
               </div>
@@ -605,6 +709,24 @@
             <button type="button" class="btn-accent-outline" data-nav="payment">💳 Open Payments</button>
             <button type="button" id="profLogoutBtn" class="btn-danger-outline">🚪 Sign Out</button>
           </div>
+        </div>
+
+        <div id="changePasswordCard" class="payment-card single-col-card" style="margin-top:16px;">
+          <div class="pay-card-head">
+            <h3>🔐 Change Password</h3>
+            <span id="tempPassAlertBadge" class="status-pill amber" style="display:none;">Temporary Password Active</span>
+          </div>
+          <div class="bank-dual-grid">
+            <div class="form-group">
+              <label for="profCurPassword">Current / Temporary Password</label>
+              <input id="profCurPassword" type="password" class="big-touch-field" placeholder="Current password" />
+            </div>
+            <div class="form-group">
+              <label for="profNewPassword">New Password</label>
+              <input id="profNewPassword" type="password" class="big-touch-field" placeholder="Min 8 chars, Upper, Lower, Num, Sym" />
+            </div>
+          </div>
+          <button type="button" id="profChangePassBtn" class="btn-accent-outline">Update Password</button>
         </div>
 
         <div class="pay-wallet-summary-grid" style="margin-top:16px;">
@@ -688,6 +810,11 @@
             <button type="button" id="settingsLogoutBtn" class="btn-danger-outline">🚪 Sign Out</button>
           </div>
         </div>
+      </section>
+
+      <!-- ========= VIEW 7: ADMIN EXTRA TOOLS (Mounted dynamically for Admin ONLY) ========= -->
+      <section id="view-admin" class="page-view" style="display:none;">
+        <div id="adminPortalRoot" class="admin-dashboard-shell"></div>
       </section>
 
     </main>

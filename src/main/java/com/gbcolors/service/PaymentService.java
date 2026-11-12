@@ -91,7 +91,6 @@ public class PaymentService {
                 + "&pn=" + urlEnc(payeeName)
                 + "&am=" + amount + ".00"
                 + "&cu=INR"
-                + "&tr=" + urlEnc(refId)
                 + "&tn=" + urlEnc("GB_Colors_Wallet_" + user.getUserId());
 
         String qrSvg = buildQrSvg(upiUri);

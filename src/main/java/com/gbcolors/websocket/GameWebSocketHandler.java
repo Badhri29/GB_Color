@@ -63,8 +63,14 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
         session.getAttributes().put("role", sess.getRole());
 
         if (sess.getRole() == GameEnums.SessionRole.ADMIN) {
+            gameLoopService.ensureAdminPlayWalletExists();
             wsHub.registerAdmin(session);
+            wsHub.registerUser(sess.getEmail(), session);
             wsHub.emitToSession(session, "admin_init", gameLoopService.getAdminInitPayload());
+            Map<String, Object> initState = gameLoopService.getInitialStateForUser(sess.getEmail());
+            if (initState != null) {
+                wsHub.emitToSession(session, "init_state", initState);
+            }
             return;
         }
 
@@ -112,8 +118,8 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                 return;
             }
 
-            if (role == GameEnums.SessionRole.ADMIN) {
-                if ("admin_set_outcome_mode".equals(event) && dataObj instanceof Map<?, ?> data) {
+            if (role == GameEnums.SessionRole.ADMIN && "admin_set_outcome_mode".equals(event)) {
+                if (dataObj instanceof Map<?, ?> data) {
                     String mode = asString(data.get("mode"));
                     Integer forcedNum = asInteger(data.get("forcedNum"));
                     Map<String, Object> res = gameLoopService.setOutcomeMode(mode, forcedNum);

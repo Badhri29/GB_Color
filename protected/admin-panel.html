@@ -1,53 +1,13 @@
 <div class="admin-dashboard-shell">
-    <!-- Admin Slide-Out Side Drawer Backdrop & Drawer -->
-    <div class="drawer-backdrop" id="admDrawerBackdrop"></div>
-    <aside class="side-drawer adm-side-drawer" id="admSideDrawer">
-        <div class="drawer-header">
-            <div class="brand">
+    <!-- Compact Admin Command Center Sub-Header (Mounted inside Unified Portal) -->
+    <div class="page-header-bar admin-sub-bar">
+        <div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                 <span class="brand-badge admin-badge-tag">ADMIN</span>
-                <span class="brand-name">GB_<span class="text-accent">Colors</span></span>
+                <h2 style="margin:0;">GB_<span class="text-accent">Colors</span> Command Center</h2>
+                <span id="admHeaderEmail" class="status-pill info" style="font-size:11px;">gbcolor.admin@gmail.com</span>
             </div>
-            <button class="modal-close-btn" id="closeAdmDrawerBtn">&times;</button>
-        </div>
-        <div class="drawer-user-summary">
-            <div class="drawer-avatar">🛡️</div>
-            <div class="drawer-user-meta">
-                <strong>Administrator</strong>
-                <small id="admDrawerEmail">gbcolor.admin@gmail.com</small>
-            </div>
-        </div>
-        <nav class="drawer-nav-list">
-            <button class="drawer-nav-item active" data-admdrawer="admLiveTab">
-                <span>📊</span> <span>Live Monitor & Profit Engine</span>
-            </button>
-            <button class="drawer-nav-item" data-admdrawer="admHistoryTab">
-                <span>🏁</span> <span>Round Result History</span>
-            </button>
-            <button class="drawer-nav-item" data-admdrawer="admWithdrawTab">
-                <span>💸</span> <span>Payments Queue</span>
-                <span class="pending-badge-pill" id="admDrawerPayBadge">0</span>
-            </button>
-            <button class="drawer-nav-item" data-admdrawer="admUsersTab">
-                <span>👥</span> <span>Users Ledger & Block</span>
-            </button>
-            <button class="drawer-nav-item" data-admdrawer="admSettingsTab">
-                <span>⚙️</span> <span>Timer, Payments & Settings</span>
-            </button>
-        </nav>
-        <div class="drawer-footer">
-            <button class="btn-danger-confirm" id="admDrawerLogoutBtn" style="width:100%;">🚪 Sign Out Admin</button>
-        </div>
-    </aside>
-
-    <!-- Top Admin Header -->
-    <header class="app-header admin-header">
-        <div class="header-left">
-            <button id="admMenuBtn" class="menu-hamburger-btn" aria-label="Open Admin Menu" title="Open Admin Menu">☰</button>
-            <div class="brand">
-                <span class="brand-badge admin-badge-tag">ADMIN</span>
-                <span class="brand-name">GB_<span class="text-accent">Colors</span> <small class="admin-sub-label">COMMAND CENTER</small></span>
-            </div>
-            <div class="admin-live-timer-pill">
+            <div class="admin-live-timer-pill" style="margin-top:8px;">
                 <span>Period: <strong id="admPeriodNum">---</strong></span>
                 <span class="divider">|</span>
                 <span>Time: <strong id="admTimeLeft" class="text-yellow">00:30</strong></span>
@@ -56,14 +16,13 @@
                 <span id="admDbStatus" class="status-chip chip-warn">DB: Checking...</span>
             </div>
         </div>
-        <div class="header-right">
-            <span class="admin-email-chip" id="admHeaderEmail">gbcolor.admin@gmail.com</span>
-            <button id="admLogoutBtn" class="pill-btn btn-danger-outline">Logout</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <button type="button" id="admBackToArenaBtn" class="btn-secondary-nav" onclick="window.gbNavToGame && window.gbNavToGame()">🎮 Switch to User Arena</button>
         </div>
-    </header>
+    </div>
 
     <!-- Main Admin Body -->
-    <div class="admin-main-content">
+    <div class="admin-main-content" style="padding:0;">
         <!-- 4 KPI Net Worth Cards -->
         <div class="kpi-grid">
             <div class="kpi-card kpi-profit">
@@ -90,13 +49,14 @@
 
         <!-- Admin Navigation Tabs -->
         <div class="admin-nav-tabs">
-            <button class="adm-tab-btn active" data-admtab="admLiveTab">📊 Live Monitor & Profit Engine</button>
-            <button class="adm-tab-btn" data-admtab="admHistoryTab">🏁 Result History</button>
+            <button class="adm-tab-btn active" data-admtab="admLiveTab">📊 Profit Engine</button>
             <button class="adm-tab-btn" data-admtab="admWithdrawTab">
-                💸 Deposits & Withdraws <span class="pending-badge-pill" id="admWithdrawBadge">0</span>
+                💸 Deposits &amp; Withdraws <span class="pending-badge-pill" id="admWithdrawBadge">0</span>
             </button>
-            <button class="adm-tab-btn" data-admtab="admUsersTab">👥 Users Ledger & Block</button>
-            <button class="adm-tab-btn" data-admtab="admSettingsTab">⚙️ Timer, Payments & Email</button>
+            <button class="adm-tab-btn" data-admtab="admNotifyTab">📣 Notifications Chat</button>
+            <button class="adm-tab-btn" data-admtab="admUsersTab">👥 Verified Users &amp; Block</button>
+            <button class="adm-tab-btn" data-admtab="admHistoryTab">🏁 Result History</button>
+            <button class="adm-tab-btn" data-admtab="admSettingsTab">⚙️ Timer, QR &amp; Email</button>
         </div>
 
         <!-- Tab 1: Live Monitor & Smart Profit Engine -->
@@ -291,11 +251,11 @@
             </div>
         </div>
 
-        <!-- Tab 4: Users Ledger & Block Controls -->
+        <!-- Tab 4: Verified Users Ledger & Block Controls -->
         <div class="adm-tab-panel" id="admUsersTab">
             <div class="adm-card full-height-card">
                 <div class="adm-card-header">
-                    <h3>👥 Registered Users Ledger &amp; Access Control</h3>
+                    <h3>👥 Verified Users Ledger &amp; Access Control</h3>
                     <input type="text" id="admUserSearch" class="adm-search-input" placeholder="Search by Email or User ID...">
                 </div>
                 <div class="adm-table-scroll" style="max-height: 540px;">
@@ -314,6 +274,52 @@
                         </thead>
                         <tbody id="admUsersTableBody"></tbody>
                     </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 6: Admin Notifications Chat Box (Broadcast All / Direct User) -->
+        <div class="adm-tab-panel" id="admNotifyTab">
+            <div class="adm-split-grid">
+                <div class="adm-card">
+                    <div class="adm-card-header">
+                        <h3>📣 Send Notification Chat Box</h3>
+                        <span class="badge-mode">Delivered Live to User Bell 🔔</span>
+                    </div>
+                    <p class="adm-help-txt">
+                        Send an announcement to <strong>All Verified Users</strong> OR pick a <strong>Specific User</strong>. Messages arrive live in the user's top Bell icon (and wait if they are logged out).
+                    </p>
+
+                    <label class="input-label">Audience</label>
+                    <div class="subtab-row">
+                        <button type="button" class="subtab-btn active" id="admNotifScopeAll">📢 All Verified Users</button>
+                        <button type="button" class="subtab-btn" id="admNotifScopeUser">👤 Specific User Only</button>
+                    </div>
+
+                    <div id="admNotifTargetWrap" style="display:none;">
+                        <label class="input-label" for="admNotifTargetUser">Select Target Verified User</label>
+                        <select id="admNotifTargetUser" class="form-input">
+                            <option value="">-- Choose a user --</option>
+                        </select>
+                    </div>
+
+                    <label class="input-label" for="admNotifTitleInput">Notification Title (Optional)</label>
+                    <input type="text" id="admNotifTitleInput" class="form-input" maxlength="120" placeholder="e.g. Important Update / Bonus Alert">
+
+                    <label class="input-label" for="admNotifMsgInput">Message</label>
+                    <textarea id="admNotifMsgInput" class="form-input adm-chat-textarea" rows="3" maxlength="480" placeholder="Type message to send to user Bell notification..."></textarea>
+
+                    <button type="button" id="admNotifSendBtn" class="btn-confirm-bet">📤 Send Notification Now</button>
+                </div>
+
+                <div class="adm-card">
+                    <div class="adm-card-header">
+                        <h3>💬 Sent Notifications Feed</h3>
+                        <span class="status-chip chip-ok">Audit Log</span>
+                    </div>
+                    <div class="adm-list-scroll" id="admSentNotifsFeed">
+                        <div class="empty-state">No Admin notifications sent yet.</div>
+                    </div>
                 </div>
             </div>
         </div>
