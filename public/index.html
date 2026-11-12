@@ -226,41 +226,44 @@
 
       <!-- ========= VIEW 1: GAME ARENA ========= -->
       <section id="view-game" class="page-view active">
-        <div id="adminArenaShortcutBar" class="admin-arena-bar" style="display:none;">
-          <div class="adm-bar-left">
-            <span class="status-pill amber">🛡️ ADMIN MODE</span>
-            <span id="admBarForecastTxt" class="adm-bar-forecast">Same User Dashboard + Extra Admin Controls active</span>
-          </div>
-          <div class="adm-bar-actions">
-            <button type="button" class="btn-adm-mini" data-nav="admin" data-admtab="admLiveTab">📊 Profit Engine</button>
-            <button type="button" class="btn-adm-mini" data-nav="admin" data-admtab="admWithdrawTab">💸 Pay Queue</button>
-            <button type="button" class="btn-adm-mini" data-nav="admin" data-admtab="admNotifyTab">📣 Notify Chat</button>
-            <button type="button" class="btn-adm-mini" data-nav="admin" data-admtab="admSettingsTab">⚙️ Settings</button>
-          </div>
-        </div>
         <div class="dashboard-grid">
 
-          <!-- LEFT: LIVE ARENA -->
+          <!-- LEFT: FEATURE RESULT (TOP) + GAME BETTING AREA (BOTTOM) -->
           <div class="game-arena-column">
-            <div class="period-timer-card">
-              <div class="period-left">
-                <div class="game-tag" id="modeTagDisplay">WIN GO • 30S</div>
-                <div class="period-label">Active Period</div>
-                <div id="periodNumber" class="period-code">--------</div>
-              </div>
-              <div class="timer-right">
-                <div class="timer-caption">Time Remaining</div>
-                <div id="countdownClock" class="countdown-digits">
-                  <span id="timerMin" class="clock-digit">00</span>
-                  <span class="clock-colon">:</span>
-                  <span id="timerSec" class="clock-digit">30</span>
+            <div class="feature-result-card">
+              <div class="period-timer-card">
+                <div class="period-left">
+                  <div class="game-tag" id="modeTagDisplay">WIN GO • 30S</div>
+                  <div class="period-label">Active Period</div>
+                  <div id="periodNumber" class="period-code">--------</div>
+                </div>
+                <div class="timer-right">
+                  <div class="timer-caption">Time Remaining</div>
+                  <div id="countdownClock" class="countdown-digits">
+                    <span id="timerMin" class="clock-digit">00</span>
+                    <span class="clock-colon">:</span>
+                    <span id="timerSec" class="clock-digit">30</span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div class="recent-strip-card">
-              <span class="recent-cap">Recent:</span>
-              <div id="recentDotsList" class="recent-dots-row"></div>
+              <div class="recent-strip-card">
+                <span class="recent-cap">Recent:</span>
+                <div id="recentDotsList" class="recent-dots-row"></div>
+              </div>
+
+              <div id="adminArenaShortcutBar" class="admin-arena-bar" style="display:none;">
+                <div class="adm-bar-left">
+                  <span class="status-pill amber">🛡️ ADMIN</span>
+                  <span id="admBarForecastTxt" class="adm-bar-forecast">Same User Dashboard + Extra Admin Controls active</span>
+                </div>
+                <div class="adm-bar-actions">
+                  <button type="button" class="btn-adm-mini" data-nav="admin" data-admtab="admLiveTab">📊 Profit</button>
+                  <button type="button" class="btn-adm-mini" data-nav="admin" data-admtab="admWithdrawTab">💸 Queue</button>
+                  <button type="button" class="btn-adm-mini" data-nav="admin" data-admtab="admNotifyTab">📣 Notify</button>
+                  <button type="button" class="btn-adm-mini" data-nav="admin" data-admtab="admSettingsTab">⚙️</button>
+                </div>
+              </div>
             </div>
 
             <!-- BETTING CONSOLE -->
@@ -340,7 +343,7 @@
 
           <!-- RIGHT: QUICK ACTIONS + RECORDS -->
           <div class="side-panel-column">
-            <div class="quick-pay-bar">
+            <div id="userQuickPayBar" class="quick-pay-bar">
               <button type="button" class="btn-pay-shortcut deposit" data-nav="payment" data-paytab="recharge">💳 Recharge Cash</button>
               <button type="button" class="btn-pay-shortcut withdraw" data-nav="payment" data-paytab="withdraw">🏦 Withdraw</button>
             </div>
@@ -706,7 +709,7 @@
             </div>
           </div>
           <div class="profile-hero-actions">
-            <button type="button" class="btn-accent-outline" data-nav="payment">💳 Open Payments</button>
+            <button type="button" id="profOpenPayBtn" class="btn-accent-outline" data-nav="payment">💳 Open Payments</button>
             <button type="button" id="profLogoutBtn" class="btn-danger-outline">🚪 Sign Out</button>
           </div>
         </div>

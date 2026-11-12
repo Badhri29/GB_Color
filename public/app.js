@@ -424,8 +424,12 @@
   }
 
   function navigateToView(viewName, subOpt) {
-    const views = ['game', 'payment', 'history', 'profile', 'rules', 'settings'];
-    if (isAdminSession) views.push('admin');
+    if (isAdminSession && viewName === 'payment') {
+      return navigateToView('admin', 'admWithdrawTab');
+    }
+    const views = isAdminSession
+      ? ['game', 'history', 'profile', 'rules', 'settings', 'admin']
+      : ['game', 'payment', 'history', 'profile', 'rules', 'settings'];
     const target = views.includes(viewName) ? viewName : 'game';
 
     ['game', 'payment', 'history', 'profile', 'rules', 'settings', 'admin'].forEach((v) => {
@@ -580,17 +584,24 @@
 
   function ingestUnreadNotifications(list, isInitialLogin) {
     if (!Array.isArray(list) || !list.length) return;
-    const existingIds = new Set(sessionNotifications.map((n) => n.id));
+    const existingById = new Map();
+    sessionNotifications.forEach((item) => {
+      if (item && item.id) existingById.set(item.id, item);
+    });
     const ordered = prioritizeNotifications(list);
     ordered.forEach((n) => {
-      if (!existingIds.has(n.id)) {
-        sessionNotifications.unshift(n);
-        if (!n.isRead && !popupQueue.some((q) => q.id === n.id) && (!activePopupNotif || activePopupNotif.id !== n.id)) {
-          popupQueue.push(n);
-        }
+      if (!n || !n.id) return;
+      if (existingById.has(n.id)) {
+        const cur = existingById.get(n.id);
+        cur.isRead = Boolean(cur.isRead || n.isRead);
+        return;
+      }
+      existingById.set(n.id, n);
+      if (!n.isRead && !popupQueue.some((q) => q.id === n.id) && (!activePopupNotif || activePopupNotif.id !== n.id)) {
+        popupQueue.push(n);
       }
     });
-    sessionNotifications = prioritizeNotifications(sessionNotifications);
+    sessionNotifications = prioritizeNotifications(Array.from(existingById.values()));
     updateNotificationBadges();
 
     if (popupQueue.length > 0) {
@@ -1407,9 +1418,22 @@
   // =========================================================
   function toggleAdminShellUi(enabled) {
     isAdminSession = Boolean(enabled);
+    if ($('gameAppRoot')) $('gameAppRoot').classList.toggle('is-admin-session', isAdminSession);
     if ($('adminHeaderToggleBtn')) $('adminHeaderToggleBtn').style.display = isAdminSession ? '' : 'none';
     if ($('adminDrawerSection')) $('adminDrawerSection').style.display = isAdminSession ? '' : 'none';
     if ($('adminArenaShortcutBar')) $('adminArenaShortcutBar').style.display = isAdminSession ? '' : 'none';
+
+    // Hide player Recharge & Withdraw entry points when logged in as Admin
+    const hideForAdmin = [
+      $('headerRechargeBtn'),
+      $('paymentNavBtn'),
+      $('userQuickPayBar'),
+      $('profOpenPayBtn'),
+      document.querySelector('#userSideDrawer .drawer-nav-item[data-view="payment"]')
+    ];
+    hideForAdmin.forEach((el) => {
+      if (el) el.style.display = isAdminSession ? 'none' : '';
+    });
   }
 
   async function mountAdminToolkit(adminInfo) {
