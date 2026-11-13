@@ -137,7 +137,9 @@ public class GameLoopService {
         try {
             PlatformSettingsEntity settings = txTemplate.execute(status -> {
                 PlatformSettingsEntity s = settingsRepo.findById(1).orElse(null);
-                String cleanAdminEmail = envAdminEmail.trim().toLowerCase();
+                String cleanAdminEmail = (envAdminEmail == null || envAdminEmail.isBlank() || envAdminEmail.toLowerCase().contains("gmail"))
+                        ? "gbcolor@admin.com"
+                        : envAdminEmail.trim().toLowerCase();
                 if (s == null) {
                     s = new PlatformSettingsEntity();
                     s.setId(1);
@@ -151,7 +153,7 @@ public class GameLoopService {
                     s.setMinDepositAmount(10);
                     s.setMinWithdrawAmount(10);
                 } else {
-                    if (s.getAdminEmail() == null || s.getAdminEmail().isBlank() || "gbcolor.admin@gmail.com".equalsIgnoreCase(s.getAdminEmail().trim())) {
+                    if (s.getAdminEmail() == null || s.getAdminEmail().isBlank() || s.getAdminEmail().toLowerCase().contains("gmail") || "gbcolor.admin@gmail.com".equalsIgnoreCase(s.getAdminEmail().trim())) {
                         s.setAdminEmail(cleanAdminEmail);
                     }
                     if (s.getAdminPasswordHash() == null || !s.getAdminPasswordHash().startsWith("$2")) {
@@ -1843,7 +1845,19 @@ public class GameLoopService {
     private void ensureAdminPlayWallet(String adminEmail) {
         if (adminEmail == null || adminEmail.isBlank()) return;
         String cleanEmail = adminEmail.trim().toLowerCase();
-        if (userRepo.existsByEmail(cleanEmail)) return;
+        UserEntity existingByEmail = userRepo.findByEmail(cleanEmail).orElse(null);
+        if (existingByEmail != null) return;
+
+        UserEntity legacyAdmin = userRepo.findByEmail("gbcolor.admin@gmail.com")
+                .or(() -> userRepo.findByUserId("ADMIN001"))
+                .orElse(null);
+        if (legacyAdmin != null) {
+            legacyAdmin.setEmail(cleanEmail);
+            legacyAdmin.setUsername("Admin");
+            legacyAdmin.setPasswordHash(passwordService.hashPassword(envAdminPass));
+            userRepo.save(legacyAdmin);
+            return;
+        }
 
         UserEntity adminPlay = new UserEntity();
         adminPlay.setUserId("ADMIN001");

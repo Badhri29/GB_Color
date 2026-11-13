@@ -66,11 +66,11 @@ APP_NAME=GB_Colors
 FRONTEND_ORIGIN=${GITHUB_PAGES_ORIGIN},https://${DOMAIN}
 REQUIRE_MYSQL=true
 
-ADMIN_EMAIL=gbcolor.admin@gmail.com
+ADMIN_EMAIL=gbcolor@admin.com
 ADMIN_DEFAULT_PASSWORD=Admin@123
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USER=gbcolor.admin@gmail.com
+SMTP_USER=gbcolor@admin.com
 SMTP_PASS=cqyqpizyebgrjyat
 SMTP_FROM_NAME=GB_Colors
 

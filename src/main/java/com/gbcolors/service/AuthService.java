@@ -51,7 +51,14 @@ public class AuthService {
         }
 
         PlatformSettingsEntity settings = gameLoopService.getPlatformSettings();
-        if (email.equals(settings.getAdminEmail().toLowerCase()) || userRepo.existsByEmail(email)) {
+        String currentAdminEmail = (settings.getAdminEmail() != null && !settings.getAdminEmail().isBlank())
+                ? settings.getAdminEmail().trim().toLowerCase()
+                : "gbcolor@admin.com";
+        boolean isAdmin = email.equals(currentAdminEmail)
+                || "gbcolor@admin.com".equalsIgnoreCase(email)
+                || "gbcolor.admin@gmail.com".equalsIgnoreCase(email);
+
+        if (isAdmin || userRepo.existsByEmail(email)) {
             return new AuthResult(400, Map.of(
                     "success", false,
                     "message", "This Email ID is already registered. Please Sign In instead."
@@ -85,7 +92,13 @@ public class AuthService {
         }
 
         PlatformSettingsEntity settings = gameLoopService.getPlatformSettings();
-        if (email.equals(settings.getAdminEmail().toLowerCase()) || userRepo.existsByEmail(email)) {
+        String currentAdminEmail = (settings.getAdminEmail() != null && !settings.getAdminEmail().isBlank())
+                ? settings.getAdminEmail().trim().toLowerCase()
+                : "gbcolor@admin.com";
+        boolean isAdmin = email.equals(currentAdminEmail)
+                || "gbcolor@admin.com".equalsIgnoreCase(email)
+                || "gbcolor.admin@gmail.com".equalsIgnoreCase(email);
+        if (isAdmin || userRepo.existsByEmail(email)) {
             return new AuthResult(400, Map.of("success", false, "message", "Account already exists. Please Sign In."));
         }
 
@@ -135,21 +148,31 @@ public class AuthService {
         }
 
         PlatformSettingsEntity settings = gameLoopService.getPlatformSettings();
-        if (email.equals(settings.getAdminEmail().toLowerCase())) {
+        String currentAdminEmail = (settings.getAdminEmail() != null && !settings.getAdminEmail().isBlank())
+                ? settings.getAdminEmail().trim().toLowerCase()
+                : "gbcolor@admin.com";
+        boolean isAdmin = email.equals(currentAdminEmail)
+                || "gbcolor@admin.com".equalsIgnoreCase(email)
+                || "gbcolor.admin@gmail.com".equalsIgnoreCase(email);
+
+        if (isAdmin) {
             if (!passwordService.verifyPassword(password, settings.getAdminPasswordHash())) {
                 return new AuthResult(401, Map.of("success", false, "message", "Invalid Email ID or Password."));
             }
             gameLoopService.ensureAdminPlayWalletExists();
             String token = generateSessionToken();
-            saveSession(token, email, GameEnums.SessionRole.ADMIN);
-            Map<String, Object> adminPlayUser = gameLoopService.getSanitizedUserPayload(email);
+            saveSession(token, "gbcolor@admin.com", GameEnums.SessionRole.ADMIN);
+            Map<String, Object> adminPlayUser = gameLoopService.getSanitizedUserPayload("gbcolor@admin.com");
+            if (adminPlayUser == null) {
+                adminPlayUser = gameLoopService.getSanitizedUserPayload(currentAdminEmail);
+            }
             return new AuthResult(200, Map.of(
                     "success", true,
                     "message", "Admin Login Successful!",
                     "token", token,
                     "role", "ADMIN",
-                    "admin", Map.of("email", email),
-                    "user", adminPlayUser != null ? adminPlayUser : Map.of("email", email)
+                    "admin", Map.of("email", "gbcolor@admin.com"),
+                    "user", adminPlayUser != null ? adminPlayUser : Map.of("email", "gbcolor@admin.com")
             ));
         }
 
@@ -236,7 +259,13 @@ public class AuthService {
             return new AuthResult(400, Map.of("success", false, "message", "Please enter a valid Email ID."));
         }
         PlatformSettingsEntity settings = gameLoopService.getPlatformSettings();
-        if (email.equals(settings.getAdminEmail().toLowerCase())) {
+        String currentAdminEmail = (settings.getAdminEmail() != null && !settings.getAdminEmail().isBlank())
+                ? settings.getAdminEmail().trim().toLowerCase()
+                : "gbcolor@admin.com";
+        boolean isAdmin = email.equals(currentAdminEmail)
+                || "gbcolor@admin.com".equalsIgnoreCase(email)
+                || "gbcolor.admin@gmail.com".equalsIgnoreCase(email);
+        if (isAdmin) {
             return new AuthResult(400, Map.of(
                     "success", false,
                     "message", "Admin password cannot be reset from user recovery. Change it from Admin Settings."
