@@ -446,19 +446,25 @@
   }
 
   function navigateToView(viewName, subOpt) {
+    if (!isAdminSession && viewName === 'admin') {
+      viewName = 'game';
+    }
     if (isAdminSession && viewName === 'payment') {
       return navigateToView('admin', 'admWithdrawTab');
     }
-    const views = isAdminSession
-      ? ['game', 'history', 'profile', 'rules', 'settings', 'admin']
-      : ['game', 'payment', 'history', 'profile', 'rules', 'settings'];
-    const target = views.includes(viewName) ? viewName : 'game';
+    if (viewName === 'settings') viewName = 'profile';
+    if (viewName === 'history') viewName = 'game';
 
-    ['game', 'payment', 'history', 'profile', 'rules', 'settings', 'admin'].forEach((v) => {
+    const allowedViews = isAdminSession
+      ? ['game', 'admin', 'profile', 'rules']
+      : ['game', 'payment', 'profile', 'rules'];
+    const target = allowedViews.includes(viewName) ? viewName : 'game';
+
+    ['game', 'payment', 'profile', 'rules', 'admin'].forEach((v) => {
       const el = $('view-' + v);
       if (el) {
         const show = (v === target);
-        el.style.display = show ? '' : 'none';
+        el.style.display = show ? 'block' : 'none';
         el.classList.toggle('active', show);
       }
     });
@@ -478,8 +484,6 @@
       refreshCurrentUser();
       if (subOpt) switchPaymentSubTab(subOpt);
       renderPaymentStatuses();
-    } else if (target === 'history') {
-      renderHistoryView();
     } else if (target === 'profile') {
       renderProfileView();
     } else if (target === 'admin' && subOpt && typeof window.switchAdminTab === 'function') {
@@ -1778,18 +1782,19 @@
       $('headerWalletPill'),
       $('headerRechargeBtn'),
       $('paymentNavBtn'),
-      $('adminHeaderToggleBtn'),
       $('notifBellBtn'),
       $('soundToggleBtn'),
       $('userQuickPayBar'),
       $('profOpenPayBtn'),
+      $('userDrawerNavGroup'),
       document.querySelector('#userSideDrawer .drawer-nav-item[data-view="payment"]')
     ];
     playerControls.forEach((el) => {
       if (el) el.style.display = isAdminSession ? 'none' : '';
     });
 
-    // Admin specific controls
+    // Admin specific controls (strictly hidden for regular users)
+    if ($('adminHeaderToggleBtn')) $('adminHeaderToggleBtn').style.display = isAdminSession ? 'inline-flex' : 'none';
     if ($('adminHeaderLogoutBtn')) $('adminHeaderLogoutBtn').style.display = isAdminSession ? 'inline-flex' : 'none';
     if ($('adminDrawerSection')) $('adminDrawerSection').style.display = isAdminSession ? '' : 'none';
     if ($('adminArenaShortcutBar')) $('adminArenaShortcutBar').style.display = isAdminSession ? '' : 'none';
