@@ -149,7 +149,7 @@ class AuthAndAdminSecurityTest {
 
         MvcResult userLogin = mockMvc.perform(post("/api/auth/signin")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"user1@gb.com\",\"password\":\"User@123\"}"))
+                        .content("{\"email\":\"badhrinarayanan79@gmail.com\",\"password\":\"User@123\"}"))
                 .andExpect(status().isOk())
                 .andReturn();
         String userToken = userLogin.getResponse().getContentAsString().replaceAll(".*\"token\":\"([^\"]+)\".*", "$1");
@@ -290,7 +290,7 @@ class AuthAndAdminSecurityTest {
 
         MvcResult user1Login = mockMvc.perform(post("/api/auth/signin")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"user1@gb.com\",\"password\":\"User@123\"}"))
+                        .content("{\"email\":\"badhrinarayanan79@gmail.com\",\"password\":\"User@123\"}"))
                 .andExpect(status().isOk())
                 .andReturn();
         String user1Token = user1Login.getResponse().getContentAsString().replaceAll(".*\"token\":\"([^\"]+)\".*", "$1");

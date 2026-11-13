@@ -1891,8 +1891,8 @@ public class GameLoopService {
             badhri.setVipLevel(1);
             badhri.setEmailVerified(true);
             badhri.setMustChangePassword(false);
-            badhri.setDemoBalance(BigDecimal.valueOf(1000));
-            badhri.setRealBalance(BigDecimal.ZERO);
+            badhri.setDemoBalance(BigDecimal.valueOf(5000));
+            badhri.setRealBalance(BigDecimal.valueOf(5000));
             badhri.setActiveMode(GameEnums.ActiveMode.REAL);
             badhri.setCreatedAt(Instant.now());
             userRepo.save(badhri);
@@ -1905,6 +1905,9 @@ public class GameLoopService {
             badhri.setBlockType(GameEnums.BlockType.NONE);
             badhri.setBlockedUntil(null);
             badhri.setBlockReason(null);
+            if (badhri.getRealBalance() == null || badhri.getRealBalance().compareTo(BigDecimal.valueOf(1000)) < 0) {
+                badhri.setRealBalance(BigDecimal.valueOf(5000));
+            }
             userRepo.save(badhri);
             System.out.println("Verified single allowed user: " + allowedUserEmail + " (" + badhri.getUserId() + ")");
         }
