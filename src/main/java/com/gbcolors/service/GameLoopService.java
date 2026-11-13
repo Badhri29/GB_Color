@@ -934,6 +934,136 @@ public class GameLoopService {
         return Map.of("success", true, "message", "Razorpay payment verified! ₹" + creditedAmt + " credited to Real Balance.");
     }
 
+    /**
+     * Universal automated deposit completion (used by UPI Gateway Webhook, Bank SMS Webhook, and PayPal).
+     */
+    public Map<String, Object> completeAutomatedDeposit(
+            String orderIdOrRef,
+            String paymentRef,
+            String method,
+            Integer amountPaid,
+            String note
+    ) {
+        Map<String, Object> updatedUserMap = null;
+        Map<String, Object> notificationMap = null;
+        Map<String, Object> adminSnapshot = null;
+        String userEmail = null;
+        long creditedAmt = 0L;
+
+        stateLock.lock();
+        try {
+            DepositRequestEntity target = null;
+            if (orderIdOrRef != null && !orderIdOrRef.isBlank()) {
+                target = depositRepo.findByOrderId(orderIdOrRef.trim()).orElse(null);
+                if (target == null) {
+                    target = depositRepo.findById(orderIdOrRef.trim()).orElse(null);
+                }
+            }
+            if (target == null && paymentRef != null && !paymentRef.isBlank()) {
+                List<DepositRequestEntity> pending = depositRepo.findAllByOrderByRequestedAtDesc().stream()
+                        .filter(d -> d.getStatus() == GameEnums.DepositStatus.PENDING)
+                        .filter(d -> paymentRef.equalsIgnoreCase(d.getUtrOrPaymentId()))
+                        .toList();
+                if (!pending.isEmpty()) {
+                    target = pending.get(0);
+                }
+            }
+            if (target == null && amountPaid != null && amountPaid > 0) {
+                Instant threshold = Instant.now().minusSeconds(1800);
+                List<DepositRequestEntity> matching = depositRepo.findAllByOrderByRequestedAtDesc().stream()
+                        .filter(d -> d.getStatus() == GameEnums.DepositStatus.PENDING)
+                        .filter(d -> d.getAmount().intValue() == amountPaid)
+                        .filter(d -> d.getRequestedAt().isAfter(threshold))
+                        .toList();
+                if (!matching.isEmpty()) {
+                    target = matching.get(0);
+                }
+            }
+
+            if (target == null) {
+                return Map.of("success", false, "message", "Pending deposit request not found for ref: " + orderIdOrRef);
+            }
+
+            if (target.getStatus() == GameEnums.DepositStatus.APPROVED) {
+                return Map.of("success", true, "message", "Deposit was already credited.", "alreadyProcessed", true);
+            }
+
+            userEmail = target.getEmail();
+            creditedAmt = target.getAmount().longValue();
+            final DepositRequestEntity finalTarget = target;
+            AtomicReference<Map<String, Object>> notifRef = new AtomicReference<>();
+
+            updatedUserMap = txTemplate.execute(status -> {
+                DepositRequestEntity dr = depositRepo.findById(finalTarget.getId()).orElseThrow();
+                dr.setStatus(GameEnums.DepositStatus.APPROVED);
+                if (paymentRef != null && !paymentRef.isBlank()) {
+                    dr.setUtrOrPaymentId(paymentRef.trim());
+                }
+                if (method != null && !method.isBlank()) {
+                    dr.setMethod(method.trim().toUpperCase());
+                }
+                if (note != null && !note.isBlank()) {
+                    dr.setAdminNote(note.trim());
+                }
+                dr.setProcessedAt(Instant.now());
+                depositRepo.save(dr);
+
+                UserEntity u = userRepo.findByEmail(dr.getEmail()).orElseThrow();
+                u.setRealBalance(u.getRealBalance().add(dr.getAmount()));
+                u.setTotalRecharged(u.getTotalRecharged().add(dr.getAmount()));
+                u.setLastRechargeAt(Instant.now());
+                u.setLastRechargeAmt(dr.getAmount());
+                userRepo.save(u);
+
+                PlatformSettingsEntity s = loadOrInitSettings();
+                s.setTotalRecharges(s.getTotalRecharges().add(dr.getAmount()));
+                settingsRepo.save(s);
+
+                TransactionEntity tx = new TransactionEntity();
+                tx.setId(dr.getId());
+                tx.setEmail(dr.getEmail());
+                tx.setTxType(GameEnums.TxType.DEPOSIT);
+                tx.setMethod(dr.getMethod());
+                tx.setAccountOrUtr(dr.getUtrOrPaymentId());
+                tx.setAmount(dr.getAmount());
+                tx.setStatus("SUCCESS");
+                tx.setCreatedAt(Instant.now());
+                txRepo.save(tx);
+
+                String curSym = "USD".equalsIgnoreCase(s.getActiveCurrency()) ? "$" : "₹";
+                NotificationEntity n = createNotification(
+                        dr.getEmail(),
+                        GameEnums.NotificationType.DEPOSIT_APPROVED,
+                        "Recharge Confirmed!",
+                        curSym + dr.getAmount().longValue() + " auto-credited via " + dr.getMethod() + " (" + (paymentRef != null ? paymentRef : "Instant") + ").",
+                        dr.getAmount(),
+                        dr.getId()
+                );
+                notifRef.set(payloadBuilder.toNotificationMap(n));
+                return buildSanitizedUser(u);
+            });
+            notificationMap = notifRef.get();
+            adminSnapshot = buildAdminAnalyticsSnapshot();
+        } finally {
+            stateLock.unlock();
+        }
+
+        if (userEmail != null) {
+            wsHub.emitToUser(userEmail, "user_updated", updatedUserMap);
+            if (notificationMap != null) {
+                wsHub.emitToUser(userEmail, "notification", notificationMap);
+            }
+        }
+        wsHub.emitToAdmin("admin_live_update", adminSnapshot);
+
+        return Map.of(
+                "success", true,
+                "message", "Payment verified and credited: " + creditedAmt,
+                "amount", creditedAmt,
+                "email", userEmail != null ? userEmail : ""
+        );
+    }
+
     public Map<String, Object> submitWithdrawal(String email, Integer amount, String upiOrBank) {
         return submitWithdrawal(email, amount, "AUTO", null, null, null, null, null, upiOrBank);
     }
@@ -1210,6 +1340,26 @@ public class GameLoopService {
             Integer minWithdraw,
             Integer maxWithdraw
     ) {
+        return updatePaymentConfig(upiId, payeeName, rzpKeyId, rzpKeySecret, minDeposit, maxDeposit, minWithdraw, maxWithdraw,
+                null, null, null, null, null, null);
+    }
+
+    public Map<String, Object> updatePaymentConfig(
+            String upiId,
+            String payeeName,
+            String rzpKeyId,
+            String rzpKeySecret,
+            Integer minDeposit,
+            Integer maxDeposit,
+            Integer minWithdraw,
+            Integer maxWithdraw,
+            String activeCurrency,
+            String upiWebhookSecret,
+            String smsWebhookToken,
+            String paypalClientId,
+            String paypalClientSecret,
+            String paypalMode
+    ) {
         Map<String, Object> adminSnapshot;
         Map<String, Object> publicPayCfg = new LinkedHashMap<>();
         String validationError = null;
@@ -1237,7 +1387,9 @@ public class GameLoopService {
                 if (payeeName != null && !payeeName.isBlank()) {
                     s.setUpiPayeeName(payeeName.trim());
                 }
-                s.setRazorpayKeyId(rzpKeyId == null ? "" : rzpKeyId.trim());
+                if (rzpKeyId != null) {
+                    s.setRazorpayKeyId(rzpKeyId.trim());
+                }
                 if (rzpKeySecret != null && !"********".equals(rzpKeySecret.trim())) {
                     s.setRazorpayKeySecret(rzpKeySecret.trim());
                 }
@@ -1245,13 +1397,40 @@ public class GameLoopService {
                 s.setMaxDepositAmount(nextMaxDep);
                 s.setMinWithdrawAmount(nextMinWth);
                 s.setMaxWithdrawAmount(nextMaxWth);
+
+                if (activeCurrency != null && !activeCurrency.isBlank()) {
+                    s.setActiveCurrency(activeCurrency);
+                }
+                if (upiWebhookSecret != null) {
+                    s.setUpiWebhookSecret(upiWebhookSecret.trim());
+                }
+                if (smsWebhookToken != null) {
+                    s.setSmsWebhookToken(smsWebhookToken.trim());
+                }
+                if (paypalClientId != null) {
+                    s.setPaypalClientId(paypalClientId.trim());
+                }
+                if (paypalClientSecret != null && !"********".equals(paypalClientSecret.trim())) {
+                    s.setPaypalClientSecret(paypalClientSecret.trim());
+                }
+                if (paypalMode != null) {
+                    s.setPaypalMode(paypalMode.trim());
+                }
+
                 settingsRepo.save(s);
 
                 boolean rzpEnabled = s.getRazorpayKeyId() != null && !s.getRazorpayKeyId().isBlank()
                         && s.getRazorpayKeySecret() != null && !s.getRazorpayKeySecret().isBlank();
+                boolean ppEnabled = s.getPaypalClientId() != null && !s.getPaypalClientId().isBlank()
+                        && s.getPaypalClientSecret() != null && !s.getPaypalClientSecret().isBlank();
+
                 publicPayCfg.put("success", true);
                 publicPayCfg.put("razorpayEnabled", rzpEnabled);
                 publicPayCfg.put("razorpayKeyId", rzpEnabled ? s.getRazorpayKeyId().trim() : "");
+                publicPayCfg.put("paypalEnabled", ppEnabled);
+                publicPayCfg.put("paypalClientId", ppEnabled ? s.getPaypalClientId().trim() : "");
+                publicPayCfg.put("paypalMode", s.getPaypalMode());
+                publicPayCfg.put("activeCurrency", s.getActiveCurrency());
                 publicPayCfg.put("upiId", s.getUpiId());
                 publicPayCfg.put("upiPayeeName", s.getUpiPayeeName());
                 publicPayCfg.put("minDeposit", s.getMinDepositAmount());
@@ -1265,7 +1444,7 @@ public class GameLoopService {
         }
         wsHub.emitToAdmin("admin_live_update", adminSnapshot);
         wsHub.emitAll("payment_config_updated", publicPayCfg);
-        return Map.of("success", true, "message", "Payment gateway, UPI & Min/Max limits saved!");
+        return Map.of("success", true, "message", "Payment gateways, Webhooks, Currency & Limits saved!");
     }
 
     public void updateSmtpConfig(String adminEmail, String host, Integer port, String authUser, String authPass, String fromName) {

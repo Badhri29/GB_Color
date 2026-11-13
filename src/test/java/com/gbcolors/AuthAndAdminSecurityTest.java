@@ -324,5 +324,64 @@ class AuthAndAdminSecurityTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.user.withdrawRequests[0].ifscCode").value("HDFC0001234"))
                 .andExpect(jsonPath("$.user.withdrawRequests[0].withdrawMethod").value("BANK"));
+
+        // 6. Automated UPI Order Initiation & Webhook Auto-Approval Test
+        MvcResult upiOrderRes = mockMvc.perform(post("/api/payment/upi/initiate")
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"amount\":500}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.orderId").isNotEmpty())
+                .andReturn();
+
+        String upiOrderId = upiOrderRes.getResponse().getContentAsString()
+                .replaceAll(".*\"orderId\":\"([^\"]+)\".*", "$1");
+
+        // Verify order status is PENDING initially
+        mockMvc.perform(get("/api/payment/order-status/" + upiOrderId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andExpect(jsonPath("$.amount").value(500));
+
+        // Simulate Automated UPI Gateway Webhook sending instant confirmation
+        mockMvc.perform(post("/api/payment/webhook/upi")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"client_txn_id\":\"" + upiOrderId + "\",\"status\":\"COMPLETED\",\"amount\":500,\"upi_txn_id\":\"431200998877\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        // Order status is now APPROVED and balance is credited automatically
+        mockMvc.perform(get("/api/payment/order-status/" + upiOrderId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("APPROVED"));
+
+        // 7. Bank SMS Auto-Approval Webhook Test
+        MvcResult upiOrder2Res = mockMvc.perform(post("/api/payment/upi/initiate")
+                        .header("Authorization", "Bearer " + user1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"amount\":1000}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        String upiOrder2Id = upiOrder2Res.getResponse().getContentAsString()
+                .replaceAll(".*\"orderId\":\"([^\"]+)\".*", "$1");
+
+        mockMvc.perform(post("/api/payment/webhook/sms")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"sender\":\"HDFCBK\",\"message\":\"Dear UPI user A/C ... credited by INR 1000.00 on 13-Nov-26 by UPI:431200889900\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
+
+        mockMvc.perform(get("/api/payment/order-status/" + upiOrder2Id))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("APPROVED"));
+
+        // 8. Admin Payment Config update with Multi-Currency & Webhook Secret
+        mockMvc.perform(post("/api/admin/payment-config")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"upiId\":\"badhrinarayanan79-3@okhdfcbank\",\"upiPayeeName\":\"Badhri Narayanan\",\"activeCurrency\":\"USD\",\"upiWebhookSecret\":\"whsec_test123\",\"smsWebhookToken\":\"sms_test456\",\"minDeposit\":100,\"maxDeposit\":50000,\"minWithdraw\":200,\"maxWithdraw\":50000}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true));
     }
 }

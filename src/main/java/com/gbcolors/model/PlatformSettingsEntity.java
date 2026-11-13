@@ -96,6 +96,24 @@ public class PlatformSettingsEntity {
     @Column(name = "max_withdraw_amount")
     private Integer maxWithdrawAmount = 50000;
 
+    @Column(name = "active_currency", length = 8)
+    private String activeCurrency = "INR";
+
+    @Column(name = "upi_webhook_secret", length = 128)
+    private String upiWebhookSecret;
+
+    @Column(name = "sms_webhook_token", length = 128)
+    private String smsWebhookToken;
+
+    @Column(name = "paypal_client_id", length = 191)
+    private String paypalClientId;
+
+    @Column(name = "paypal_client_secret", length = 191)
+    private String paypalClientSecret;
+
+    @Column(name = "paypal_mode", length = 16)
+    private String paypalMode = "sandbox";
+
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
 
@@ -213,5 +231,31 @@ public class PlatformSettingsEntity {
     public void setMaxWithdrawAmount(Integer maxWithdrawAmount) {
         int min = getMinWithdrawAmount();
         this.maxWithdrawAmount = maxWithdrawAmount != null && maxWithdrawAmount >= min ? maxWithdrawAmount : Math.max(min, 50000);
+    }
+
+    public String getActiveCurrency() {
+        return activeCurrency != null && !activeCurrency.isBlank() ? activeCurrency.trim().toUpperCase() : "INR";
+    }
+    public void setActiveCurrency(String activeCurrency) {
+        this.activeCurrency = activeCurrency != null && !activeCurrency.isBlank() ? activeCurrency.trim().toUpperCase() : "INR";
+    }
+
+    public String getUpiWebhookSecret() { return upiWebhookSecret; }
+    public void setUpiWebhookSecret(String upiWebhookSecret) { this.upiWebhookSecret = upiWebhookSecret; }
+
+    public String getSmsWebhookToken() { return smsWebhookToken; }
+    public void setSmsWebhookToken(String smsWebhookToken) { this.smsWebhookToken = smsWebhookToken; }
+
+    public String getPaypalClientId() { return paypalClientId; }
+    public void setPaypalClientId(String paypalClientId) { this.paypalClientId = paypalClientId; }
+
+    public String getPaypalClientSecret() { return paypalClientSecret; }
+    public void setPaypalClientSecret(String paypalClientSecret) { this.paypalClientSecret = paypalClientSecret; }
+
+    public String getPaypalMode() {
+        return paypalMode != null && paypalMode.equalsIgnoreCase("live") ? "live" : "sandbox";
+    }
+    public void setPaypalMode(String paypalMode) {
+        this.paypalMode = paypalMode != null && paypalMode.equalsIgnoreCase("live") ? "live" : "sandbox";
     }
 }

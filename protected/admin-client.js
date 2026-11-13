@@ -168,7 +168,13 @@
                 minDeposit: parseInt(document.getElementById('cfgMinDeposit').value, 10),
                 maxDeposit: parseInt(document.getElementById('cfgMaxDeposit').value, 10),
                 minWithdraw: parseInt(document.getElementById('cfgMinWithdraw').value, 10),
-                maxWithdraw: parseInt(document.getElementById('cfgMaxWithdraw').value, 10)
+                maxWithdraw: parseInt(document.getElementById('cfgMaxWithdraw').value, 10),
+                activeCurrency: document.getElementById('cfgActiveCurrency')?.value || 'INR',
+                upiWebhookSecret: document.getElementById('cfgUpiWebhookSecret')?.value || '',
+                smsWebhookToken: document.getElementById('cfgSmsWebhookToken')?.value || '',
+                paypalClientId: document.getElementById('cfgPaypalClientId')?.value || '',
+                paypalClientSecret: document.getElementById('cfgPaypalClientSecret')?.value || '',
+                paypalMode: document.getElementById('cfgPaypalMode')?.value || 'sandbox'
             };
             const res = await fetch(window.apiUrl('/api/admin/payment-config'), {
                 method: 'POST',
@@ -659,6 +665,24 @@
             document.getElementById('cfgMaxDeposit').value = data.paymentConfig.maxDeposit ?? 50000;
             document.getElementById('cfgMinWithdraw').value = data.paymentConfig.minWithdraw ?? 200;
             document.getElementById('cfgMaxWithdraw').value = data.paymentConfig.maxWithdraw ?? 50000;
+            if (document.getElementById('cfgActiveCurrency') && data.paymentConfig.activeCurrency) {
+                document.getElementById('cfgActiveCurrency').value = data.paymentConfig.activeCurrency;
+            }
+            if (document.getElementById('cfgUpiWebhookSecret') && data.paymentConfig.upiWebhookSecret) {
+                document.getElementById('cfgUpiWebhookSecret').value = data.paymentConfig.upiWebhookSecret;
+            }
+            if (document.getElementById('cfgSmsWebhookToken') && data.paymentConfig.smsWebhookToken) {
+                document.getElementById('cfgSmsWebhookToken').value = data.paymentConfig.smsWebhookToken;
+            }
+            if (document.getElementById('cfgPaypalClientId') && data.paymentConfig.paypalClientId) {
+                document.getElementById('cfgPaypalClientId').value = data.paymentConfig.paypalClientId;
+            }
+            if (document.getElementById('cfgPaypalMode') && data.paymentConfig.paypalMode) {
+                document.getElementById('cfgPaypalMode').value = data.paymentConfig.paypalMode;
+            }
+            if (data.paymentConfig.paypalEnabled && document.getElementById('cfgPaypalClientSecret')) {
+                document.getElementById('cfgPaypalClientSecret').value = '********';
+            }
             if (data.paymentConfig.razorpayEnabled) {
                 document.getElementById('cfgRzpKeySecret').value = '********';
             }

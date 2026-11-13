@@ -322,11 +322,20 @@ public class GamePayloadBuilder {
 
         boolean razorpayEnabled = settings.getRazorpayKeyId() != null && !settings.getRazorpayKeyId().isBlank()
                 && settings.getRazorpayKeySecret() != null && !settings.getRazorpayKeySecret().isBlank();
+        boolean paypalEnabled = settings.getPaypalClientId() != null && !settings.getPaypalClientId().isBlank()
+                && settings.getPaypalClientSecret() != null && !settings.getPaypalClientSecret().isBlank();
+
         Map<String, Object> paymentConfig = new LinkedHashMap<>();
         paymentConfig.put("upiId", settings.getUpiId());
         paymentConfig.put("upiPayeeName", settings.getUpiPayeeName());
         paymentConfig.put("razorpayKeyId", settings.getRazorpayKeyId() != null ? settings.getRazorpayKeyId() : "");
         paymentConfig.put("razorpayEnabled", razorpayEnabled);
+        paymentConfig.put("paypalEnabled", paypalEnabled);
+        paymentConfig.put("paypalClientId", settings.getPaypalClientId() != null ? settings.getPaypalClientId() : "");
+        paymentConfig.put("paypalMode", settings.getPaypalMode());
+        paymentConfig.put("activeCurrency", settings.getActiveCurrency());
+        paymentConfig.put("upiWebhookSecret", settings.getUpiWebhookSecret() != null ? settings.getUpiWebhookSecret() : "");
+        paymentConfig.put("smsWebhookToken", settings.getSmsWebhookToken() != null ? settings.getSmsWebhookToken() : "");
         paymentConfig.put("minDeposit", settings.getMinDepositAmount());
         paymentConfig.put("maxDeposit", settings.getMaxDepositAmount());
         paymentConfig.put("minWithdraw", settings.getMinWithdrawAmount());

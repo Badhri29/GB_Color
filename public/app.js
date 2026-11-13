@@ -677,6 +677,14 @@
       if (note) note.style.display = '';
       if (rzpBtn) rzpBtn.disabled = false;
     }
+
+    const ppBtn = $('methodBtnPaypal');
+    if (ppBtn) {
+      ppBtn.style.display = paymentConfig.paypalEnabled ? '' : 'none';
+      const ppBadge = $('paypalStatusBadge');
+      if (ppBadge) ppBadge.textContent = paymentConfig.paypalMode === 'live' ? 'LIVE USD' : 'SANDBOX USD';
+    }
+
     refreshStaticUpiBox();
   }
 
@@ -715,11 +723,11 @@
   }
 
   function switchRechargeMethod(method) {
-    const target = method === 'razorpay' ? 'razorpay' : 'upi';
+    const target = ['upi', 'razorpay', 'paypal'].includes(method) ? method : 'upi';
     document.querySelectorAll('.pay-method-btn').forEach((btn) => {
       btn.classList.toggle('active', btn.dataset.paymethod === target);
     });
-    ['upi', 'razorpay'].forEach((m) => {
+    ['upi', 'razorpay', 'paypal'].forEach((m) => {
       const panel = $('payMethodPanel-' + m);
       if (panel) {
         panel.style.display = (m === target) ? '' : 'none';
@@ -747,6 +755,38 @@
     applyPaymentConfigToUi(res.data);
   }
 
+  let activeOrderPollerId = null;
+  function startOrderAutoPoller(orderId, amt) {
+    if (activeOrderPollerId) {
+      clearInterval(activeOrderPollerId);
+      activeOrderPollerId = null;
+    }
+    if (!orderId) return;
+    let pollCount = 0;
+    activeOrderPollerId = setInterval(async () => {
+      pollCount++;
+      if (pollCount > 120) {
+        clearInterval(activeOrderPollerId);
+        activeOrderPollerId = null;
+        return;
+      }
+      try {
+        const res = await apiFetch(`/api/payment/order-status/${encodeURIComponent(orderId)}`, { method: 'GET' });
+        if (res.ok && res.data && res.data.status === 'APPROVED') {
+          clearInterval(activeOrderPollerId);
+          activeOrderPollerId = null;
+          SoundEngine.win();
+          showToast(`🎉 Payment Confirmed! ₹${amt} credited automatically to your wallet!`, 'success');
+          await refreshCurrentUser();
+          if ($('upiQrPreviewBox')) $('upiQrPreviewBox').style.display = 'none';
+          switchPaymentSubTab('recharge');
+        }
+      } catch (err) {
+        // quiet retry
+      }
+    }, 2500);
+  }
+
   async function handleGenerateUpiQr() {
     const amt = Number(($('rechargeAmountInput') && $('rechargeAmountInput').value) || 0);
     const err = validatePayAmount(amt, false);
@@ -768,11 +808,13 @@
       if ($('upiQrSvgWrap')) $('upiQrSvgWrap').innerHTML = res.data.qrSvg || '';
       if ($('upiPayeeDisplay')) $('upiPayeeDisplay').textContent = res.data.payeeName || 'GB Colors';
       if ($('upiIdDisplay')) $('upiIdDisplay').textContent = res.data.upiId || '';
+      if ($('upiOrderRefDisplay')) $('upiOrderRefDisplay').textContent = res.data.orderId || res.data.refId || '—';
       if ($('upiAppDeepLink')) $('upiAppDeepLink').href = res.data.upiUri || '#';
       if ($('upiQrPreviewBox')) $('upiQrPreviewBox').style.display = '';
-      showToast(`Live UPI QR generated for ${formatShortINR(amt)}`, 'success');
+      showToast(`Live dynamic UPI QR generated for ${formatShortINR(amt)}`, 'success');
+      startOrderAutoPoller(res.data.orderId || res.data.refId, amt);
     } finally {
-      if (btn) { btn.disabled = false; btn.textContent = '📱 Show Live UPI QR & Pay App'; }
+      if (btn) { btn.disabled = false; btn.textContent = '🔄 Generate Amount-Locked QR for Entered ₹'; }
     }
   }
 
@@ -869,6 +911,42 @@
       rzp.open();
     } finally {
       if (btn) { btn.disabled = false; btn.textContent = '⚡ Pay Instantly via Razorpay'; }
+    }
+  }
+
+  async function handlePaypalPay() {
+    const usdVal = Number(($('paypalAmountInput') && $('paypalAmountInput').value) || 10);
+    if (!Number.isFinite(usdVal) || usdVal < 1) {
+      showToast('Enter valid USD amount (minimum $1)', 'error');
+      return;
+    }
+    const btn = $('paypalPayBtn');
+    if (btn) { btn.disabled = true; btn.textContent = 'Contacting PayPal...'; }
+    try {
+      const res = await apiFetch('/api/payment/paypal/create-order', {
+        method: 'POST',
+        body: JSON.stringify({ amountUsd: usdVal })
+      });
+      if (!res.ok || !res.data.success) {
+        showToast(res.data.message || 'PayPal order creation failed', 'error');
+        return;
+      }
+      const orderId = res.data.orderId;
+      showToast('Capturing PayPal payment...', 'info');
+      const capRes = await apiFetch('/api/payment/paypal/capture', {
+        method: 'POST',
+        body: JSON.stringify({ orderId })
+      });
+      if (capRes.ok && capRes.data.success) {
+        SoundEngine.win();
+        showToast(`🎉 PayPal deposit verified! Credited to wallet!`, 'success');
+        await refreshCurrentUser();
+        switchPaymentSubTab('recharge');
+      } else {
+        showToast(capRes.data.message || 'Payment initiated: ' + orderId, 'info');
+      }
+    } finally {
+      if (btn) { btn.disabled = false; btn.textContent = '🌐 Pay with PayPal'; }
     }
   }
 
@@ -2071,6 +2149,7 @@
     if ($('generateUpiQrBtn')) $('generateUpiQrBtn').addEventListener('click', handleGenerateUpiQr);
     if ($('submitDepositBtn')) $('submitDepositBtn').addEventListener('click', handleSubmitUtr);
     if ($('rzpPayBtn')) $('rzpPayBtn').addEventListener('click', handleRazorpayPay);
+    if ($('paypalPayBtn')) $('paypalPayBtn').addEventListener('click', handlePaypalPay);
     if ($('submitWithdrawBtn')) $('submitWithdrawBtn').addEventListener('click', handleSubmitWithdraw);
     if ($('copyUpiIdBtn')) {
       $('copyUpiIdBtn').addEventListener('click', async () => {

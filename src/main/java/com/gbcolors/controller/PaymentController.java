@@ -8,6 +8,8 @@ import com.gbcolors.service.PaymentService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -126,6 +128,80 @@ public class PaymentController {
                 upiOrBank
         );
         return ResponseEntity.status(Boolean.TRUE.equals(res.get("success")) ? 200 : 400).body(res);
+    }
+
+    @GetMapping("/order-status/{orderId}")
+    public ResponseEntity<Map<String, Object>> getOrderStatus(@PathVariable("orderId") String orderId) {
+        Map<String, Object> res = paymentService.getOrderStatus(orderId);
+        return ResponseEntity.status(Boolean.TRUE.equals(res.get("success")) ? 200 : 404).body(res);
+    }
+
+    @PostMapping("/webhook/upi")
+    public ResponseEntity<Map<String, Object>> handleUpiWebhook(
+            @RequestHeader(value = "X-Webhook-Secret", required = false) String secretHeader,
+            @RequestBody(required = false) Map<String, Object> body,
+            @RequestParam(required = false) Map<String, String> allParams
+    ) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        if (allParams != null) payload.putAll(allParams);
+        if (body != null) payload.putAll(body);
+        Map<String, Object> res = paymentService.processUpiWebhook(payload, secretHeader);
+        return ResponseEntity.status(Boolean.TRUE.equals(res.get("success")) ? 200 : 400).body(res);
+    }
+
+    @PostMapping("/webhook/sms")
+    public ResponseEntity<Map<String, Object>> handleSmsWebhook(
+            @RequestHeader(value = "X-SMS-Token", required = false) String tokenHeader,
+            @RequestBody(required = false) Map<String, Object> body,
+            @RequestParam(required = false) Map<String, String> allParams
+    ) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        if (allParams != null) payload.putAll(allParams);
+        if (body != null) payload.putAll(body);
+        Map<String, Object> res = paymentService.processSmsWebhook(payload, tokenHeader);
+        return ResponseEntity.status(Boolean.TRUE.equals(res.get("success")) ? 200 : 400).body(res);
+    }
+
+    @PostMapping("/paypal/create-order")
+    public ResponseEntity<Map<String, Object>> createPaypalOrder(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody Map<String, Object> body
+    ) {
+        SessionEntity sess = resolveUserSession(authHeader);
+        if (sess == null) {
+            return ResponseEntity.status(401).body(Map.of("success", false, "message", "Not authenticated."));
+        }
+        Double usd = parseDouble(body == null ? null : body.get("amountUsd"));
+        if (usd == null) {
+            Integer inr = parseInt(body == null ? null : body.get("amount"));
+            usd = inr != null ? (inr / 85.0) : 10.0;
+        }
+        Map<String, Object> res = paymentService.createPaypalOrder(sess.getEmail(), BigDecimal.valueOf(usd));
+        return ResponseEntity.status(Boolean.TRUE.equals(res.get("success")) ? 200 : 400).body(res);
+    }
+
+    @PostMapping("/paypal/capture")
+    public ResponseEntity<Map<String, Object>> capturePaypalOrder(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody Map<String, Object> body
+    ) {
+        SessionEntity sess = resolveUserSession(authHeader);
+        if (sess == null) {
+            return ResponseEntity.status(401).body(Map.of("success", false, "message", "Not authenticated."));
+        }
+        String orderId = str(body, "orderId");
+        Map<String, Object> res = paymentService.capturePaypalOrder(sess.getEmail(), orderId);
+        return ResponseEntity.status(Boolean.TRUE.equals(res.get("success")) ? 200 : 400).body(res);
+    }
+
+    private Double parseDouble(Object obj) {
+        if (obj == null) return null;
+        if (obj instanceof Number n) return n.doubleValue();
+        try {
+            return Double.parseDouble(String.valueOf(obj).trim());
+        } catch (Exception ex) {
+            return null;
+        }
     }
 
     private SessionEntity resolveUserSession(String authHeader) {

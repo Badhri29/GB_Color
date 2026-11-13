@@ -379,6 +379,46 @@
                     <label class="input-label">Razorpay Key Secret</label>
                     <input type="password" id="cfgRzpKeySecret" class="form-input" placeholder="Enter Razorpay Key Secret">
 
+                    <h4 style="margin:16px 0 6px;color:#38bdf8;font-size:0.95rem;">⚡ Automated Instant UPI Webhook (Zero UTR Typing)</h4>
+                    <p class="adm-help-txt">
+                        Paste this Webhook URL into your automated UPI gateway (e.g. upigateway.com / ekqr.in). When users scan &amp; pay, their wallet updates automatically in 2 seconds!
+                    </p>
+                    <label class="input-label">Your Automated UPI Webhook URL (Copy &amp; Paste in Gateway Dashboard)</label>
+                    <input type="text" id="cfgUpiWebhookUrl" class="form-input" readonly value="https://gbcolor.duckdns.org/api/payment/webhook/upi" style="background:#0b1329;color:#38bdf8;font-weight:700;">
+                    <label class="input-label">Gateway Secret Key / Token (Optional signature match)</label>
+                    <input type="password" id="cfgUpiWebhookSecret" class="form-input" placeholder="Enter webhook secret token from gateway">
+
+                    <h4 style="margin:16px 0 6px;color:#fbbf24;font-size:0.95rem;">📱 Direct Bank SMS Auto-Approval (Zero Gateway Fees)</h4>
+                    <p class="adm-help-txt">
+                        Install a webhook SMS forwarder on your phone. When GPay / HDFC SMS arrives, it forwards to this URL and auto-credits the player!
+                    </p>
+                    <label class="input-label">Your Bank SMS Webhook URL</label>
+                    <input type="text" id="cfgSmsWebhookUrl" class="form-input" readonly value="https://gbcolor.duckdns.org/api/payment/webhook/sms" style="background:#0b1329;color:#fbbf24;font-weight:700;">
+                    <label class="input-label">SMS Forwarder Secret Token</label>
+                    <input type="password" id="cfgSmsWebhookToken" class="form-input" placeholder="Enter custom secret token for SMS forwarder app">
+
+                    <h4 style="margin:16px 0 6px;color:#34d399;font-size:0.95rem;">🌐 Multi-Currency &amp; PayPal International (USD)</h4>
+                    <div class="dual-btn-row">
+                        <div>
+                            <label class="input-label">Platform Active Currency</label>
+                            <select id="cfgActiveCurrency" class="form-input" style="background:#0b1329;color:#fff;">
+                                <option value="INR">INR (₹ Indian Rupee)</option>
+                                <option value="USD">USD ($ US Dollar)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="input-label">PayPal Mode</label>
+                            <select id="cfgPaypalMode" class="form-input" style="background:#0b1329;color:#fff;">
+                                <option value="sandbox">Sandbox (Testing)</option>
+                                <option value="live">Live (Real USD)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <label class="input-label">PayPal Client ID</label>
+                    <input type="text" id="cfgPaypalClientId" class="form-input" placeholder="Enter PayPal Client ID">
+                    <label class="input-label">PayPal Client Secret</label>
+                    <input type="password" id="cfgPaypalClientSecret" class="form-input" placeholder="Enter PayPal Client Secret">
+
                     <div class="dual-btn-row">
                         <div>
                             <label class="input-label">Min Recharge (₹)</label>

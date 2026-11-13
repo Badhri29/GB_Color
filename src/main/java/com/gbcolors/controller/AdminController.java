@@ -178,8 +178,15 @@ public class AdminController {
         Integer maxDeposit = parseInt(body == null ? null : body.get("maxDeposit"));
         Integer minWithdraw = parseInt(body == null ? null : body.get("minWithdraw"));
         Integer maxWithdraw = parseInt(body == null ? null : body.get("maxWithdraw"));
+        String activeCurrency = str(body, "activeCurrency");
+        String upiWebhookSecret = str(body, "upiWebhookSecret");
+        String smsWebhookToken = str(body, "smsWebhookToken");
+        String paypalClientId = str(body, "paypalClientId");
+        String paypalClientSecret = str(body, "paypalClientSecret");
+        String paypalMode = str(body, "paypalMode");
         Map<String, Object> res = gameLoopService.updatePaymentConfig(
-                upiId, payeeName, rzpKeyId, rzpKeySecret, minDeposit, maxDeposit, minWithdraw, maxWithdraw
+                upiId, payeeName, rzpKeyId, rzpKeySecret, minDeposit, maxDeposit, minWithdraw, maxWithdraw,
+                activeCurrency, upiWebhookSecret, smsWebhookToken, paypalClientId, paypalClientSecret, paypalMode
         );
         int status = Boolean.TRUE.equals(res.get("success")) ? 200 : 400;
         return ResponseEntity.status(status).body(res);

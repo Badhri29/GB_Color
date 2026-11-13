@@ -462,6 +462,10 @@
                     <span>⚡ Razorpay</span>
                     <small id="rzpStatusBadge" class="status-pill neutral">Checking</small>
                   </button>
+                  <button type="button" id="methodBtnPaypal" class="pay-method-btn" data-paymethod="paypal" style="display:none;">
+                    <span>🌐 PayPal / USD</span>
+                    <small id="paypalStatusBadge" class="status-pill neutral">USD $</small>
+                  </button>
                 </div>
 
                 <!-- METHOD A: DIRECT UPI QR + UTR -->
@@ -487,18 +491,24 @@
                   <div id="upiQrPreviewBox" class="upi-qr-box" style="display:none;">
                     <div id="upiQrSvgWrap" class="qr-svg-wrap"></div>
                     <div class="upi-details-col">
+                      <div class="status-pill good" style="align-self:flex-start;display:flex;align-items:center;gap:6px;">
+                        <span class="pulse-ring"></span>
+                        <span>LIVE AUTO-CREDIT ACTIVE</span>
+                      </div>
                       <div class="upi-kv"><span>Payee:</span><strong id="upiPayeeDisplay">—</strong></div>
                       <div class="upi-kv">
                         <span>UPI ID:</span>
                         <strong id="upiIdDisplay">—</strong>
                         <button id="copyUpiIdBtn" type="button" class="btn-copy-mini">Copy</button>
                       </div>
+                      <div class="upi-kv"><span>Order Ref:</span><strong id="upiOrderRefDisplay" class="mono">—</strong></div>
                       <a id="upiAppDeepLink" href="#" class="btn-upi-app touch-cta-btn">📲 Open Installed UPI App</a>
+                      <small style="color:#38bdf8;font-size:0.75rem;">Pay in your UPI app. Wallet updates automatically within 2 seconds of payment!</small>
                     </div>
                   </div>
 
                   <div class="form-group" style="margin-top:12px;">
-                    <label for="depositUtrInput">Step 3: After Payment, Enter 12-Digit UPI UTR / Ref ID</label>
+                    <label for="depositUtrInput">Optional: If not auto-credited within 1 min, Enter 12-Digit UPI UTR</label>
                     <input id="depositUtrInput" type="text" inputmode="numeric" maxlength="32" class="big-touch-field" placeholder="e.g. 431209876543" />
                   </div>
                   <button id="submitDepositBtn" type="button" class="btn-primary-glow full-w touch-cta-btn">✅ Submit UTR for Verification</button>
@@ -512,6 +522,21 @@
                   </div>
                   <button id="rzpPayBtn" type="button" class="btn-primary-glow full-w touch-cta-btn">⚡ Pay Instantly via Razorpay</button>
                   <small id="rzpFallbackNote" class="pay-card-note" style="display:none;">Razorpay keys are not configured by Admin yet. Switch to <strong>UPI QR / App</strong> above to recharge.</small>
+                </div>
+
+                <!-- METHOD C: PAYPAL INTERNATIONAL -->
+                <div id="payMethodPanel-paypal" class="pay-method-panel" style="display:none;">
+                  <p class="pay-card-desc">Instant International Recharge via PayPal Wallet or International Debit/Credit Card (USD).</p>
+                  <div class="form-group">
+                    <label for="paypalAmountInput">Deposit in USD ($)</label>
+                    <div class="pay-input-prefix-wrap">
+                      <span class="pay-currency-prefix">$</span>
+                      <input id="paypalAmountInput" type="number" min="1" max="1000" step="1" value="10" class="pay-amount-input big-touch-input" placeholder="Enter USD amount" />
+                    </div>
+                    <small class="pay-limit-hint" id="paypalInrEquivHint">Rate: ~$10 ≈ 850 Game Credits</small>
+                  </div>
+                  <button id="paypalPayBtn" type="button" class="btn-primary-glow full-w touch-cta-btn">🌐 Pay with PayPal</button>
+                  <small id="paypalFallbackNote" class="pay-card-note" style="display:none;">PayPal credentials not configured by Admin yet.</small>
                 </div>
               </div>
 
