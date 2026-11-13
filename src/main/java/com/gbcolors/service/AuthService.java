@@ -8,6 +8,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.Map;
 import java.util.Optional;
@@ -203,17 +204,21 @@ public class AuthService {
             ));
         }
 
+        String userEmail = user.getEmail();
         String token = generateSessionToken();
-        saveSession(token, email, GameEnums.SessionRole.USER);
-        Map<String, Object> sanitizedUser = gameLoopService.getSanitizedUserPayload(email);
+        saveSession(token, userEmail, GameEnums.SessionRole.USER);
+        Map<String, Object> sanitizedUser = gameLoopService.getSanitizedUserPayload(userEmail);
 
-        return new AuthResult(200, Map.of(
-                "success", true,
-                "message", "Sign In Successful!",
-                "token", token,
-                "role", "USER",
-                "user", sanitizedUser
-        ));
+        Map<String, Object> resBody = new HashMap<>();
+        resBody.put("success", true);
+        resBody.put("message", "Sign In Successful!");
+        resBody.put("token", token);
+        resBody.put("role", "USER");
+        if (sanitizedUser != null) {
+            resBody.put("user", sanitizedUser);
+        }
+
+        return new AuthResult(200, resBody);
     }
 
     public AuthResult getCurrentSession(String authHeader) {

@@ -154,6 +154,21 @@ class AuthAndAdminSecurityTest {
                 .andReturn();
         String userToken = userLogin.getResponse().getContentAsString().replaceAll(".*\"token\":\"([^\"]+)\".*", "$1");
 
+        // Verify login works via username and UID as well
+        mockMvc.perform(post("/api/auth/signin")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"Badhrinarayanan79\",\"password\":\"User@123\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.user.email").value("badhrinarayanan79@gmail.com"));
+
+        mockMvc.perform(post("/api/auth/signin")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"GB800761\",\"password\":\"User@123\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.user.email").value("badhrinarayanan79@gmail.com"));
+
         // Invalid range (min > max) must fail cleanly
         mockMvc.perform(post("/api/admin/payment-config")
                         .header("Authorization", "Bearer " + adminToken)
