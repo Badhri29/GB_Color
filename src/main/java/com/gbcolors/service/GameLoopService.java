@@ -2069,7 +2069,7 @@ public class GameLoopService {
 
     private List<Map<String, Object>> getHistoryTop25() {
         List<GameRoundEntity> all = roundRepo.findTop50ByOrderByIdDesc();
-        int limit = Math.min(25, all.size());
+        int limit = Math.min(50, all.size());
         return all.subList(0, limit).stream().map(payloadBuilder::toRoundMap).toList();
     }
 

@@ -17,7 +17,7 @@
   let latestAdminAnalytics = null;
   let currentGameMode = 'CLASSIC'; // 'CLASSIC' | 'SAFE'
   let histCurrentPage = 1;
-  const HIST_PAGE_SIZE = 20;
+  const HIST_PAGE_SIZE = 10;
   let attachedDepositProofBase64 = null;
   let selectedWithdrawMethod = 'UPI';
   let selectedWithdrawUpiApp = 'Any UPI';

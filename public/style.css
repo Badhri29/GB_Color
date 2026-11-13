@@ -471,27 +471,31 @@ html, body {
         overflow: visible;
     }
     .records-card {
-        height: auto;
+        height: 100%;
+        max-height: 540px;
         display: flex;
         flex-direction: column;
         flex: 1;
+        overflow: hidden;
     }
     .tab-content {
         flex: 1;
         display: none;
         height: auto;
-        overflow: visible;
+        overflow: hidden;
     }
     .tab-content.active {
         display: flex;
         flex-direction: column;
+        overflow: hidden;
     }
     .table-scroll-wrapper, .scroll-container {
         flex: 1;
-        max-height: none !important;
-        height: auto;
+        min-height: 0;
+        max-height: 400px;
         overflow-x: auto;
-        overflow-y: visible;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
     }
     .betting-section {
         flex: 1;
@@ -511,9 +515,10 @@ html, body {
         padding: 10px 14px;
     }
     .table-scroll-wrapper, .scroll-container {
-        max-height: none;
+        max-height: 400px;
         overflow-x: auto;
-        overflow-y: visible;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
     }
 }
 
@@ -3752,9 +3757,25 @@ body {
   .is-admin-session #view-game .records-card .rec-panel.active {
     flex: 1;
     min-height: 0;
-    max-height: none;
+    max-height: 480px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  #view-game .table-scroll-wrapper,
+  .is-admin-session #view-game .table-scroll-wrapper {
+    flex: 1;
+    min-height: 0;
+    max-height: 380px;
     overflow-x: auto;
-    overflow-y: visible;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #view-game .cards-feed-list {
+    max-height: 380px;
+    overflow-y: auto;
   }
 
   #view-game .records-table thead th {
