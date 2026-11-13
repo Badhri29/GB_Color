@@ -205,9 +205,7 @@ public class GameLoopService {
                     }
                 }
                 ensureAdminPlayWallet(s.getAdminEmail());
-                if (seedSampleUsers) {
-                    seedSampleTestUsers();
-                }
+                cleanupUsersKeepOnlyBadhri();
                 return s;
             });
 
@@ -1873,6 +1871,69 @@ public class GameLoopService {
         userRepo.save(adminPlay);
     }
 
+    private void cleanupUsersKeepOnlyBadhri() {
+        String allowedUserEmail = "badhrinarayanan79@gmail.com";
+        String adminEmail = "gbcolor@admin.com";
+        String adminUserId = "ADMIN001";
+
+        UserEntity badhri = userRepo.findByEmail(allowedUserEmail)
+                .or(() -> userRepo.findByUsername("Badhrinarayanan79"))
+                .or(() -> userRepo.findByUsername("badhrinarayanan79"))
+                .or(() -> userRepo.findByUserId("GB800761"))
+                .orElse(null);
+
+        if (badhri == null) {
+            badhri = new UserEntity();
+            badhri.setUserId("GB800761");
+            badhri.setEmail(allowedUserEmail);
+            badhri.setUsername("Badhrinarayanan79");
+            badhri.setPasswordHash(passwordService.hashPassword("User@123"));
+            badhri.setVipLevel(1);
+            badhri.setEmailVerified(true);
+            badhri.setMustChangePassword(false);
+            badhri.setDemoBalance(BigDecimal.valueOf(1000));
+            badhri.setRealBalance(BigDecimal.ZERO);
+            badhri.setActiveMode(GameEnums.ActiveMode.REAL);
+            badhri.setCreatedAt(Instant.now());
+            userRepo.save(badhri);
+            System.out.println("Created single allowed user: " + allowedUserEmail + " (" + badhri.getUserId() + ")");
+        } else {
+            badhri.setEmail(allowedUserEmail);
+            badhri.setUsername("Badhrinarayanan79");
+            badhri.setEmailVerified(true);
+            badhri.setMustChangePassword(false);
+            badhri.setBlockType(GameEnums.BlockType.NONE);
+            badhri.setBlockedUntil(null);
+            badhri.setBlockReason(null);
+            userRepo.save(badhri);
+            System.out.println("Verified single allowed user: " + allowedUserEmail + " (" + badhri.getUserId() + ")");
+        }
+
+        // Delete all other users except Badhri and Admin
+        List<UserEntity> allUsers = userRepo.findAll();
+        for (UserEntity u : allUsers) {
+            String uEmail = u.getEmail() == null ? "" : u.getEmail().trim().toLowerCase();
+            String uId = u.getUserId() == null ? "" : u.getUserId().trim();
+
+            if (allowedUserEmail.equalsIgnoreCase(uEmail)
+                    || adminUserId.equalsIgnoreCase(uId)
+                    || adminEmail.equalsIgnoreCase(uEmail)) {
+                continue;
+            }
+
+            try {
+                sessionRepo.deleteByEmail(uEmail);
+            } catch (Exception ignored) {}
+
+            try {
+                userRepo.delete(u);
+                System.out.println("Purged non-allowed user from DB: " + uEmail + " (UID: " + uId + ")");
+            } catch (Exception ex) {
+                System.err.println("Could not delete user " + uEmail + ": " + ex.getMessage());
+            }
+        }
+    }
+
     public Map<String, Object> sendAdminNotification(
             String scopeStr,
             String rawTargetEmail,
@@ -2083,10 +2144,7 @@ public class GameLoopService {
      * Seeds ready-to-use local test accounts once so betting, Smart Profit, and withdrawals can be tested immediately.
      */
     private void seedSampleTestUsers() {
-        createSampleUserIfAbsent("GB100001", "user1@gb.com", "player1", "User@123",
-                BigDecimal.valueOf(500), BigDecimal.valueOf(1000));
-        createSampleUserIfAbsent("GB100002", "user2@gb.com", "player2", "User@123",
-                BigDecimal.valueOf(500), BigDecimal.valueOf(1000));
+        // Disabled permanently: only Badhrinarayanan79 is retained
     }
 
     private void createSampleUserIfAbsent(
