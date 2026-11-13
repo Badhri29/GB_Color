@@ -569,23 +569,40 @@
         // KPIs
         const stats = data.financialStats;
         const netEl = document.getElementById('kpiNetProfit');
-        if (netEl) {
+        if (netEl && stats) {
             netEl.textContent = `${stats.totalHouseProfit < 0 ? '-' : '+'}₹${fmt(Math.abs(stats.totalHouseProfit))}`;
             netEl.style.color = stats.totalHouseProfit >= 0 ? '#10b981' : '#ef4444';
         }
-        document.getElementById('kpiProfitSub').textContent =
-            `Collected: ₹${fmt(stats.totalBetsCollectedReal)} | Paid: ₹${fmt(stats.totalPayoutsPaidReal)}`;
-        document.getElementById('kpiTotalRecharges').textContent = `₹${fmt(stats.totalRecharges)}`;
-        document.getElementById('kpiWithdrawPaidSub').textContent = `Withdrawals Paid: ₹${fmt(stats.totalWithdrawalsPaid)}`;
-        document.getElementById('kpiUsersHolding').textContent = `₹${fmt(stats.totalUsersRealWallet)}`;
-        document.getElementById('kpiTotalUsers').textContent = stats.totalRegisteredUsers;
-        const pendingDep = stats.pendingDepositsCount || 0;
-        const pendingWth = stats.pendingWithdrawalsCount || 0;
+        if (document.getElementById('kpiProfitSub') && stats) {
+            document.getElementById('kpiProfitSub').textContent =
+                `Collected: ₹${fmt(stats.totalBetsCollectedReal)} | Paid: ₹${fmt(stats.totalPayoutsPaidReal)}`;
+        }
+        if (document.getElementById('kpiTotalRecharges') && stats) {
+            document.getElementById('kpiTotalRecharges').textContent = `₹${fmt(stats.totalRecharges)}`;
+        }
+        if (document.getElementById('kpiWithdrawPaidSub') && stats) {
+            document.getElementById('kpiWithdrawPaidSub').textContent = `Withdrawals Paid: ₹${fmt(stats.totalWithdrawalsPaid)}`;
+        }
+        if (document.getElementById('kpiUsersHolding') && stats) {
+            document.getElementById('kpiUsersHolding').textContent = `₹${fmt(stats.totalUsersRealWallet)}`;
+        }
+        if (document.getElementById('kpiTotalUsers') && stats) {
+            document.getElementById('kpiTotalUsers').textContent = stats.totalRegisteredUsers;
+        }
+        const pendingDep = (stats && stats.pendingDepositsCount) || 0;
+        const pendingWth = (stats && stats.pendingWithdrawalsCount) || 0;
         const totalPendingPay = pendingDep + pendingWth;
-        document.getElementById('kpiPendingWithdrawTxt').textContent = `Pending: ${pendingDep} Dep | ${pendingWth} Wth`;
-        document.getElementById('admWithdrawBadge').textContent = totalPendingPay;
-        const drawerBadge = document.getElementById('admDrawerPayBadge');
-        if (drawerBadge) drawerBadge.textContent = totalPendingPay;
+        if (document.getElementById('kpiPendingWithdrawTxt')) {
+            document.getElementById('kpiPendingWithdrawTxt').textContent = `Pending: ${pendingDep} Dep | ${pendingWth} Wth`;
+        }
+        if (document.getElementById('admWithdrawBadge')) {
+            document.getElementById('admWithdrawBadge').textContent = totalPendingPay;
+        }
+        const drawerBadge = document.getElementById('admDrawerPendingBadge') || document.getElementById('admDrawerPayBadge');
+        if (drawerBadge) {
+            drawerBadge.textContent = totalPendingPay;
+            drawerBadge.style.display = totalPendingPay > 0 ? 'inline-block' : 'none';
+        }
 
         renderUpcomingPreview(data);
 
@@ -600,15 +617,17 @@
                 modeBadgeEl.textContent = 'Waiting for Bets (No Active Pool)';
             }
         }
-        document.getElementById('poolGreen').textContent = `₹${fmt(data.liveTotals.colors.GREEN)}`;
-        document.getElementById('poolViolet').textContent = `₹${fmt(data.liveTotals.colors.VIOLET)}`;
-        document.getElementById('poolRed').textContent = `₹${fmt(data.liveTotals.colors.RED)}`;
-        document.getElementById('poolBig').textContent = `₹${fmt(data.liveTotals.sizes.BIG)}`;
-        document.getElementById('poolSmall').textContent = `₹${fmt(data.liveTotals.sizes.SMALL)}`;
+        if (document.getElementById('poolGreen') && data.liveTotals?.colors) document.getElementById('poolGreen').textContent = `₹${fmt(data.liveTotals.colors.GREEN)}`;
+        if (document.getElementById('poolViolet') && data.liveTotals?.colors) document.getElementById('poolViolet').textContent = `₹${fmt(data.liveTotals.colors.VIOLET)}`;
+        if (document.getElementById('poolRed') && data.liveTotals?.colors) document.getElementById('poolRed').textContent = `₹${fmt(data.liveTotals.colors.RED)}`;
+        if (document.getElementById('poolBig') && data.liveTotals?.sizes) document.getElementById('poolBig').textContent = `₹${fmt(data.liveTotals.sizes.BIG)}`;
+        if (document.getElementById('poolSmall') && data.liveTotals?.sizes) document.getElementById('poolSmall').textContent = `₹${fmt(data.liveTotals.sizes.SMALL)}`;
 
-        for (let i = 0; i <= 9; i++) {
-            const numEl = document.getElementById(`poolNum-${i}`);
-            if (numEl) numEl.textContent = `₹${fmt(data.liveTotals.numbers[i])}`;
+        if (data.liveTotals?.numbers) {
+            for (let i = 0; i <= 9; i++) {
+                const numEl = document.getElementById(`poolNum-${i}`);
+                if (numEl) numEl.textContent = `₹${fmt(data.liveTotals.numbers[i])}`;
+            }
         }
 
         // Engine Status
@@ -619,12 +638,14 @@
         btnSmart?.classList.toggle('active', data.outcomeMode === 'SMART_PROFIT');
         btnRand?.classList.toggle('active', data.outcomeMode === 'FAIR_RANDOM');
 
-        if (data.outcomeMode === 'MANUAL') {
-            engineStatusEl.textContent = `FORCED NEXT: #${data.forcedNextResult}`;
-        } else if (data.outcomeMode === 'SMART_PROFIT') {
-            engineStatusEl.textContent = `SMART PROFIT (MIN ${data.adminMinProfitPercent ?? 15}%)`;
-        } else {
-            engineStatusEl.textContent = 'FAIR RANDOM ACTIVE';
+        if (engineStatusEl) {
+            if (data.outcomeMode === 'MANUAL') {
+                engineStatusEl.textContent = `FORCED NEXT: #${data.forcedNextResult}`;
+            } else if (data.outcomeMode === 'SMART_PROFIT') {
+                engineStatusEl.textContent = `SMART PROFIT (MIN ${data.adminMinProfitPercent ?? 15}%)`;
+            } else {
+                engineStatusEl.textContent = 'FAIR RANDOM ACTIVE';
+            }
         }
 
         // Projections Table

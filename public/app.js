@@ -486,8 +486,8 @@
       renderPaymentStatuses();
     } else if (target === 'profile') {
       renderProfileView();
-    } else if (target === 'admin' && subOpt && typeof window.switchAdminTab === 'function') {
-      window.switchAdminTab(subOpt);
+    } else if (target === 'admin' && typeof window.switchAdminTab === 'function') {
+      window.switchAdminTab(subOpt || 'admWithdrawTab');
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -1793,8 +1793,8 @@
       if (el) el.style.display = isAdminSession ? 'none' : '';
     });
 
-    // Admin specific controls (strictly hidden for regular users)
-    if ($('adminHeaderToggleBtn')) $('adminHeaderToggleBtn').style.display = isAdminSession ? 'inline-flex' : 'none';
+    // Admin specific controls (strictly hidden for regular users; admin navigates via Drawer Menu)
+    if ($('adminHeaderToggleBtn')) $('adminHeaderToggleBtn').style.display = 'none';
     if ($('adminHeaderLogoutBtn')) $('adminHeaderLogoutBtn').style.display = isAdminSession ? 'inline-flex' : 'none';
     if ($('adminDrawerSection')) $('adminDrawerSection').style.display = isAdminSession ? '' : 'none';
     if ($('adminArenaShortcutBar')) $('adminArenaShortcutBar').style.display = isAdminSession ? '' : 'none';

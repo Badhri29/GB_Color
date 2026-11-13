@@ -1,65 +1,16 @@
 <div class="admin-dashboard-shell">
-    <!-- Compact Admin Command Center Sub-Header -->
-    <div class="page-header-bar admin-sub-bar">
-        <div>
-            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-                <span class="brand-badge admin-badge-tag">ADMIN</span>
-                <h2 style="margin:0;">GB_<span class="text-accent">Colors</span> Command Center</h2>
-                <span id="admHeaderEmail" class="status-pill info" style="font-size:11px;">gbcolor@admin.com</span>
-            </div>
-            <div class="admin-live-timer-pill" style="margin-top:8px;">
-                <span>Period: <strong id="admPeriodNum">---</strong></span>
-                <span class="divider">|</span>
-                <span>Time: <strong id="admTimeLeft" class="text-yellow">00:30</strong></span>
-                <span id="admRoundStatus" class="status-chip">BETTING</span>
-                <span id="admTimingChip" class="status-chip">30s / Close 5s</span>
-                <span id="admDbStatus" class="status-chip chip-warn">DB: Checking...</span>
-            </div>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-            <button type="button" id="admBackToArenaBtn" class="btn-secondary-nav" onclick="window.gbNavToGame && window.gbNavToGame()">🎮 Return to Dashboard</button>
-        </div>
-    </div>
-
-    <!-- Main Admin Body -->
+    <!-- Main Admin Body: Only the active page chosen from Drawer Menu is displayed -->
     <div class="admin-main-content" style="padding:0;">
-        <!-- 4 KPI Net Worth Cards -->
-        <div class="kpi-grid">
-            <div class="kpi-card kpi-profit">
-                <span class="kpi-label">House Net Profit (Real)</span>
-                <h2 class="kpi-value" id="kpiNetProfit">₹0</h2>
-                <small class="kpi-sub" id="kpiProfitSub">Collected: ₹0 | Paid: ₹0</small>
-            </div>
-            <div class="kpi-card">
-                <span class="kpi-label">Total Recharges</span>
-                <h2 class="kpi-value text-green" id="kpiTotalRecharges">₹0</h2>
-                <small class="kpi-sub" id="kpiWithdrawPaidSub">Withdrawals Paid: ₹0</small>
-            </div>
-            <div class="kpi-card">
-                <span class="kpi-label">All Users Wallet Holding</span>
-                <h2 class="kpi-value text-yellow" id="kpiUsersHolding">₹0</h2>
-                <small class="kpi-sub">Total Active Real Balances</small>
-            </div>
-            <div class="kpi-card">
-                <span class="kpi-label">Registered Users</span>
-                <h2 class="kpi-value" id="kpiTotalUsers">0</h2>
-                <small class="kpi-sub text-danger" id="kpiPendingWithdrawTxt">Pending: 0 Dep | 0 Wth</small>
-            </div>
-        </div>
-
-        <!-- Admin Navigation Tabs -->
-        <div class="admin-nav-tabs">
-            <button class="adm-tab-btn active" data-admtab="admWithdrawTab">
-                💸 Recharge &amp; Withdraw Requests <span class="pending-badge-pill" id="admWithdrawBadge">0</span>
-            </button>
-            <button class="adm-tab-btn" data-admtab="admUsersTab">👥 Users Ledger &amp; Block</button>
-            <button class="adm-tab-btn" data-admtab="admTimingTab">⏱️ Edit Cycle Time &amp; Margin</button>
-            <button class="adm-tab-btn" data-admtab="admSecurityPaymentTab">🔐 Security &amp; Payment</button>
-            <button class="adm-tab-btn" data-admtab="admNotifyTab">📣 Notification Chatbox</button>
-        </div>
 
         <!-- Tab 1: Recharge & Withdraw Requests (2-Column Split) -->
         <div class="adm-tab-panel active" id="admWithdrawTab">
+            <div class="page-header-bar">
+                <div>
+                    <h2>💸 Recharge &amp; Withdraw Requests</h2>
+                    <p class="page-subtitle">Approve manual UPI QR deposits and process user withdrawal requests</p>
+                </div>
+                <button type="button" class="btn-secondary-nav" onclick="window.gbNavToGame && window.gbNavToGame()">← Back to Dashboard</button>
+            </div>
             <div class="adm-split-grid">
                 <!-- Left: Pending Requests with Toggle -->
                 <div class="adm-card">
@@ -110,6 +61,13 @@
 
         <!-- Tab 2: Verified Users Ledger & Block Controls -->
         <div class="adm-tab-panel" id="admUsersTab">
+            <div class="page-header-bar">
+                <div>
+                    <h2>👥 Verified Users Ledger &amp; Access Control</h2>
+                    <p class="page-subtitle">Player balances, win/loss lifetime records, and account restrictions</p>
+                </div>
+                <button type="button" class="btn-secondary-nav" onclick="window.gbNavToGame && window.gbNavToGame()">← Back to Dashboard</button>
+            </div>
             <div class="adm-card full-height-card">
                 <div class="adm-card-header">
                     <h3>👥 Verified Users Ledger &amp; Access Control</h3>
@@ -137,6 +95,13 @@
 
         <!-- Tab 3: Game Timing & Profit Margin -->
         <div class="adm-tab-panel" id="admTimingTab">
+            <div class="page-header-bar">
+                <div>
+                    <h2>⏱️ Edit Cycle Time &amp; Profit Margin</h2>
+                    <p class="page-subtitle">Configure round duration, betting close window, minimum house profit %, and engine mode</p>
+                </div>
+                <button type="button" class="btn-secondary-nav" onclick="window.gbNavToGame && window.gbNavToGame()">← Back to Dashboard</button>
+            </div>
             <div class="adm-split-grid">
                 <div class="adm-card">
                     <div class="adm-card-header">
@@ -192,6 +157,13 @@
 
         <!-- Tab 4: Security, Merchant UPI ID & SMTP Setup -->
         <div class="adm-tab-panel" id="admSecurityPaymentTab">
+            <div class="page-header-bar">
+                <div>
+                    <h2>🔐 Security &amp; Payment Settings</h2>
+                    <p class="page-subtitle">Merchant UPI ID, QR deposit limits, SMTP email delivery, and admin password</p>
+                </div>
+                <button type="button" class="btn-secondary-nav" onclick="window.gbNavToGame && window.gbNavToGame()">← Back to Dashboard</button>
+            </div>
             <div class="adm-split-grid">
                 <!-- Merchant UPI ID & Limits -->
                 <div class="adm-card">
@@ -278,6 +250,13 @@
 
         <!-- Tab 5: Admin Notifications Chat Box -->
         <div class="adm-tab-panel" id="admNotifyTab">
+            <div class="page-header-bar">
+                <div>
+                    <h2>📣 Notification Broadcast Chatbox</h2>
+                    <p class="page-subtitle">Send real-time notifications to all verified players or targeted individuals</p>
+                </div>
+                <button type="button" class="btn-secondary-nav" onclick="window.gbNavToGame && window.gbNavToGame()">← Back to Dashboard</button>
+            </div>
             <div class="adm-split-grid">
                 <div class="adm-card">
                     <div class="adm-card-header">
