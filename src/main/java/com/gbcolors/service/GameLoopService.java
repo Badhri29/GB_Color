@@ -54,7 +54,7 @@ public class GameLoopService {
     @Value("${server.port:7070}")
     private int serverPort;
 
-    @Value("${gbcolors.admin-email:gbcolor.admin@gmail.com}")
+    @Value("${gbcolors.admin-email:gbcolor@admin.com}")
     private String envAdminEmail;
 
     @Value("${gbcolors.admin-default-password:Admin@123}")
@@ -66,7 +66,7 @@ public class GameLoopService {
     @Value("${gbcolors.smtp.port:587}")
     private int envSmtpPort;
 
-    @Value("${gbcolors.smtp.user:gbcolor.admin@gmail.com}")
+    @Value("${gbcolors.smtp.user:gbcolor@admin.com}")
     private String envSmtpUser;
 
     @Value("${gbcolors.smtp.pass:}")
@@ -75,10 +75,10 @@ public class GameLoopService {
     @Value("${gbcolors.smtp.from-name:GB_Colors}")
     private String envSmtpFromName;
 
-    @Value("${gbcolors.upi-id:badhrinarayanan79-3@okhdfcbank}")
+    @Value("${gbcolors.upi-id:gbpayment0@nyes}")
     private String envUpiId;
 
-    @Value("${gbcolors.upi-payee-name:Badhri Narayanan}")
+    @Value("${gbcolors.upi-payee-name:GB Colors}")
     private String envUpiPayeeName;
 
     @Value("${gbcolors.razorpay.key-id:}")
@@ -148,8 +148,12 @@ public class GameLoopService {
                     s.setCycleDurationSeconds(30);
                     s.setBetCloseSeconds(5);
                     s.setAdminMinProfitPercent(15);
+                    s.setMinDepositAmount(10);
+                    s.setMinWithdrawAmount(10);
                 } else {
-                    s.setAdminEmail(cleanAdminEmail);
+                    if (s.getAdminEmail() == null || s.getAdminEmail().isBlank() || "gbcolor.admin@gmail.com".equalsIgnoreCase(s.getAdminEmail().trim())) {
+                        s.setAdminEmail(cleanAdminEmail);
+                    }
                     if (s.getAdminPasswordHash() == null || !s.getAdminPasswordHash().startsWith("$2")) {
                         s.setAdminPasswordHash(passwordService.hashPassword(envAdminPass));
                     }
@@ -160,11 +164,17 @@ public class GameLoopService {
                 if (envSmtpPass != null && !envSmtpPass.isBlank()) s.setSmtpPass(envSmtpPass.replaceAll("\\s+", "").trim());
                 if (envSmtpFromName != null && !envSmtpFromName.isBlank()) s.setSmtpFromName(envSmtpFromName.trim());
 
-                if (s.getUpiId() == null || s.getUpiId().isBlank() || "gbcolors.pay@upi".equalsIgnoreCase(s.getUpiId().trim())) {
+                if (s.getUpiId() == null || s.getUpiId().isBlank() || "gbcolors.pay@upi".equalsIgnoreCase(s.getUpiId().trim()) || s.getUpiId().toLowerCase().contains("badhri")) {
                     s.setUpiId(envUpiId);
                 }
-                if (s.getUpiPayeeName() == null || s.getUpiPayeeName().isBlank() || "GB_Colors".equalsIgnoreCase(s.getUpiPayeeName().trim())) {
+                if (s.getUpiPayeeName() == null || s.getUpiPayeeName().isBlank() || s.getUpiPayeeName().toLowerCase().contains("badhri")) {
                     s.setUpiPayeeName(envUpiPayeeName);
+                }
+                if (s.getMinDepositAmount() > 10) {
+                    s.setMinDepositAmount(10);
+                }
+                if (s.getMinWithdrawAmount() > 10) {
+                    s.setMinWithdrawAmount(10);
                 }
                 if ((s.getRazorpayKeyId() == null || s.getRazorpayKeyId().isBlank()) && envRazorpayKeyId != null && !envRazorpayKeyId.isBlank()) {
                     s.setRazorpayKeyId(envRazorpayKeyId.trim());
@@ -355,7 +365,7 @@ public class GameLoopService {
                 GameRuleEngine.BetEvalResult eval = ruleEngine.evaluateBetOutcome(bet, winningNumber);
                 BigDecimal amtBd = bet.getAmount();
                 BigDecimal payoutBd = BigDecimal.valueOf(eval.payout());
-                BigDecimal netProfitBd = eval.win() ? payoutBd.subtract(amtBd) : amtBd.negate();
+                BigDecimal netProfitBd = payoutBd.subtract(amtBd);
 
                 if (bet.getMode() == GameEnums.ActiveMode.REAL) {
                     roundRealCollected = roundRealCollected.add(amtBd);
@@ -368,7 +378,7 @@ public class GameLoopService {
                     settings.setTotalDemoPayouts(settings.getTotalDemoPayouts().add(payoutBd));
                 }
 
-                bet.setStatus(eval.win() ? GameEnums.BetStatus.WON : GameEnums.BetStatus.LOST);
+                bet.setStatus(eval.win() ? GameEnums.BetStatus.WON : (payoutBd.compareTo(BigDecimal.ZERO) > 0 ? GameEnums.BetStatus.WON : GameEnums.BetStatus.LOST));
                 bet.setPayout(payoutBd);
                 bet.setNetProfit(netProfitBd);
                 bet.setResultNumber(winningNumber);
@@ -382,12 +392,17 @@ public class GameLoopService {
 
                 UserEntity user = userRepo.findByEmail(bet.getEmail()).orElse(null);
                 if (user != null) {
-                    if (eval.win()) {
-                        winnersCount++;
+                    if (payoutBd.compareTo(BigDecimal.ZERO) > 0) {
                         if (bet.getMode() == GameEnums.ActiveMode.REAL) {
                             user.setRealBalance(user.getRealBalance().add(payoutBd));
-                            user.setTotalWon(user.getTotalWon().add(payoutBd.subtract(amtBd)));
+                            if (eval.win()) {
+                                winnersCount++;
+                                user.setTotalWon(user.getTotalWon().add(netProfitBd));
+                            } else {
+                                user.setTotalLost(user.getTotalLost().add(amtBd.subtract(payoutBd)));
+                            }
                         } else {
+                            if (eval.win()) winnersCount++;
                             user.setDemoBalance(user.getDemoBalance().add(payoutBd));
                         }
                     } else if (bet.getMode() == GameEnums.ActiveMode.REAL) {
@@ -522,6 +537,11 @@ public class GameLoopService {
         String choice = choiceStr == null ? "" : choiceStr.trim().toUpperCase();
         if (choice.isEmpty()) {
             return Map.of("success", false, "message", "Bet choice is required.");
+        }
+        if (betType == GameEnums.BetType.SAFE_COLOR) {
+            if (!"GREEN".equals(choice) && !"RED".equals(choice)) {
+                return Map.of("success", false, "message", "Game 2 Safe Protect mode only accepts GREEN or RED.");
+            }
         }
 
         Map<String, Object> betMap;
@@ -699,6 +719,10 @@ public class GameLoopService {
      * Submits a manual UPI UTR deposit request into the Admin Verification Queue.
      */
     public Map<String, Object> submitDeposit(String email, Integer amount, String utr, String method) {
+        return submitDeposit(email, amount, utr, method, null);
+    }
+
+    public Map<String, Object> submitDeposit(String email, Integer amount, String utr, String method, String proofImage) {
         String amtErr = validateDepositAmount(amount);
         if (amtErr != null) {
             return Map.of("success", false, "message", amtErr);
@@ -740,6 +764,7 @@ public class GameLoopService {
                 dr.setAmount(depBd);
                 dr.setMethod(cleanMethod);
                 dr.setUtrOrPaymentId(cleanUtr);
+                dr.setProofImage(proofImage);
                 dr.setStatus(GameEnums.DepositStatus.PENDING);
                 dr.setRequestedAt(Instant.now());
                 depositRepo.save(dr);

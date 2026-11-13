@@ -65,7 +65,8 @@ public class PaymentController {
         Integer amount = parseInt(body == null ? null : body.get("amount"));
         String utr = body == null || body.get("utr") == null ? "" : String.valueOf(body.get("utr"));
         String method = body == null || body.get("method") == null ? "UPI" : String.valueOf(body.get("method"));
-        Map<String, Object> res = gameLoopService.submitDeposit(sess.getEmail(), amount, utr, method);
+        String proofImage = body == null || body.get("proofImage") == null ? null : String.valueOf(body.get("proofImage"));
+        Map<String, Object> res = gameLoopService.submitDeposit(sess.getEmail(), amount, utr, method, proofImage);
         return ResponseEntity.status(Boolean.TRUE.equals(res.get("success")) ? 200 : 400).body(res);
     }
 

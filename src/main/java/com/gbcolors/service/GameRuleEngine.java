@@ -107,10 +107,20 @@ public class GameRuleEngine {
                 win = true;
                 multiplier = 2.0;
             }
+        } else if (bet.getBetType() == GameEnums.BetType.SAFE_COLOR) {
+            String winningColor = (winningNumber == 1 || winningNumber == 3 || winningNumber == 5 || winningNumber == 7 || winningNumber == 9)
+                    ? "green" : "red";
+            if (choice.equals(winningColor)) {
+                win = true;
+                multiplier = 1.5;
+            } else {
+                win = false;
+                multiplier = 0.8;
+            }
         }
 
         double amt = bet.getAmount() != null ? bet.getAmount().doubleValue() : 0.0;
-        long payout = win ? (long) Math.floor(amt * multiplier) : 0L;
+        long payout = (long) Math.floor(amt * multiplier);
         return new BetEvalResult(win, multiplier, payout);
     }
 

@@ -156,6 +156,7 @@ public class GamePayloadBuilder {
         map.put("orderId", d.getOrderId());
         map.put("status", d.getStatus().name());
         map.put("adminNote", d.getAdminNote());
+        map.put("proofImage", d.getProofImage());
         map.put("requestedAt", toEpoch(d.getRequestedAt()));
         map.put("processedAt", d.getProcessedAt() != null ? d.getProcessedAt().toEpochMilli() : null);
         return map;
@@ -206,6 +207,10 @@ public class GamePayloadBuilder {
         colorTotals.put("RED", 0L);
         colorTotals.put("VIOLET", 0L);
 
+        Map<String, Long> safeColorTotals = new LinkedHashMap<>();
+        safeColorTotals.put("GREEN", 0L);
+        safeColorTotals.put("RED", 0L);
+
         Map<String, Long> sizeTotals = new LinkedHashMap<>();
         sizeTotals.put("BIG", 0L);
         sizeTotals.put("SMALL", 0L);
@@ -228,6 +233,9 @@ public class GamePayloadBuilder {
                 demoBetAmount += amt;
             }
             if (bet.getBetType() == GameEnums.BetType.COLOR) {
+                colorTotals.merge(bet.getChoice(), amt, Long::sum);
+            } else if (bet.getBetType() == GameEnums.BetType.SAFE_COLOR) {
+                safeColorTotals.merge(bet.getChoice(), amt, Long::sum);
                 colorTotals.merge(bet.getChoice(), amt, Long::sum);
             } else if (bet.getBetType() == GameEnums.BetType.SIZE) {
                 sizeTotals.merge(bet.getChoice(), amt, Long::sum);
@@ -303,6 +311,7 @@ public class GamePayloadBuilder {
 
         Map<String, Object> liveTotals = new LinkedHashMap<>();
         liveTotals.put("colors", colorTotals);
+        liveTotals.put("safeColors", safeColorTotals);
         liveTotals.put("sizes", sizeTotals);
         liveTotals.put("numbers", numberTotals);
         liveTotals.put("totalBetAmount", totalBetAmount);

@@ -47,6 +47,20 @@ class GameRuleEngineTest {
 
         assertEquals(450L, engine.evaluateBetOutcome(numBet, 7).payout());
         assertEquals(0L, engine.evaluateBetOutcome(numBet, 1).payout());
+
+        // Game 2: Safe Protect (1.5x Win + 80% Refund Protect on Loss)
+        BetEntity safeGreen = new BetEntity();
+        safeGreen.setBetType(GameEnums.BetType.SAFE_COLOR);
+        safeGreen.setChoice("GREEN");
+        safeGreen.setAmount(BigDecimal.valueOf(100));
+
+        var safeGreenWin = engine.evaluateBetOutcome(safeGreen, 3);
+        assertTrue(safeGreenWin.win());
+        assertEquals(150L, safeGreenWin.payout()); // 1.5x payout (50% profit)
+
+        var safeGreenLossRefund = engine.evaluateBetOutcome(safeGreen, 2);
+        assertFalse(safeGreenLossRefund.win());
+        assertEquals(80L, safeGreenLossRefund.payout()); // 80% refund protection!
     }
 
     @Test

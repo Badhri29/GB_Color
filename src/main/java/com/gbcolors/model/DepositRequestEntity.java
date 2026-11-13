@@ -46,6 +46,10 @@ public class DepositRequestEntity {
     @Column(name = "admin_note", length = 255)
     private String adminNote;
 
+    @Lob
+    @Column(name = "proof_image", columnDefinition = "LONGTEXT")
+    private String proofImage;
+
     @Column(name = "requested_at", nullable = false)
     private Instant requestedAt = Instant.now();
 
@@ -81,6 +85,9 @@ public class DepositRequestEntity {
 
     public String getAdminNote() { return adminNote; }
     public void setAdminNote(String adminNote) { this.adminNote = adminNote; }
+
+    public String getProofImage() { return proofImage; }
+    public void setProofImage(String proofImage) { this.proofImage = proofImage; }
 
     public Instant getRequestedAt() { return requestedAt; }
     public void setRequestedAt(Instant requestedAt) { this.requestedAt = requestedAt; }

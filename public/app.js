@@ -14,17 +14,22 @@
   let currentUser = null;
   let isAdminSession = false;
   let currentAdminInfo = null;
+  let latestAdminAnalytics = null;
+  let currentGameMode = 'CLASSIC'; // 'CLASSIC' | 'SAFE'
+  let histCurrentPage = 1;
+  const HIST_PAGE_SIZE = 20;
+  let attachedDepositProofBase64 = null;
   let selectedWithdrawMethod = 'UPI';
   let selectedWithdrawUpiApp = 'Any UPI';
   let socket = null;
   let paymentConfig = {
     razorpayEnabled: false,
     razorpayKeyId: '',
-    upiId: '',
+    upiId: 'gbpayment0@nyes',
     upiPayeeName: 'GB Colors',
-    minDeposit: 100,
+    minDeposit: 10,
     maxDeposit: 50000,
-    minWithdraw: 200,
+    minWithdraw: 10,
     maxWithdraw: 50000
   };
   let gameState = {
@@ -638,9 +643,9 @@
     if (!cfg) return;
     paymentConfig = Object.assign(paymentConfig, cfg);
 
-    const minDep = Number(paymentConfig.minDeposit || 100);
+    const minDep = Number(paymentConfig.minDeposit || 10);
     const maxDep = Number(paymentConfig.maxDeposit || 50000);
-    const minWth = Number(paymentConfig.minWithdraw || 200);
+    const minWth = Number(paymentConfig.minWithdraw || 10);
     const maxWth = Number(paymentConfig.maxWithdraw || 50000);
 
     if ($('minDepositHint')) $('minDepositHint').textContent = `Limit: ₹${minDep.toLocaleString('en-IN')} – ₹${maxDep.toLocaleString('en-IN')}`;
@@ -689,8 +694,8 @@
   }
 
   function refreshStaticUpiBox() {
-    const upiId = (paymentConfig.upiId || 'badhrinarayanan79-3@okhdfcbank').trim();
-    const payee = (paymentConfig.upiPayeeName || 'Badhri Narayanan').trim();
+    const upiId = (paymentConfig.upiId || 'gbpayment0@nyes').trim();
+    const payee = (paymentConfig.upiPayeeName || 'GB Colors').trim();
     if ($('staticUpiIdDisplay')) $('staticUpiIdDisplay').textContent = upiId;
     if ($('staticUpiPayeeDisplay')) $('staticUpiPayeeDisplay').textContent = payee;
 
@@ -703,8 +708,7 @@
 
     const qrImg = $('merchantStaticQrImg');
     if (qrImg) {
-      const isDefaultUpi = upiId.toLowerCase() === 'badhrinarayanan79-3@okhdfcbank';
-      qrImg.style.display = isDefaultUpi ? '' : 'none';
+      qrImg.style.display = '';
     }
   }
 
@@ -737,7 +741,7 @@
   }
 
   function validatePayAmount(amt, isWithdraw) {
-    const min = Number(isWithdraw ? (paymentConfig.minWithdraw || 200) : (paymentConfig.minDeposit || 100));
+    const min = Number(isWithdraw ? (paymentConfig.minWithdraw || 10) : (paymentConfig.minDeposit || 10));
     const max = Number(isWithdraw ? (paymentConfig.maxWithdraw || 50000) : (paymentConfig.maxDeposit || 50000));
     const label = isWithdraw ? 'withdrawal' : 'recharge';
     if (!Number.isFinite(amt) || amt < min) {
@@ -833,15 +837,22 @@
     const btn = $('submitDepositBtn');
     if (btn) { btn.disabled = true; btn.textContent = 'Submitting...'; }
     try {
+      const payload = { amount: amt, utr, method: 'UPI' };
+      if (attachedDepositProofBase64) {
+        payload.proofImage = attachedDepositProofBase64;
+      }
       const res = await apiFetch('/api/payment/upi/submit-utr', {
         method: 'POST',
-        body: JSON.stringify({ amount: amt, utr, method: 'UPI' })
+        body: JSON.stringify(payload)
       });
       if (!res.ok || !res.data.success) {
         showToast(res.data.message || res.data.error || 'Could not submit deposit request', 'error');
         return;
       }
       if ($('depositUtrInput')) $('depositUtrInput').value = '';
+      attachedDepositProofBase64 = null;
+      if ($('depositProofFileInput')) $('depositProofFileInput').value = '';
+      if ($('depositProofPreviewWrap')) $('depositProofPreviewWrap').style.display = 'none';
       showToast(res.data.message || 'UTR submitted for verification', 'success');
       await refreshCurrentUser();
       switchPaymentSubTab('recharge');
@@ -1061,6 +1072,16 @@
     const isReal = currentUser.mode === 'REAL';
     const activeBal = isReal ? currentUser.realBalance : currentUser.demoBalance;
 
+    if ($('topNavIdentityTag')) {
+      if (isAdminSession) {
+        $('topNavIdentityTag').textContent = 'Admin: gbcolor@admin.com';
+        $('topNavIdentityTag').className = 'top-nav-id-badge admin';
+      } else {
+        $('topNavIdentityTag').textContent = `UID: ${currentUser.userId || '—'} • ${currentUser.email || currentUser.username || ''}`;
+        $('topNavIdentityTag').className = 'top-nav-id-badge user';
+      }
+    }
+
     if ($('headerWalletLabel')) $('headerWalletLabel').textContent = isReal ? 'REAL CASH' : 'DEMO COINS';
     if ($('activeBalanceDisplay')) $('activeBalanceDisplay').textContent = formatINR(activeBal);
     if ($('modeDemoBtn')) $('modeDemoBtn').classList.toggle('active', !isReal);
@@ -1096,13 +1117,49 @@
   function renderActiveBetBadges() {
     document.querySelectorAll('.bet-badge').forEach((b) => {
       b.style.display = 'none';
+      b.classList.remove('admin-pool-badge');
       b.textContent = '₹0';
     });
+
+    if (isAdminSession) {
+      if (!latestAdminAnalytics || !latestAdminAnalytics.liveTotals) return;
+      const lt = latestAdminAnalytics.liveTotals;
+      const colors = lt.colors || {};
+      const safeColors = lt.safeColors || {};
+      const sizes = lt.sizes || {};
+      const numbers = lt.numbers || {};
+
+      const pools = {
+        'GREEN': colors.GREEN || 0,
+        'VIOLET': colors.VIOLET || 0,
+        'RED': colors.RED || 0,
+        'BIG': sizes.BIG || 0,
+        'SMALL': sizes.SMALL || 0,
+        'SAFE-GREEN': safeColors.GREEN || 0,
+        'SAFE-RED': safeColors.RED || 0
+      };
+      for (let i = 0; i <= 9; i++) {
+        pools[String(i)] = numbers[String(i)] || 0;
+      }
+
+      Object.keys(pools).forEach((key) => {
+        const badge = $('badge-' + key);
+        if (badge) {
+          const val = Number(pools[key] || 0);
+          badge.textContent = '₹' + val.toLocaleString('en-IN');
+          badge.classList.add('admin-pool-badge');
+          badge.style.display = 'inline-block';
+        }
+      });
+      return;
+    }
+
     if (!currentUser || !Array.isArray(currentUser.activeBets)) return;
     const totals = {};
     currentUser.activeBets.forEach((b) => {
       if (b.period === gameState.period && isBetActive(b)) {
-        totals[b.choice] = (totals[b.choice] || 0) + Number(b.amount || 0);
+        const key = (b.betType === 'SAFE_COLOR' ? 'SAFE-' : '') + b.choice;
+        totals[key] = (totals[key] || 0) + Number(b.amount || 0);
       }
     });
     Object.keys(totals).forEach((choice) => {
@@ -1118,7 +1175,7 @@
     if (!Array.isArray(history) || !history.length) {
       return '<tr><td colspan="4" class="empty-cell">No rounds completed yet.</td></tr>';
     }
-    return history.slice(0, 30).map((r) => {
+    return history.map((r) => {
       const numCls = getRoundBallClass(r);
       return `
         <tr>
@@ -1140,8 +1197,23 @@
         return `<span class="recent-dot-ball ${cls}" title="Period ${escapeHtml(r.period)}">${escapeHtml(r.number)}</span>`;
       }).join('');
     }
-    if ($('historyTableBody')) $('historyTableBody').innerHTML = buildHistoryRowsHtml(history);
-    if ($('fullHistoryTableBody')) $('fullHistoryTableBody').innerHTML = buildHistoryRowsHtml(history);
+
+    const totalRecords = history.length;
+    const totalPages = Math.max(1, Math.ceil(totalRecords / HIST_PAGE_SIZE));
+    if (histCurrentPage > totalPages) histCurrentPage = totalPages;
+    if (histCurrentPage < 1) histCurrentPage = 1;
+
+    const startIdx = (histCurrentPage - 1) * HIST_PAGE_SIZE;
+    const pageRecords = history.slice(startIdx, startIdx + HIST_PAGE_SIZE);
+
+    if ($('historyTableBody')) $('historyTableBody').innerHTML = buildHistoryRowsHtml(pageRecords);
+    if ($('fullHistoryTableBody')) $('fullHistoryTableBody').innerHTML = buildHistoryRowsHtml(history.slice(0, 30));
+
+    if ($('histPageIndicator')) {
+      $('histPageIndicator').textContent = `Page ${histCurrentPage} of ${totalPages} (${totalRecords} rounds)`;
+    }
+    if ($('histPrevPageBtn')) $('histPrevPageBtn').disabled = histCurrentPage <= 1;
+    if ($('histNextPageBtn')) $('histNextPageBtn').disabled = histCurrentPage >= totalPages;
   }
 
   function renderUserBetAndTxLists() {
@@ -1432,7 +1504,11 @@
 
     const cycleSec = Number(gameState.cycleDurationSeconds || 30);
     const lockSec = Number(gameState.betCloseSeconds || 5);
-    if ($('modeTagDisplay')) $('modeTagDisplay').textContent = `WIN GO • ${cycleSec}S`;
+    if ($('modeTagDisplay')) {
+      $('modeTagDisplay').textContent = currentGameMode === 'SAFE'
+        ? `SAFE PROTECT • ${cycleSec}S`
+        : `WIN GO • ${cycleSec}S`;
+    }
     if ($('rulesCycleSecondsTxt')) $('rulesCycleSecondsTxt').textContent = `${cycleSec}s`;
     if ($('rulesLockSecondsTxt')) $('rulesLockSecondsTxt').textContent = `${lockSec}s`;
     if ($('lockOverlayHint')) $('lockOverlayHint').textContent = `Closing in final ${lockSec}s — revealing soon...`;
@@ -1443,11 +1519,48 @@
     const clockEl = $('countdownClock');
     if (clockEl) clockEl.classList.toggle('urgent', isLocked || t <= lockSec);
 
+    // Admin Real-Time Upcoming Result Lock Preview on Dashboard
+    const previewEl = $('adminDashLockPreview');
+    if (previewEl) {
+      if (isAdminSession && (isLocked || t <= lockSec) && latestAdminAnalytics && latestAdminAnalytics.upcomingResult) {
+        const up = latestAdminAnalytics.upcomingResult;
+        const cols = Array.isArray(up.colors) ? up.colors.join(' + ') : '';
+        previewEl.style.display = 'block';
+        previewEl.innerHTML = `
+          <div class="lock-preview-banner">
+            <span class="lpb-tag">🔒 Admin Real-Time Lock Preview (Revealing in ${t}s)</span>
+            <div class="lpb-content">
+              <span class="lpb-num ball-${up.number}">${up.number}</span>
+              <span class="lpb-pill ${(up.size || '').toLowerCase()}">${escapeHtml(up.size || '')}</span>
+              <span class="lpb-colors">${escapeHtml(cols)}</span>
+            </div>
+          </div>
+        `;
+      } else {
+        previewEl.style.display = 'none';
+      }
+    }
+
     if (isLocked && $('betModal') && $('betModal').style.display !== 'none') {
       $('betModal').style.display = 'none';
     }
     if (isLocked && t > 0) {
       SoundEngine.tick();
+    }
+  }
+
+  function setGameMode(mode) {
+    currentGameMode = mode === 'SAFE' ? 'SAFE' : 'CLASSIC';
+    if ($('gameModeClassicBtn')) $('gameModeClassicBtn').classList.toggle('active', currentGameMode === 'CLASSIC');
+    if ($('gameModeSafeBtn')) $('gameModeSafeBtn').classList.toggle('active', currentGameMode === 'SAFE');
+    if ($('classicBettingContainer')) $('classicBettingContainer').style.display = currentGameMode === 'CLASSIC' ? '' : 'none';
+    if ($('safeBettingContainer')) $('safeBettingContainer').style.display = currentGameMode === 'SAFE' ? '' : 'none';
+
+    const cycleSec = Number(gameState.cycleDurationSeconds || 30);
+    if ($('modeTagDisplay')) {
+      $('modeTagDisplay').textContent = currentGameMode === 'SAFE'
+        ? `SAFE PROTECT • ${cycleSec}S`
+        : `WIN GO • ${cycleSec}S`;
     }
   }
 
@@ -1462,18 +1575,29 @@
     let mult = 2;
     if (pendingBet.type === 'NUMBER') mult = 9;
     else if (pendingBet.type === 'COLOR' && pendingBet.choice === 'VIOLET') mult = 4.5;
+    else if (pendingBet.type === 'SAFE_COLOR') mult = 1.5;
 
     if ($('summaryTotalAmt')) $('summaryTotalAmt').textContent = formatShortINR(total);
-    if ($('summaryEstPayout')) $('summaryEstPayout').textContent = formatShortINR(Math.round(total * mult * 100) / 100);
+    if ($('summaryEstPayout')) {
+      const payoutText = pendingBet.type === 'SAFE_COLOR'
+        ? `${formatShortINR(Math.round(total * mult * 100) / 100)} (or 80% refund ${formatShortINR(Math.floor(total * 0.8))})`
+        : formatShortINR(Math.round(total * mult * 100) / 100);
+      $('summaryEstPayout').textContent = payoutText;
+    }
   }
 
   function openBetModal(type, choice) {
+    if (isAdminSession) {
+      showToast('Admin Mode: Betting is disabled. Viewing live pools only.', 'info');
+      return;
+    }
     if (gameState.status !== 'BETTING') {
       showToast('Betting is closed for this round', 'error');
       return;
     }
     pendingBet = { type, choice, unit: 10, mult: 1 };
-    if ($('modalBetTarget')) $('modalBetTarget').textContent = `${choice} (${type})`;
+    const typeLabel = type === 'SAFE_COLOR' ? 'Safe Protect' : type;
+    if ($('modalBetTarget')) $('modalBetTarget').textContent = `${choice} (${typeLabel})`;
     document.querySelectorAll('.unit-chip').forEach((b) => b.classList.toggle('active', b.dataset.unit === '10'));
     document.querySelectorAll('.mult-chip').forEach((b) => b.classList.toggle('active', b.dataset.mult === '1'));
     if ($('betCustomAmountInput')) $('betCustomAmountInput').value = '10';
@@ -1531,6 +1655,15 @@
       if (tick.cycleDurationSeconds) gameState.cycleDurationSeconds = tick.cycleDurationSeconds;
       if (tick.betCloseSeconds) gameState.betCloseSeconds = tick.betCloseSeconds;
       updateClockAndLock();
+    });
+
+    socket.on('admin_live_update', (analytics) => {
+      if (!analytics) return;
+      latestAdminAnalytics = analytics;
+      if (isAdminSession) {
+        renderActiveBetBadges();
+        updateClockAndLock();
+      }
     });
 
     socket.on('user_updated', (u) => {
@@ -1638,21 +1771,39 @@
   function toggleAdminShellUi(enabled) {
     isAdminSession = Boolean(enabled);
     if ($('gameAppRoot')) $('gameAppRoot').classList.toggle('is-admin-session', isAdminSession);
-    if ($('adminHeaderToggleBtn')) $('adminHeaderToggleBtn').style.display = isAdminSession ? '' : 'none';
-    if ($('adminDrawerSection')) $('adminDrawerSection').style.display = isAdminSession ? '' : 'none';
-    if ($('adminArenaShortcutBar')) $('adminArenaShortcutBar').style.display = isAdminSession ? '' : 'none';
 
-    // Hide player Recharge & Withdraw entry points when logged in as Admin
-    const hideForAdmin = [
+    // Hide player controls when logged in as Admin
+    const playerControls = [
+      $('modeSwitchPill'),
+      $('headerWalletPill'),
       $('headerRechargeBtn'),
       $('paymentNavBtn'),
+      $('adminHeaderToggleBtn'),
+      $('notifBellBtn'),
+      $('soundToggleBtn'),
       $('userQuickPayBar'),
       $('profOpenPayBtn'),
       document.querySelector('#userSideDrawer .drawer-nav-item[data-view="payment"]')
     ];
-    hideForAdmin.forEach((el) => {
+    playerControls.forEach((el) => {
       if (el) el.style.display = isAdminSession ? 'none' : '';
     });
+
+    // Admin specific controls
+    if ($('adminHeaderLogoutBtn')) $('adminHeaderLogoutBtn').style.display = isAdminSession ? 'inline-flex' : 'none';
+    if ($('adminDrawerSection')) $('adminDrawerSection').style.display = isAdminSession ? '' : 'none';
+    if ($('adminArenaShortcutBar')) $('adminArenaShortcutBar').style.display = isAdminSession ? '' : 'none';
+    if ($('adminMonitorNotice')) $('adminMonitorNotice').style.display = isAdminSession ? 'flex' : 'none';
+    if (!isAdminSession && $('adminDashLockPreview')) $('adminDashLockPreview').style.display = 'none';
+
+    // Toggle view-only on betting buttons
+    document.querySelectorAll('.bet-btn').forEach((b) => {
+      b.classList.toggle('admin-view-only', isAdminSession);
+    });
+
+    if (currentUser) {
+      renderUserSummary();
+    }
   }
 
   async function mountAdminToolkit(adminInfo) {
@@ -1980,7 +2131,7 @@
     });
 
     // Logout buttons
-    [$('drawerLogoutBtn'), $('profLogoutBtn'), $('settingsLogoutBtn')].forEach((btn) => {
+    [$('drawerLogoutBtn'), $('profLogoutBtn'), $('settingsLogoutBtn'), $('adminHeaderLogoutBtn')].forEach((btn) => {
       if (btn) {
         btn.addEventListener('click', async () => {
           closeUserDrawer();
@@ -1990,6 +2141,36 @@
         });
       }
     });
+
+    // Game Mode Switcher (Game 1 Classic vs Game 2 Safe Protect)
+    if ($('gameModeClassicBtn')) $('gameModeClassicBtn').addEventListener('click', () => setGameMode('CLASSIC'));
+    if ($('gameModeSafeBtn')) $('gameModeSafeBtn').addEventListener('click', () => setGameMode('SAFE'));
+
+    // Game History Pagination
+    if ($('histPrevPageBtn')) {
+      $('histPrevPageBtn').addEventListener('click', () => {
+        if (histCurrentPage > 1) {
+          histCurrentPage--;
+          renderGameHistory();
+        }
+      });
+    }
+    if ($('histNextPageBtn')) {
+      $('histNextPageBtn').addEventListener('click', () => {
+        const history = gameState.history || [];
+        const totalPages = Math.max(1, Math.ceil(history.length / HIST_PAGE_SIZE));
+        if (histCurrentPage < totalPages) {
+          histCurrentPage++;
+          renderGameHistory();
+        }
+      });
+    }
+    if ($('histJumpLatestBtn')) {
+      $('histJumpLatestBtn').addEventListener('click', () => {
+        histCurrentPage = 1;
+        renderGameHistory();
+      });
+    }
 
     // Mode Switcher
     if ($('modeDemoBtn')) {
@@ -2148,6 +2329,42 @@
 
     if ($('generateUpiQrBtn')) $('generateUpiQrBtn').addEventListener('click', handleGenerateUpiQr);
     if ($('submitDepositBtn')) $('submitDepositBtn').addEventListener('click', handleSubmitUtr);
+
+    // Deposit screenshot proof handler
+    const proofFileInput = $('depositProofFileInput');
+    if (proofFileInput) {
+      proofFileInput.addEventListener('change', (e) => {
+        const file = e.target.files && e.target.files[0];
+        if (!file) {
+          attachedDepositProofBase64 = null;
+          if ($('depositProofPreviewWrap')) $('depositProofPreviewWrap').style.display = 'none';
+          return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+          showToast('Screenshot file size must be under 5MB', 'error');
+          proofFileInput.value = '';
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = () => {
+          attachedDepositProofBase64 = reader.result;
+          if ($('depositProofPreviewImg')) $('depositProofPreviewImg').src = reader.result;
+          if ($('depositProofPreviewWrap')) $('depositProofPreviewWrap').style.display = 'flex';
+        };
+        reader.onerror = () => {
+          showToast('Could not read image file', 'error');
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    if ($('removeProofImgBtn')) {
+      $('removeProofImgBtn').addEventListener('click', () => {
+        attachedDepositProofBase64 = null;
+        if ($('depositProofFileInput')) $('depositProofFileInput').value = '';
+        if ($('depositProofPreviewWrap')) $('depositProofPreviewWrap').style.display = 'none';
+      });
+    }
     if ($('rzpPayBtn')) $('rzpPayBtn').addEventListener('click', handleRazorpayPay);
     if ($('paypalPayBtn')) $('paypalPayBtn').addEventListener('click', handlePaypalPay);
     if ($('submitWithdrawBtn')) $('submitWithdrawBtn').addEventListener('click', handleSubmitWithdraw);

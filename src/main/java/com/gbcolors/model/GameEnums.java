@@ -16,7 +16,7 @@ public final class GameEnums {
     }
 
     public enum BetType {
-        COLOR, NUMBER, SIZE
+        COLOR, NUMBER, SIZE, SAFE_COLOR
     }
 
     public enum BetStatus {

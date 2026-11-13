@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.*;
         "spring.datasource.username=sa",
         "spring.datasource.password=",
         "spring.datasource.driver-class-name=org.h2.Driver",
-        "gbcolors.admin-email=gbcolor.admin@gmail.com",
+        "gbcolors.admin-email=gbcolor@admin.com",
         "gbcolors.admin-default-password=Admin@123"
 })
 class WebSocketAndBetFlowTest {

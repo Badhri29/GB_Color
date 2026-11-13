@@ -135,15 +135,18 @@
           </span>
           <span class="brand-title">GB COLORS</span>
         </div>
+        <div class="top-nav-identity-wrap" id="topNavIdentityWrap">
+          <span id="topNavIdentityTag" class="top-nav-id-badge">ID: —</span>
+        </div>
       </div>
 
       <div class="header-right-group">
-        <div class="mode-switch-pill" role="group" aria-label="Wallet Mode">
+        <div class="mode-switch-pill" id="modeSwitchPill" role="group" aria-label="Wallet Mode">
           <button id="modeDemoBtn" class="mode-btn active" type="button">DEMO</button>
           <button id="modeRealBtn" class="mode-btn" type="button">REAL</button>
         </div>
 
-        <div class="wallet-pill">
+        <div class="wallet-pill" id="headerWalletPill">
           <div class="wallet-meta">
             <span class="wallet-mode-cap" id="headerWalletLabel">DEMO WALLET</span>
             <strong id="activeBalanceDisplay" class="wallet-amount">₹0.00</strong>
@@ -160,6 +163,8 @@
         </button>
 
         <button id="soundToggleBtn" class="header-icon-btn" type="button" aria-label="Toggle Sound" title="Toggle Sound">🔊</button>
+
+        <button id="adminHeaderLogoutBtn" class="btn-danger-outline btn-sm" type="button" style="display:none;" title="Sign Out">🚪 Sign Out</button>
       </div>
     </header>
 
@@ -183,7 +188,7 @@
         </div>
       </div>
 
-      <div class="drawer-wallet-strip">
+      <div class="drawer-wallet-strip" id="drawerWalletStrip">
         <div class="dw-box real">
           <span>Real Cash</span>
           <strong id="drawerRealBal">₹0.00</strong>
@@ -195,24 +200,26 @@
       </div>
 
       <nav class="drawer-nav-list">
-        <button type="button" class="drawer-nav-item active" data-view="game"><span>🎮</span> Game Arena</button>
-        <button type="button" class="drawer-nav-item" data-view="payment"><span>💳</span> Payment (Recharge &amp; Withdraw)</button>
-        <button type="button" class="drawer-nav-item" data-view="history"><span>📜</span> Bet History &amp; Results</button>
-        <button type="button" class="drawer-nav-item" data-view="profile"><span>👤</span> My Profile</button>
-        <button type="button" class="drawer-nav-item" data-view="rules"><span>📘</span> Rules &amp; Payouts</button>
-        <button type="button" class="drawer-nav-item" data-view="settings"><span>⚙️</span> Settings</button>
-        <button type="button" class="drawer-nav-item" id="drawerNotifBtn">
-          <span>🔔</span> Notifications
-          <em id="drawerNotifBadge" class="drawer-pill-badge" style="display:none;">0</em>
-        </button>
+        <div id="userDrawerNavGroup">
+          <button type="button" class="drawer-nav-item active" data-view="game"><span>🎮</span> Dashboard</button>
+          <button type="button" class="drawer-nav-item" data-view="payment"><span>💳</span> Payment (Recharge &amp; Withdraw)</button>
+          <button type="button" class="drawer-nav-item" data-view="profile"><span>👤</span> Profile &amp; Settings</button>
+          <button type="button" class="drawer-nav-item" data-view="rules"><span>📘</span> Rules &amp; Payouts</button>
+          <button type="button" class="drawer-nav-item" id="drawerNotifBtn">
+            <span>🔔</span> Notifications
+            <em id="drawerNotifBadge" class="drawer-pill-badge" style="display:none;">0</em>
+          </button>
+        </div>
 
         <div id="adminDrawerSection" class="drawer-admin-section" style="display:none;">
           <div class="drawer-section-cap">🛡️ ADMIN EXTRA FEATURES</div>
-          <button type="button" class="drawer-nav-item admin-drawer-link" data-view="admin" data-admtab="admLiveTab"><span>📊</span> Profit Engine &amp; Preview</button>
-          <button type="button" class="drawer-nav-item admin-drawer-link" data-view="admin" data-admtab="admWithdrawTab"><span>💸</span> Deposits &amp; Withdraws Queue</button>
-          <button type="button" class="drawer-nav-item admin-drawer-link" data-view="admin" data-admtab="admNotifyTab"><span>📣</span> Notifications Chat Box</button>
+          <button type="button" class="drawer-nav-item admin-drawer-link" data-view="game"><span>🎮</span> Dashboard (Live Monitor)</button>
+          <button type="button" class="drawer-nav-item admin-drawer-link" data-view="admin" data-admtab="admWithdrawTab"><span>💸</span> Recharge &amp; Withdraw Requests <em id="admDrawerPendingBadge" class="drawer-pill-badge" style="display:none;">0</em></button>
           <button type="button" class="drawer-nav-item admin-drawer-link" data-view="admin" data-admtab="admUsersTab"><span>👥</span> Users Ledger &amp; Block</button>
-          <button type="button" class="drawer-nav-item admin-drawer-link" data-view="admin" data-admtab="admSettingsTab"><span>🛠️</span> Timer, QR, Razorpay &amp; SMTP</button>
+          <button type="button" class="drawer-nav-item admin-drawer-link" data-view="admin" data-admtab="admTimingTab"><span>⏱️</span> Edit Cycle Time &amp; Margin</button>
+          <button type="button" class="drawer-nav-item admin-drawer-link" data-view="admin" data-admtab="admSecurityPaymentTab"><span>🔐</span> Security &amp; Payment</button>
+          <button type="button" class="drawer-nav-item admin-drawer-link" data-view="admin" data-admtab="admNotifyTab"><span>📣</span> Notification Chatbox</button>
+          <button type="button" class="drawer-nav-item admin-drawer-link" data-view="rules"><span>📘</span> Rules &amp; Payouts</button>
         </div>
       </nav>
 
@@ -224,8 +231,26 @@
     <!-- MULTI-PAGE VIEWS CONTAINER -->
     <main class="app-views-root">
 
-      <!-- ========= VIEW 1: GAME ARENA ========= -->
+      <!-- ========= VIEW 1: DASHBOARD (GAME & ADMIN MONITOR) ========= -->
       <section id="view-game" class="page-view active">
+        <!-- DUAL GAME MODE SELECTOR -->
+        <div class="game-mode-selector-bar">
+          <button type="button" class="game-mode-btn active" id="gameModeClassicBtn" data-mode="CLASSIC">
+            <span class="gmb-icon">🎮</span>
+            <div class="gmb-text">
+              <strong>Win Go 30s</strong>
+              <small>Classic Colors (2x), Numbers (9x), Big/Small</small>
+            </div>
+          </button>
+          <button type="button" class="game-mode-btn" id="gameModeSafeBtn" data-mode="SAFE">
+            <span class="gmb-icon">🛡️</span>
+            <div class="gmb-text">
+              <strong>Safe Protect Game</strong>
+              <small>1.5x Win (50% Profit) + 80% Loss Refund</small>
+            </div>
+          </button>
+        </div>
+
         <div class="dashboard-grid">
 
           <!-- LEFT: FEATURE RESULT (TOP) + GAME BETTING AREA (BOTTOM) -->
@@ -247,6 +272,9 @@
                 </div>
               </div>
 
+              <!-- Real-Time Admin Lock Preview right on Dashboard -->
+              <div id="adminDashLockPreview" class="admin-dash-lock-card" style="display:none;"></div>
+
               <div class="recent-strip-card">
                 <span class="recent-cap">Recent:</span>
                 <div id="recentDotsList" class="recent-dots-row"></div>
@@ -254,20 +282,23 @@
 
               <div id="adminArenaShortcutBar" class="admin-arena-bar" style="display:none;">
                 <div class="adm-bar-left">
-                  <span class="status-pill amber">🛡️ ADMIN</span>
-                  <span id="admBarForecastTxt" class="adm-bar-forecast">Same User Dashboard + Extra Admin Controls active</span>
+                  <span class="status-pill amber">🛡️ ADMIN MONITOR</span>
+                  <span id="admBarForecastTxt" class="adm-bar-forecast">Real pool betting totals displayed directly above choices</span>
                 </div>
                 <div class="adm-bar-actions">
-                  <button type="button" class="btn-adm-mini" data-nav="admin" data-admtab="admLiveTab">📊 Profit</button>
-                  <button type="button" class="btn-adm-mini" data-nav="admin" data-admtab="admWithdrawTab">💸 Queue</button>
-                  <button type="button" class="btn-adm-mini" data-nav="admin" data-admtab="admNotifyTab">📣 Notify</button>
-                  <button type="button" class="btn-adm-mini" data-nav="admin" data-admtab="admSettingsTab">⚙️</button>
+                  <button type="button" class="btn-adm-mini" data-nav="admin" data-admtab="admWithdrawTab">💸 Requests</button>
+                  <button type="button" class="btn-adm-mini" data-nav="admin" data-admtab="admUsersTab">👥 Users</button>
+                  <button type="button" class="btn-adm-mini" data-nav="admin" data-admtab="admNotifyTab">📣 Chat</button>
                 </div>
               </div>
             </div>
 
             <!-- BETTING CONSOLE -->
             <div id="bettingSection" class="betting-section">
+              <div id="adminMonitorNotice" class="admin-monitor-banner" style="display:none;">
+                <span>🛡️ <strong>Admin Live Monitor:</strong> Viewing live real pools wagered by players. Betting is disabled for Admin.</span>
+              </div>
+
               <div id="lockOverlay" class="lock-overlay" style="display:none;">
                 <div class="lock-badge">
                   <span>⏳ BETTING CLOSED</span>
@@ -275,69 +306,94 @@
                 </div>
               </div>
 
-              <div class="color-buttons-grid">
-                <button type="button" class="bet-btn color-green" data-type="COLOR" data-choice="GREEN">
-                  <span class="bet-label">Green</span>
-                  <span class="bet-mult">2x</span>
-                  <span id="badge-GREEN" class="bet-badge" style="display:none;">₹0</span>
-                </button>
-                <button type="button" class="bet-btn color-violet" data-type="COLOR" data-choice="VIOLET">
-                  <span class="bet-label">Violet</span>
-                  <span class="bet-mult">4.5x</span>
-                  <span id="badge-VIOLET" class="bet-badge" style="display:none;">₹0</span>
-                </button>
-                <button type="button" class="bet-btn color-red" data-type="COLOR" data-choice="RED">
-                  <span class="bet-label">Red</span>
-                  <span class="bet-mult">2x</span>
-                  <span id="badge-RED" class="bet-badge" style="display:none;">₹0</span>
-                </button>
+              <!-- CLASSIC GAME MODE CONTROLS -->
+              <div id="classicBettingContainer">
+                <div class="color-buttons-grid">
+                  <button type="button" class="bet-btn color-green" data-type="COLOR" data-choice="GREEN">
+                    <span class="bet-label">Green</span>
+                    <span class="bet-mult">2x</span>
+                    <span id="badge-GREEN" class="bet-badge" style="display:none;">₹0</span>
+                  </button>
+                  <button type="button" class="bet-btn color-violet" data-type="COLOR" data-choice="VIOLET">
+                    <span class="bet-label">Violet</span>
+                    <span class="bet-mult">4.5x</span>
+                    <span id="badge-VIOLET" class="bet-badge" style="display:none;">₹0</span>
+                  </button>
+                  <button type="button" class="bet-btn color-red" data-type="COLOR" data-choice="RED">
+                    <span class="bet-label">Red</span>
+                    <span class="bet-mult">2x</span>
+                    <span id="badge-RED" class="bet-badge" style="display:none;">₹0</span>
+                  </button>
+                </div>
+
+                <div class="numbers-grid">
+                  <button type="button" class="bet-btn num-btn n0" data-type="NUMBER" data-choice="0">
+                    <span>0</span><span id="badge-0" class="bet-badge" style="display:none;">₹0</span>
+                  </button>
+                  <button type="button" class="bet-btn num-btn n1" data-type="NUMBER" data-choice="1">
+                    <span>1</span><span id="badge-1" class="bet-badge" style="display:none;">₹0</span>
+                  </button>
+                  <button type="button" class="bet-btn num-btn n2" data-type="NUMBER" data-choice="2">
+                    <span>2</span><span id="badge-2" class="bet-badge" style="display:none;">₹0</span>
+                  </button>
+                  <button type="button" class="bet-btn num-btn n3" data-type="NUMBER" data-choice="3">
+                    <span>3</span><span id="badge-3" class="bet-badge" style="display:none;">₹0</span>
+                  </button>
+                  <button type="button" class="bet-btn num-btn n4" data-type="NUMBER" data-choice="4">
+                    <span>4</span><span id="badge-4" class="bet-badge" style="display:none;">₹0</span>
+                  </button>
+                  <button type="button" class="bet-btn num-btn n5" data-type="NUMBER" data-choice="5">
+                    <span>5</span><span id="badge-5" class="bet-badge" style="display:none;">₹0</span>
+                  </button>
+                  <button type="button" class="bet-btn num-btn n6" data-type="NUMBER" data-choice="6">
+                    <span>6</span><span id="badge-6" class="bet-badge" style="display:none;">₹0</span>
+                  </button>
+                  <button type="button" class="bet-btn num-btn n7" data-type="NUMBER" data-choice="7">
+                    <span>7</span><span id="badge-7" class="bet-badge" style="display:none;">₹0</span>
+                  </button>
+                  <button type="button" class="bet-btn num-btn n8" data-type="NUMBER" data-choice="8">
+                    <span>8</span><span id="badge-8" class="bet-badge" style="display:none;">₹0</span>
+                  </button>
+                  <button type="button" class="bet-btn num-btn n9" data-type="NUMBER" data-choice="9">
+                    <span>9</span><span id="badge-9" class="bet-badge" style="display:none;">₹0</span>
+                  </button>
+                </div>
+
+                <div class="size-buttons-grid">
+                  <button type="button" class="bet-btn size-big" data-type="SIZE" data-choice="BIG">
+                    <span class="bet-label">BIG (5–9)</span>
+                    <span class="bet-mult">2x</span>
+                    <span id="badge-BIG" class="bet-badge" style="display:none;">₹0</span>
+                  </button>
+                  <button type="button" class="bet-btn size-small" data-type="SIZE" data-choice="SMALL">
+                    <span class="bet-label">SMALL (0–4)</span>
+                    <span class="bet-mult">2x</span>
+                    <span id="badge-SMALL" class="bet-badge" style="display:none;">₹0</span>
+                  </button>
+                </div>
               </div>
 
-              <div class="numbers-grid">
-                <button type="button" class="bet-btn num-btn n0" data-type="NUMBER" data-choice="0">
-                  <span>0</span><span id="badge-0" class="bet-badge" style="display:none;">₹0</span>
-                </button>
-                <button type="button" class="bet-btn num-btn n1" data-type="NUMBER" data-choice="1">
-                  <span>1</span><span id="badge-1" class="bet-badge" style="display:none;">₹0</span>
-                </button>
-                <button type="button" class="bet-btn num-btn n2" data-type="NUMBER" data-choice="2">
-                  <span>2</span><span id="badge-2" class="bet-badge" style="display:none;">₹0</span>
-                </button>
-                <button type="button" class="bet-btn num-btn n3" data-type="NUMBER" data-choice="3">
-                  <span>3</span><span id="badge-3" class="bet-badge" style="display:none;">₹0</span>
-                </button>
-                <button type="button" class="bet-btn num-btn n4" data-type="NUMBER" data-choice="4">
-                  <span>4</span><span id="badge-4" class="bet-badge" style="display:none;">₹0</span>
-                </button>
-                <button type="button" class="bet-btn num-btn n5" data-type="NUMBER" data-choice="5">
-                  <span>5</span><span id="badge-5" class="bet-badge" style="display:none;">₹0</span>
-                </button>
-                <button type="button" class="bet-btn num-btn n6" data-type="NUMBER" data-choice="6">
-                  <span>6</span><span id="badge-6" class="bet-badge" style="display:none;">₹0</span>
-                </button>
-                <button type="button" class="bet-btn num-btn n7" data-type="NUMBER" data-choice="7">
-                  <span>7</span><span id="badge-7" class="bet-badge" style="display:none;">₹0</span>
-                </button>
-                <button type="button" class="bet-btn num-btn n8" data-type="NUMBER" data-choice="8">
-                  <span>8</span><span id="badge-8" class="bet-badge" style="display:none;">₹0</span>
-                </button>
-                <button type="button" class="bet-btn num-btn n9" data-type="NUMBER" data-choice="9">
-                  <span>9</span><span id="badge-9" class="bet-badge" style="display:none;">₹0</span>
-                </button>
+              <!-- SAFE PROTECT GAME MODE CONTROLS (GREEN & RED ONLY) -->
+              <div id="safeBettingContainer" class="safe-betting-container" style="display:none;">
+                <div class="safe-info-banner">
+                  <span>🛡️ <strong>Safe Protect Rules:</strong> Win pays <strong>1.5x</strong> (50% profit). If your color does not appear, you receive an <strong>80% refund</strong> (20% platform commission)!</span>
+                </div>
+                <div class="safe-buttons-grid">
+                  <button type="button" class="bet-btn safe-btn color-green" data-type="SAFE_COLOR" data-choice="GREEN">
+                    <span class="bet-label">Green</span>
+                    <span class="bet-mult">1.5x Win (50% Profit)</span>
+                    <span class="safe-protect-pill">🛡️ 80% Refund on Loss</span>
+                    <span id="badge-SAFE-GREEN" class="bet-badge" style="display:none;">₹0</span>
+                  </button>
+                  <button type="button" class="bet-btn safe-btn color-red" data-type="SAFE_COLOR" data-choice="RED">
+                    <span class="bet-label">Red</span>
+                    <span class="bet-mult">1.5x Win (50% Profit)</span>
+                    <span class="safe-protect-pill">🛡️ 80% Refund on Loss</span>
+                    <span id="badge-SAFE-RED" class="bet-badge" style="display:none;">₹0</span>
+                  </button>
+                </div>
               </div>
 
-              <div class="size-buttons-grid">
-                <button type="button" class="bet-btn size-big" data-type="SIZE" data-choice="BIG">
-                  <span class="bet-label">BIG (5–9)</span>
-                  <span class="bet-mult">2x</span>
-                  <span id="badge-BIG" class="bet-badge" style="display:none;">₹0</span>
-                </button>
-                <button type="button" class="bet-btn size-small" data-type="SIZE" data-choice="SMALL">
-                  <span class="bet-label">SMALL (0–4)</span>
-                  <span class="bet-mult">2x</span>
-                  <span id="badge-SMALL" class="bet-badge" style="display:none;">₹0</span>
-                </button>
-              </div>
             </div>
           </div>
 
@@ -352,7 +408,7 @@
               </div>
 
               <div id="recPanel-history" class="rec-panel active">
-                <div class="table-scroll-wrapper">
+                <div class="table-scroll-wrapper" id="historyTableWrapper">
                   <table class="records-table">
                     <thead>
                       <tr>
@@ -364,6 +420,12 @@
                     </thead>
                     <tbody id="historyTableBody"></tbody>
                   </table>
+                </div>
+                <div class="hist-pagination-bar">
+                  <button type="button" id="histPrevPageBtn" class="btn-page-nav" disabled>◀ Prev</button>
+                  <span id="histPageIndicator" class="page-indicator">Page 1 of 1</span>
+                  <button type="button" id="histNextPageBtn" class="btn-page-nav" disabled>Next ▶</button>
+                  <button type="button" id="histJumpLatestBtn" class="btn-jump-latest">⏩ Jump to Latest</button>
                 </div>
               </div>
 
@@ -384,14 +446,17 @@
         </div>
       </section>
 
+        </div>
+      </section>
+
       <!-- ========= VIEW 2: DEDICATED PAYMENT PAGE ========= -->
       <section id="view-payment" class="page-view" style="display:none;">
         <div class="page-header-bar">
           <div>
             <h2>💳 Payment Center</h2>
-            <p class="page-subtitle">Instant Recharge via UPI QR / Razorpay &amp; Fast Withdrawals</p>
+            <p class="page-subtitle">Manual UPI QR Recharge &amp; Fast Withdrawals</p>
           </div>
-          <button type="button" class="btn-secondary-nav" data-nav="game">← Back to Game</button>
+          <button type="button" class="btn-secondary-nav" data-nav="game">← Back to Dashboard</button>
         </div>
 
         <div class="pay-wallet-summary-grid">
@@ -429,46 +494,31 @@
                   <span class="pay-step-num">1</span>
                   <div>
                     <label for="rechargeAmountInput" class="pay-step-title">Choose Recharge Amount</label>
-                    <small id="minDepositHint" class="pay-limit-hint">Limit: ₹100 – ₹50,000</small>
+                    <small id="minDepositHint" class="pay-limit-hint">Limit: ₹10 – ₹50,000</small>
                   </div>
                 </div>
 
                 <div class="pay-input-prefix-wrap">
                   <span class="pay-currency-prefix">₹</span>
-                  <input id="rechargeAmountInput" type="number" inputmode="numeric" min="100" max="50000" step="10" value="500" class="pay-amount-input big-touch-input" placeholder="Enter amount" />
+                  <input id="rechargeAmountInput" type="number" inputmode="numeric" min="10" max="50000" step="10" value="100" class="pay-amount-input big-touch-input" placeholder="Enter amount" />
                 </div>
 
                 <div id="rechargeQuickChips" class="quick-chips-row chips-4-grid">
-                  <button type="button" class="chip-amt-btn" data-target="rechargeAmountInput" data-val="100">₹100</button>
-                  <button type="button" class="chip-amt-btn active" data-target="rechargeAmountInput" data-val="500">₹500</button>
-                  <button type="button" class="chip-amt-btn" data-target="rechargeAmountInput" data-val="1000">₹1,000</button>
-                  <button type="button" class="chip-amt-btn" data-target="rechargeAmountInput" data-val="5000">₹5,000</button>
+                  <button type="button" class="chip-amt-btn" data-target="rechargeAmountInput" data-val="10">₹10</button>
+                  <button type="button" class="chip-amt-btn" data-target="rechargeAmountInput" data-val="50">₹50</button>
+                  <button type="button" class="chip-amt-btn active" data-target="rechargeAmountInput" data-val="100">₹100</button>
+                  <button type="button" class="chip-amt-btn" data-target="rechargeAmountInput" data-val="500">₹500</button>
                 </div>
 
                 <div class="pay-step-head" style="margin-top:16px;">
                   <span class="pay-step-num">2</span>
                   <div>
-                    <div class="pay-step-title">Select Payment Method</div>
-                    <small class="pay-limit-hint">Tap UPI QR / App or Razorpay Checkout</small>
+                    <div class="pay-step-title">Scan QR &amp; Pay via UPI</div>
+                    <small class="pay-limit-hint">GPay, PhonePe, Paytm, Navi or any UPI app</small>
                   </div>
                 </div>
 
-                <div class="pay-method-switch">
-                  <button type="button" id="methodBtnUpi" class="pay-method-btn active" data-paymethod="upi">
-                    <span>📱 UPI QR / App</span>
-                    <small class="status-pill info">LIVE QR</small>
-                  </button>
-                  <button type="button" id="methodBtnRazorpay" class="pay-method-btn" data-paymethod="razorpay">
-                    <span>⚡ Razorpay</span>
-                    <small id="rzpStatusBadge" class="status-pill neutral">Checking</small>
-                  </button>
-                  <button type="button" id="methodBtnPaypal" class="pay-method-btn" data-paymethod="paypal" style="display:none;">
-                    <span>🌐 PayPal / USD</span>
-                    <small id="paypalStatusBadge" class="status-pill neutral">USD $</small>
-                  </button>
-                </div>
-
-                <!-- METHOD A: DIRECT UPI QR + UTR -->
+                <!-- DIRECT UPI QR + UTR + SCREENSHOT PROOF -->
                 <div id="payMethodPanel-upi" class="pay-method-panel active">
                   <div id="staticMerchantQrBox" class="upi-qr-box merchant-qr-card">
                     <div class="qr-img-wrap">
@@ -476,67 +526,31 @@
                     </div>
                     <div class="upi-details-col">
                       <span class="status-pill good" style="align-self:flex-start;">SCAN &amp; PAY ANY UPI APP</span>
-                      <div class="upi-kv"><span>Payee:</span><strong id="staticUpiPayeeDisplay">Badhri Narayanan</strong></div>
+                      <div class="upi-kv"><span>Payee:</span><strong id="staticUpiPayeeDisplay">GB Colors</strong></div>
                       <div class="upi-kv">
                         <span>UPI ID:</span>
-                        <strong id="staticUpiIdDisplay">badhrinarayanan79-3@okhdfcbank</strong>
+                        <strong id="staticUpiIdDisplay">gbpayment0@nyes</strong>
                         <button id="copyStaticUpiIdBtn" type="button" class="btn-copy-mini">Copy</button>
                       </div>
-                      <a id="staticUpiAppLink" href="#" class="btn-upi-app touch-cta-btn">📲 Pay Now in GPay / PhonePe / Paytm</a>
+                      <a id="staticUpiAppLink" href="upi://pay?pa=gbpayment0@nyes&pn=GB%20Colors&cu=INR" class="btn-upi-app touch-cta-btn">📲 Pay Now in UPI App</a>
                     </div>
                   </div>
 
-                  <button id="generateUpiQrBtn" type="button" class="btn-accent-outline full-w touch-cta-btn" style="margin-top:10px;">🔄 Generate Amount-Locked QR for Entered ₹</button>
-
-                  <div id="upiQrPreviewBox" class="upi-qr-box" style="display:none;">
-                    <div id="upiQrSvgWrap" class="qr-svg-wrap"></div>
-                    <div class="upi-details-col">
-                      <div class="status-pill good" style="align-self:flex-start;display:flex;align-items:center;gap:6px;">
-                        <span class="pulse-ring"></span>
-                        <span>LIVE AUTO-CREDIT ACTIVE</span>
-                      </div>
-                      <div class="upi-kv"><span>Payee:</span><strong id="upiPayeeDisplay">—</strong></div>
-                      <div class="upi-kv">
-                        <span>UPI ID:</span>
-                        <strong id="upiIdDisplay">—</strong>
-                        <button id="copyUpiIdBtn" type="button" class="btn-copy-mini">Copy</button>
-                      </div>
-                      <div class="upi-kv"><span>Order Ref:</span><strong id="upiOrderRefDisplay" class="mono">—</strong></div>
-                      <a id="upiAppDeepLink" href="#" class="btn-upi-app touch-cta-btn">📲 Open Installed UPI App</a>
-                      <small style="color:#38bdf8;font-size:0.75rem;">Pay in your UPI app. Wallet updates automatically within 2 seconds of payment!</small>
-                    </div>
-                  </div>
-
-                  <div class="form-group" style="margin-top:12px;">
-                    <label for="depositUtrInput">Optional: If not auto-credited within 1 min, Enter 12-Digit UPI UTR</label>
+                  <div class="form-group" style="margin-top:14px;">
+                    <label for="depositUtrInput">Enter 12-Digit UPI UTR / Ref Number *</label>
                     <input id="depositUtrInput" type="text" inputmode="numeric" maxlength="32" class="big-touch-field" placeholder="e.g. 431209876543" />
                   </div>
-                  <button id="submitDepositBtn" type="button" class="btn-primary-glow full-w touch-cta-btn">✅ Submit UTR for Verification</button>
-                </div>
 
-                <!-- METHOD B: RAZORPAY GATEWAY -->
-                <div id="payMethodPanel-razorpay" class="pay-method-panel" style="display:none;">
-                  <p class="pay-card-desc">Instant auto-credited checkout via GPay, PhonePe, Paytm, Cards &amp; NetBanking.</p>
-                  <div class="method-badges-row">
-                    <span>UPI</span><span>GPay</span><span>PhonePe</span><span>Cards</span><span>NetBanking</span>
-                  </div>
-                  <button id="rzpPayBtn" type="button" class="btn-primary-glow full-w touch-cta-btn">⚡ Pay Instantly via Razorpay</button>
-                  <small id="rzpFallbackNote" class="pay-card-note" style="display:none;">Razorpay keys are not configured by Admin yet. Switch to <strong>UPI QR / App</strong> above to recharge.</small>
-                </div>
-
-                <!-- METHOD C: PAYPAL INTERNATIONAL -->
-                <div id="payMethodPanel-paypal" class="pay-method-panel" style="display:none;">
-                  <p class="pay-card-desc">Instant International Recharge via PayPal Wallet or International Debit/Credit Card (USD).</p>
-                  <div class="form-group">
-                    <label for="paypalAmountInput">Deposit in USD ($)</label>
-                    <div class="pay-input-prefix-wrap">
-                      <span class="pay-currency-prefix">$</span>
-                      <input id="paypalAmountInput" type="number" min="1" max="1000" step="1" value="10" class="pay-amount-input big-touch-input" placeholder="Enter USD amount" />
+                  <div class="form-group" style="margin-top:10px;">
+                    <label for="depositProofFileInput">Attach Payment Screenshot (Optional Verification Proof)</label>
+                    <input id="depositProofFileInput" type="file" accept="image/*" class="file-touch-input" />
+                    <div id="depositProofPreviewWrap" style="display:none;margin-top:8px;">
+                      <img id="depositProofPreviewImg" src="" alt="Proof Preview" style="max-height:120px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);" />
+                      <button type="button" id="removeProofImgBtn" class="btn-xs-danger" style="margin-left:8px;">✕ Remove</button>
                     </div>
-                    <small class="pay-limit-hint" id="paypalInrEquivHint">Rate: ~$10 ≈ 850 Game Credits</small>
                   </div>
-                  <button id="paypalPayBtn" type="button" class="btn-primary-glow full-w touch-cta-btn">🌐 Pay with PayPal</button>
-                  <small id="paypalFallbackNote" class="pay-card-note" style="display:none;">PayPal credentials not configured by Admin yet.</small>
+
+                  <button id="submitDepositBtn" type="button" class="btn-primary-glow full-w touch-cta-btn">✅ Submit UTR for Verification</button>
                 </div>
               </div>
 
@@ -577,21 +591,21 @@
                     <span>Available Real Winnings</span>
                     <strong id="withdrawAvailableBal">₹0.00</strong>
                   </div>
-                  <span id="minWithdrawHint" class="status-pill good">Limit: ₹200 – ₹50,000</span>
+                  <span id="minWithdrawHint" class="status-pill good">Limit: ₹10 – ₹50,000</span>
                 </div>
 
                 <div class="form-group">
                   <label for="withdrawAmountInput">1. Withdrawal Amount (₹)</label>
                   <div class="pay-input-prefix-wrap">
                     <span class="pay-currency-prefix">₹</span>
-                    <input id="withdrawAmountInput" type="number" inputmode="numeric" min="200" max="50000" step="10" class="pay-amount-input big-touch-input" placeholder="Enter amount" />
+                    <input id="withdrawAmountInput" type="number" inputmode="numeric" min="10" max="50000" step="10" class="pay-amount-input big-touch-input" placeholder="Enter amount" />
                   </div>
                 </div>
 
                 <div id="withdrawQuickChips" class="quick-chips-row chips-4-grid" style="margin-bottom:14px;">
-                  <button type="button" class="chip-amt-btn" data-target="withdrawAmountInput" data-val="200">₹200</button>
-                  <button type="button" class="chip-amt-btn" data-target="withdrawAmountInput" data-val="500">₹500</button>
-                  <button type="button" class="chip-amt-btn" data-target="withdrawAmountInput" data-val="1000">₹1,000</button>
+                  <button type="button" class="chip-amt-btn" data-target="withdrawAmountInput" data-val="10">₹10</button>
+                  <button type="button" class="chip-amt-btn" data-target="withdrawAmountInput" data-val="50">₹50</button>
+                  <button type="button" class="chip-amt-btn" data-target="withdrawAmountInput" data-val="100">₹100</button>
                   <button type="button" class="chip-amt-btn chip-max-btn" data-target="withdrawAmountInput" data-val="ALL">MAX</button>
                 </div>
 
@@ -611,15 +625,9 @@
 
                 <!-- WITHDRAW METHOD A: UPI -->
                 <div id="wthMethodPanel-upi" class="wth-method-panel active">
-                  <div class="upi-app-pills" id="wthUpiAppPills">
-                    <button type="button" class="chip-amt-btn active" data-upiapp="Any UPI">Any UPI</button>
-                    <button type="button" class="chip-amt-btn" data-upiapp="Google Pay">GPay</button>
-                    <button type="button" class="chip-amt-btn" data-upiapp="PhonePe">PhonePe</button>
-                    <button type="button" class="chip-amt-btn" data-upiapp="Paytm">Paytm</button>
-                  </div>
                   <div class="form-group" style="margin-top:10px;">
                     <label for="withdrawUpiIdInput">UPI ID *</label>
-                    <input id="withdrawUpiIdInput" type="text" class="big-touch-field" placeholder="e.g. yourname@okhdfcbank / 98xxxx@ybl" />
+                    <input id="withdrawUpiIdInput" type="text" class="big-touch-field" placeholder="e.g. user@okhdfcbank / 98xxxx@ybl" />
                   </div>
                   <div class="form-group">
                     <label for="withdrawUpiHolderInput">Account Holder Name (Recommended)</label>
@@ -654,7 +662,7 @@
                 </div>
 
                 <button id="submitWithdrawBtn" type="button" class="btn-primary-glow full-w touch-cta-btn" style="margin-top:8px;">🏦 Submit Withdrawal Request</button>
-                <small class="pay-card-note" style="color:#94a3b8;">You will get a live Bell 🔔 notification when Admin approves or rejects your withdrawal.</small>
+                <small class="pay-card-note" style="color:#94a3b8;">You will get a live Bell 🔔 notification when Admin approves your withdrawal.</small>
               </div>
             </div>
 
@@ -672,49 +680,14 @@
         </div>
       </section>
 
-      <!-- ========= VIEW 3: HISTORY & RECORDS ========= -->
-      <section id="view-history" class="page-view" style="display:none;">
-        <div class="page-header-bar">
-          <div>
-            <h2>📜 Bet History &amp; Round Results</h2>
-            <p class="page-subtitle">Full personal wager breakdown and recent official round outcomes</p>
-          </div>
-          <button type="button" class="btn-secondary-nav" data-nav="game">← Back to Game</button>
-        </div>
-
-        <div class="pay-wallet-summary-grid">
-          <div class="pw-stat-card"><span>Total Settled Bets</span><strong id="histTotalBets">0</strong></div>
-          <div class="pw-stat-card accent-green"><span>Total Won</span><strong id="histTotalWon">₹0.00</strong></div>
-          <div class="pw-stat-card accent-red"><span>Total Lost</span><strong id="histTotalLost">₹0.00</strong></div>
-          <div class="pw-stat-card accent-blue"><span>Win Rate</span><strong id="histWinRate">0%</strong></div>
-        </div>
-
-        <div class="payment-grid">
-          <div class="payment-card">
-            <div class="pay-card-head"><h3>🎯 Official Round Results</h3></div>
-            <div class="table-scroll-wrapper">
-              <table class="records-table">
-                <thead><tr><th>Period</th><th>Number</th><th>Size</th><th>Color</th></tr></thead>
-                <tbody id="fullHistoryTableBody"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div class="payment-card">
-            <div class="pay-card-head"><h3>🧾 My Wager Records</h3></div>
-            <div id="fullMyBetsList" class="cards-feed-list"></div>
-          </div>
-        </div>
-      </section>
-
-      <!-- ========= VIEW 4: MY PROFILE ========= -->
+      <!-- ========= VIEW 3: PROFILE & SETTINGS ========= -->
       <section id="view-profile" class="page-view" style="display:none;">
         <div class="page-header-bar">
           <div>
-            <h2>👤 My Profile</h2>
-            <p class="page-subtitle">Account details, lifetime performance, and security overview</p>
+            <h2>👤 Profile &amp; Preferences</h2>
+            <p class="page-subtitle">Account overview, security settings, audio preferences, and lifetime stats</p>
           </div>
-          <button type="button" class="btn-secondary-nav" data-nav="game">← Back to Game</button>
+          <button type="button" class="btn-secondary-nav" data-nav="game">← Back to Dashboard</button>
         </div>
 
         <div class="payment-card profile-hero-card">
@@ -755,58 +728,10 @@
           <button type="button" id="profChangePassBtn" class="btn-accent-outline">Update Password</button>
         </div>
 
-        <div class="pay-wallet-summary-grid" style="margin-top:16px;">
-          <div class="pw-stat-card accent-green"><span>Real Balance</span><strong id="profRealBal">₹0.00</strong></div>
-          <div class="pw-stat-card accent-amber"><span>Demo Balance</span><strong id="profDemoBal">₹0.00</strong></div>
-          <div class="pw-stat-card accent-green"><span>Total Won</span><strong id="profTotalWon">₹0.00</strong></div>
-          <div class="pw-stat-card accent-red"><span>Total Lost</span><strong id="profTotalLost">₹0.00</strong></div>
-          <div class="pw-stat-card accent-blue"><span>Total Recharged</span><strong id="profTotalRecharged">₹0.00</strong></div>
-          <div class="pw-stat-card accent-violet"><span>Total Withdrawn</span><strong id="profTotalWithdrawn">₹0.00</strong></div>
-        </div>
-      </section>
-
-      <!-- ========= VIEW 5: RULES & PAYOUTS ========= -->
-      <section id="view-rules" class="page-view" style="display:none;">
-        <div class="page-header-bar">
-          <div>
-            <h2>📘 Game Rules &amp; Payouts</h2>
-            <p class="page-subtitle">Transparent payout rules for Color, Number, and Size predictions</p>
+        <div class="payment-card single-col-card" style="margin-top:16px;">
+          <div class="pay-card-head">
+            <h3>⚙️ Preferences &amp; Audio</h3>
           </div>
-          <button type="button" class="btn-secondary-nav" data-nav="game">← Back to Game</button>
-        </div>
-
-        <div class="payment-grid">
-          <div class="payment-card">
-            <h3>🎨 Color Predictions</h3>
-            <ul class="rules-list">
-              <li><strong>Green (1, 3, 7, 9):</strong> Pays <strong>2x</strong> your stake. If outcome is <strong>5</strong> (Green+Violet), pays <strong>1.5x</strong>.</li>
-              <li><strong>Red (2, 4, 6, 8):</strong> Pays <strong>2x</strong> your stake. If outcome is <strong>0</strong> (Red+Violet), pays <strong>1.5x</strong>.</li>
-              <li><strong>Violet (0, 5):</strong> Pays <strong>4.5x</strong> your stake whenever 0 or 5 lands.</li>
-            </ul>
-          </div>
-          <div class="payment-card">
-            <h3>🔢 Number &amp; Size Predictions</h3>
-            <ul class="rules-list">
-              <li><strong>Exact Number (0–9):</strong> Pays <strong>9x</strong> your stake on exact match.</li>
-              <li><strong>Big (5, 6, 7, 8, 9):</strong> Pays <strong>2x</strong> your stake.</li>
-              <li><strong>Small (0, 1, 2, 3, 4):</strong> Pays <strong>2x</strong> your stake.</li>
-              <li><strong>Round Timing:</strong> Cycle runs every <strong id="rulesCycleSecondsTxt">30s</strong>; betting closes <strong id="rulesLockSecondsTxt">5s</strong> before reveal.</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      <!-- ========= VIEW 6: SETTINGS ========= -->
-      <section id="view-settings" class="page-view" style="display:none;">
-        <div class="page-header-bar">
-          <div>
-            <h2>⚙️ Preferences &amp; Settings</h2>
-            <p class="page-subtitle">Audio cues, alerts, and user interface controls</p>
-          </div>
-          <button type="button" class="btn-secondary-nav" data-nav="game">← Back to Game</button>
-        </div>
-
-        <div class="payment-card single-col-card">
           <div class="setting-toggle-row">
             <div>
               <strong>🔊 Sound Effects (Clicks, Countdown, Wins)</strong>
@@ -831,14 +756,55 @@
             <label class="switch-toggle"><input type="checkbox" id="settingVibrate" checked /><span class="slider-round"></span></label>
           </div>
 
-          <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap;">
+          <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
             <button type="button" id="testAudioBtn" class="btn-accent-outline">🔊 Test Win Sound</button>
-            <button type="button" id="settingsLogoutBtn" class="btn-danger-outline">🚪 Sign Out</button>
+          </div>
+        </div>
+
+        <div class="pay-wallet-summary-grid" style="margin-top:16px;">
+          <div class="pw-stat-card accent-green"><span>Real Balance</span><strong id="profRealBal">₹0.00</strong></div>
+          <div class="pw-stat-card accent-amber"><span>Demo Balance</span><strong id="profDemoBal">₹0.00</strong></div>
+          <div class="pw-stat-card accent-green"><span>Total Won</span><strong id="profTotalWon">₹0.00</strong></div>
+          <div class="pw-stat-card accent-red"><span>Total Lost</span><strong id="profTotalLost">₹0.00</strong></div>
+          <div class="pw-stat-card accent-blue"><span>Total Recharged</span><strong id="profTotalRecharged">₹0.00</strong></div>
+          <div class="pw-stat-card accent-violet"><span>Total Withdrawn</span><strong id="profTotalWithdrawn">₹0.00</strong></div>
+        </div>
+      </section>
+
+      <!-- ========= VIEW 4: RULES & PAYOUTS ========= -->
+      <section id="view-rules" class="page-view" style="display:none;">
+        <div class="page-header-bar">
+          <div>
+            <h2>📘 Game Rules &amp; Payouts</h2>
+            <p class="page-subtitle">Transparent payout rules for Game 1 (Win Go 30s) and Game 2 (Safe Protect 1.5x)</p>
+          </div>
+          <button type="button" class="btn-secondary-nav" data-nav="game">← Back to Dashboard</button>
+        </div>
+
+        <div class="payment-grid">
+          <div class="payment-card">
+            <h3>🎮 Game 1: Classic Win Go (30s)</h3>
+            <ul class="rules-list">
+              <li><strong>Green (1, 3, 7, 9):</strong> Pays <strong>2x</strong> your stake. If outcome is <strong>5</strong> (Green+Violet), pays <strong>1.5x</strong>.</li>
+              <li><strong>Red (2, 4, 6, 8):</strong> Pays <strong>2x</strong> your stake. If outcome is <strong>0</strong> (Red+Violet), pays <strong>1.5x</strong>.</li>
+              <li><strong>Violet (0, 5):</strong> Pays <strong>4.5x</strong> your stake whenever 0 or 5 lands.</li>
+              <li><strong>Exact Number (0–9):</strong> Pays <strong>9x</strong> your stake on exact match.</li>
+              <li><strong>Big (5–9) / Small (0–4):</strong> Pays <strong>2x</strong> your stake.</li>
+            </ul>
+          </div>
+          <div class="payment-card">
+            <h3>🛡️ Game 2: Safe Protect Game (50% Profit + Refund)</h3>
+            <ul class="rules-list">
+              <li><strong>Only 2 Colors:</strong> Bet on either <strong>Green</strong> or <strong>Red</strong>.</li>
+              <li><strong>1.5x Win Payout (50% Pure Profit):</strong> E.g. ₹100 bet returns <strong>₹150</strong> on winning color!</li>
+              <li><strong>80% Loss Refund Protection:</strong> If the opposing color lands, you do NOT lose your stake! Platform withholds only 20% platform commission and <strong>refunds 80% directly back to your balance</strong>! E.g. ₹100 bet returns ₹80 refund.</li>
+              <li><strong>Round Timing:</strong> Cycle runs every <strong id="rulesCycleSecondsTxt">30s</strong>; betting closes <strong id="rulesLockSecondsTxt">5s</strong> before reveal.</li>
+            </ul>
           </div>
         </div>
       </section>
 
-      <!-- ========= VIEW 7: ADMIN EXTRA TOOLS (Mounted dynamically for Admin ONLY) ========= -->
+      <!-- ========= VIEW 5: ADMIN EXTRA TOOLS (Mounted dynamically for Admin ONLY) ========= -->
       <section id="view-admin" class="page-view" style="display:none;">
         <div id="adminPortalRoot" class="admin-dashboard-shell"></div>
       </section>

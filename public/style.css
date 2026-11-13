@@ -3775,3 +3775,271 @@ body {
   70% { box-shadow: 0 0 0 7px rgba(16, 185, 129, 0); }
   100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
 }
+
+/* =========================================================
+   TOP NAVBAR IDENTITY & DUAL GAME MODES & ADMIN MONITOR
+========================================================= */
+.top-nav-identity-wrap {
+  display: flex;
+  align-items: center;
+  margin-left: 10px;
+}
+
+.top-nav-id-badge {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.top-nav-id-badge.admin-badge {
+  background: rgba(245, 158, 11, 0.16);
+  border: 1px solid rgba(245, 158, 11, 0.45);
+  color: #fbbf24;
+}
+
+.top-nav-id-badge.user-badge {
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  color: #38bdf8;
+}
+
+/* Dual Game Mode Selector Bar */
+.game-mode-selector-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+  width: 100%;
+}
+
+.game-mode-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  background: #0e172e;
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  cursor: pointer;
+  color: #94a3b8;
+  text-align: left;
+  transition: all 0.2s ease;
+}
+
+.game-mode-btn:hover {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: #121e3a;
+  color: #e2e8f0;
+}
+
+.game-mode-btn.active {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(6, 95, 70, 0.15));
+  border-color: #10b981;
+  color: #fff;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.2);
+}
+
+.game-mode-btn .gmb-icon {
+  font-size: 1.6rem;
+}
+
+.game-mode-btn .gmb-text strong {
+  display: block;
+  font-size: 0.95rem;
+  color: inherit;
+}
+
+.game-mode-btn .gmb-text small {
+  font-size: 0.75rem;
+  opacity: 0.8;
+}
+
+/* Safe Protect Game (1.5x Win + 80% Refund) */
+.safe-betting-container {
+  width: 100%;
+}
+
+.safe-info-banner {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #a7f3d0;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  margin-bottom: 14px;
+}
+
+.safe-buttons-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.bet-btn.safe-btn {
+  padding: 24px 14px;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+.safe-protect-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.18);
+  padding: 2px 8px;
+  border-radius: 9999px;
+  letter-spacing: 0.3px;
+  color: #fff;
+}
+
+/* Admin Live Monitor Mode & Badges */
+.admin-monitor-banner {
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.bet-btn.admin-view-only {
+  cursor: default !important;
+  opacity: 0.95;
+}
+
+.bet-btn.admin-view-only:hover {
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+.bet-badge.admin-pool-badge {
+  background: #fbbf24 !important;
+  color: #0b1329 !important;
+  font-weight: 800 !important;
+  font-size: 0.72rem !important;
+  padding: 2px 7px !important;
+  border-radius: 6px !important;
+  letter-spacing: 0.2px !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+/* Admin Dashboard Locked Upcoming Preview */
+.admin-dash-lock-card {
+  margin: 12px 0;
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(16, 185, 129, 0.15));
+  border: 1.5px solid #fbbf24;
+  border-radius: 10px;
+  padding: 10px 14px;
+  animation: pulseGlow 1.8s infinite alternate;
+}
+
+.lock-preview-banner .lpb-tag {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #fbbf24;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.lock-preview-banner .lpb-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.lock-preview-banner .lpb-num {
+  font-size: 1.2rem;
+  font-weight: 800;
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+}
+
+.lock-preview-banner .lpb-profit {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-left: auto;
+}
+
+/* History Pagination */
+.hist-pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(11, 19, 41, 0.6);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  flex-wrap: wrap;
+}
+
+.btn-page-nav {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #e2e8f0;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-page-nav:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.btn-page-nav:not(:disabled):hover {
+  background: rgba(255, 255, 255, 0.16);
+  border-color: #38bdf8;
+}
+
+.btn-jump-latest {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-jump-latest:hover {
+  background: rgba(56, 189, 248, 0.28);
+}
+
+.page-indicator {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+@keyframes pulseGlow {
+  0% { box-shadow: 0 0 6px rgba(251, 191, 36, 0.3); }
+  100% { box-shadow: 0 0 16px rgba(251, 191, 36, 0.6); }
+}
+
+@media (max-width: 768px) {
+  .game-mode-selector-bar {
+    grid-template-columns: 1fr;
+  }
+}
+

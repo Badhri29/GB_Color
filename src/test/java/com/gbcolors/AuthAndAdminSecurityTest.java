@@ -23,7 +23,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "spring.datasource.username=sa",
         "spring.datasource.password=",
         "spring.datasource.driver-class-name=org.h2.Driver",
-        "gbcolors.admin-email=gbcolor.admin@gmail.com",
+        "gbcolors.admin-email=gbcolor@admin.com",
         "gbcolors.admin-default-password=Admin@123",
         "gbcolors.seed-sample-users=true"
 })
@@ -65,7 +65,7 @@ class AuthAndAdminSecurityTest {
         // Sign in as Admin
         MvcResult adminLogin = mockMvc.perform(post("/api/auth/signin")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"gbcolor.admin@gmail.com\",\"password\":\"Admin@123\"}"))
+                        .content("{\"email\":\"gbcolor@admin.com\",\"password\":\"Admin@123\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.role").value("ADMIN"))
                 .andReturn();
@@ -106,7 +106,7 @@ class AuthAndAdminSecurityTest {
         // Admin blocks user temporarily, verify signin returns 403 blocked, then unblock and allow
         MvcResult adminLogin = mockMvc.perform(post("/api/auth/signin")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"gbcolor.admin@gmail.com\",\"password\":\"Admin@123\"}"))
+                        .content("{\"email\":\"gbcolor@admin.com\",\"password\":\"Admin@123\"}"))
                 .andExpect(status().isOk())
                 .andReturn();
         String adminToken = adminLogin.getResponse().getContentAsString().replaceAll(".*\"token\":\"([^\"]+)\".*", "$1");
@@ -142,7 +142,7 @@ class AuthAndAdminSecurityTest {
     void adminCanConfigureAndEnforcePaymentMinMaxLimits() throws Exception {
         MvcResult adminLogin = mockMvc.perform(post("/api/auth/signin")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"gbcolor.admin@gmail.com\",\"password\":\"Admin@123\"}"))
+                        .content("{\"email\":\"gbcolor@admin.com\",\"password\":\"Admin@123\"}"))
                 .andExpect(status().isOk())
                 .andReturn();
         String adminToken = adminLogin.getResponse().getContentAsString().replaceAll(".*\"token\":\"([^\"]+)\".*", "$1");
@@ -213,10 +213,10 @@ class AuthAndAdminSecurityTest {
         // 1. Admin login exposes both admin info and play wallet (for same User Dashboard)
         MvcResult adminLogin = mockMvc.perform(post("/api/auth/signin")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"gbcolor.admin@gmail.com\",\"password\":\"Admin@123\"}"))
+                        .content("{\"email\":\"gbcolor@admin.com\",\"password\":\"Admin@123\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.role").value("ADMIN"))
-                .andExpect(jsonPath("$.admin.email").value("gbcolor.admin@gmail.com"))
+                .andExpect(jsonPath("$.admin.email").value("gbcolor@admin.com"))
                 .andExpect(jsonPath("$.user.email").exists())
                 .andReturn();
         String adminToken = adminLogin.getResponse().getContentAsString().replaceAll(".*\"token\":\"([^\"]+)\".*", "$1");
@@ -242,7 +242,7 @@ class AuthAndAdminSecurityTest {
 
         mockMvc.perform(post("/api/auth/forgot-password")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"email\":\"gbcolor.admin@gmail.com\"}"))
+                        .content("{\"email\":\"gbcolor@admin.com\"}"))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false));
 
@@ -380,7 +380,7 @@ class AuthAndAdminSecurityTest {
         mockMvc.perform(post("/api/admin/payment-config")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"upiId\":\"badhrinarayanan79-3@okhdfcbank\",\"upiPayeeName\":\"Badhri Narayanan\",\"activeCurrency\":\"USD\",\"upiWebhookSecret\":\"whsec_test123\",\"smsWebhookToken\":\"sms_test456\",\"minDeposit\":100,\"maxDeposit\":50000,\"minWithdraw\":200,\"maxWithdraw\":50000}"))
+                        .content("{\"upiId\":\"gbpayment0@nyes\",\"upiPayeeName\":\"GB Colors\",\"activeCurrency\":\"USD\",\"upiWebhookSecret\":\"whsec_test123\",\"smsWebhookToken\":\"sms_test456\",\"minDeposit\":10,\"maxDeposit\":50000,\"minWithdraw\":10,\"maxWithdraw\":50000}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true));
     }

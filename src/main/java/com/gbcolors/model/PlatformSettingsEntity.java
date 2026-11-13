@@ -73,10 +73,10 @@ public class PlatformSettingsEntity {
     private Integer adminMinProfitPercent = 15;
 
     @Column(name = "upi_id", length = 120)
-    private String upiId = "badhrinarayanan79-3@okhdfcbank";
+    private String upiId = "gbpayment0@nyes";
 
     @Column(name = "upi_payee_name", length = 120)
-    private String upiPayeeName = "Badhri Narayanan";
+    private String upiPayeeName = "GB Colors";
 
     @Column(name = "razorpay_key_id", length = 128)
     private String razorpayKeyId;
@@ -85,13 +85,13 @@ public class PlatformSettingsEntity {
     private String razorpayKeySecret;
 
     @Column(name = "min_deposit_amount")
-    private Integer minDepositAmount = 100;
+    private Integer minDepositAmount = 10;
 
     @Column(name = "max_deposit_amount")
     private Integer maxDepositAmount = 50000;
 
     @Column(name = "min_withdraw_amount")
-    private Integer minWithdrawAmount = 200;
+    private Integer minWithdrawAmount = 10;
 
     @Column(name = "max_withdraw_amount")
     private Integer maxWithdrawAmount = 50000;
@@ -189,10 +189,10 @@ public class PlatformSettingsEntity {
         this.adminMinProfitPercent = adminMinProfitPercent != null ? Math.max(0, Math.min(100, adminMinProfitPercent)) : 15;
     }
 
-    public String getUpiId() { return upiId != null && !upiId.isBlank() ? upiId : "badhrinarayanan79-3@okhdfcbank"; }
+    public String getUpiId() { return upiId != null && !upiId.isBlank() ? upiId : "gbpayment0@nyes"; }
     public void setUpiId(String upiId) { this.upiId = upiId; }
 
-    public String getUpiPayeeName() { return upiPayeeName != null && !upiPayeeName.isBlank() ? upiPayeeName : "Badhri Narayanan"; }
+    public String getUpiPayeeName() { return upiPayeeName != null && !upiPayeeName.isBlank() ? upiPayeeName : "GB Colors"; }
     public void setUpiPayeeName(String upiPayeeName) { this.upiPayeeName = upiPayeeName; }
 
     public String getRazorpayKeyId() { return razorpayKeyId; }

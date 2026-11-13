@@ -158,7 +158,8 @@ public class GameWebSocketHandler extends TextWebSocketHandler {
                                 email,
                                 asInteger(data.get("amount")),
                                 asString(data.get("utr")),
-                                asString(data.get("method"))
+                                asString(data.get("method")),
+                                asString(data.get("proofImage"))
                         );
                         wsHub.sendAck(session, reqId, res);
                     }

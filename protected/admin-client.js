@@ -31,6 +31,35 @@
             btn.addEventListener('click', () => switchAdminTab(btn.getAttribute('data-admtab')));
         });
 
+        // Filter Pending Requests Queue (All, Recharges, Withdrawals)
+        const fAll = document.getElementById('filterPendingAllBtn');
+        const fDep = document.getElementById('filterPendingDepBtn');
+        const fWth = document.getElementById('filterPendingWthBtn');
+        const wrapDep = document.getElementById('admPendingDepWrap');
+        const wrapWth = document.getElementById('admPendingWthWrap');
+
+        fAll?.addEventListener('click', () => {
+            fAll.classList.add('active');
+            fDep?.classList.remove('active');
+            fWth?.classList.remove('active');
+            if (wrapDep) wrapDep.style.display = 'block';
+            if (wrapWth) wrapWth.style.display = 'block';
+        });
+        fDep?.addEventListener('click', () => {
+            fDep.classList.add('active');
+            fAll?.classList.remove('active');
+            fWth?.classList.remove('active');
+            if (wrapDep) wrapDep.style.display = 'block';
+            if (wrapWth) wrapWth.style.display = 'none';
+        });
+        fWth?.addEventListener('click', () => {
+            fWth.classList.add('active');
+            fAll?.classList.remove('active');
+            fDep?.classList.remove('active');
+            if (wrapDep) wrapDep.style.display = 'none';
+            if (wrapWth) wrapWth.style.display = 'block';
+        });
+
         // Build 0-9 Force buttons
         const forceRow = document.getElementById('forceNumsRow');
         if (forceRow) {
@@ -328,6 +357,17 @@
         document.getElementById('admBlockTypePermBtn')?.classList.remove('active');
         document.getElementById('admTempDurationWrap').style.display = 'block';
         document.getElementById('admBlockModal')?.classList.add('active');
+    };
+
+    window.viewProofScreenshot = function (depositId) {
+        const dep = (latestAnalytics && latestAnalytics.depositRequests ? latestAnalytics.depositRequests : []).find(d => d.id === depositId);
+        if (!dep || !dep.proofImage) return;
+        const modal = document.getElementById('admProofModal');
+        const img = document.getElementById('admProofFullImg');
+        const meta = document.getElementById('admProofMetaTxt');
+        if (img) img.src = dep.proofImage;
+        if (meta) meta.textContent = `Deposit ID: ${dep.id} | Email: ${dep.email} | Amount: ₹${fmt(dep.amount)} | UTR: ${dep.utrOrPaymentId || '—'}`;
+        if (modal) modal.style.display = 'flex';
     };
 
     window.unblockUser = async function (email) {
@@ -747,6 +787,7 @@
                             <strong>${d.email}</strong> <small>(${d.userId})</small>
                             <div class="wth-upi">${d.method} UTR: <strong>${d.utrOrPaymentId || '—'}</strong></div>
                             <div class="wth-time">Requested: ${fmtDate(d.requestedAt)}</div>
+                            ${d.proofImage ? `<button type="button" class="btn-copy-mini" style="margin-top:6px;background:rgba(56,189,248,0.2);color:#38bdf8;border:1px solid rgba(56,189,248,0.5);font-weight:700;" onclick="viewProofScreenshot('${d.id}')">📷 View Proof Screenshot</button>` : ''}
                         </div>
                         <div class="wth-amt" style="color:#34d399;">+₹${fmt(d.amount)}</div>
                     </div>
