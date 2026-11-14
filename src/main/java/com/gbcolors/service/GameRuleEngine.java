@@ -58,7 +58,7 @@ public class GameRuleEngine {
     }
 
     public String generatePeriodString(int roundCounter) {
-        return LocalDate.now().format(PERIOD_DATE_FMT) + String.format("%04d", roundCounter);
+        return String.valueOf(roundCounter);
     }
 
     public BetEvalResult evaluateBetOutcome(BetEntity bet, int winningNumber) {

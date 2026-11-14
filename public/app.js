@@ -1179,6 +1179,29 @@
     return `<span class="color-chips-wrap"><span class="color-dot-pill ${escapeHtml(cls)}"><span class="color-circle-dot"></span>${escapeHtml(label)}</span></span>`;
   }
 
+  function formatPeriodNumber(rawPeriod) {
+    if (!rawPeriod) return '--------';
+    const s = String(rawPeriod).trim();
+    if (/^\d{12,}$/.test(s)) {
+      return s.slice(8);
+    }
+    return s;
+  }
+
+  function getModePeriodPrefix(mode) {
+    const m = mode || currentGameMode;
+    if (m === 'SAFE' || m === 'SAFE_COLOR') return 'SP';
+    if (m === 'POOL' || m === 'POOL_SHARE') return 'PS';
+    return 'WG';
+  }
+
+  function formatPeriodForMode(rawPeriod, mode) {
+    if (!rawPeriod) return '--------';
+    const prefix = getModePeriodPrefix(mode);
+    const num = formatPeriodNumber(rawPeriod);
+    return `${prefix}-${num}`;
+  }
+
   function renderUserSummary() {
     if (!currentUser) return;
     const isReal = currentUser.mode === 'REAL';
@@ -1304,7 +1327,7 @@
 
   function buildHistoryRowsHtml(history) {
     if (!Array.isArray(history) || !history.length) {
-      const colSpan = currentGameMode === 'CLASSIC' ? 4 : 3;
+      const colSpan = currentGameMode === 'CLASSIC' ? 4 : 2;
       return `<tr><td colspan="${colSpan}" class="empty-cell">No rounds completed yet.</td></tr>`;
     }
     if (currentGameMode === 'SAFE') {
@@ -1312,9 +1335,8 @@
         const color = (r.safeResultColor || (r.number % 2 === 1 ? 'GREEN' : 'RED')).toUpperCase();
         return `
           <tr>
-            <td class="mono">${escapeHtml(r.period)}</td>
+            <td class="mono">${escapeHtml(formatPeriodForMode(r.period, 'SAFE'))}</td>
             <td>${singleColorChipHtml(color)}</td>
-            <td><span class="text-green" style="font-weight:600;font-size:0.8rem;">80% Refund Shield</span></td>
           </tr>
         `;
       }).join('');
@@ -1324,9 +1346,8 @@
         const color = (r.poolResultColor || (r.number % 2 === 1 ? 'GREEN' : 'RED')).toUpperCase();
         return `
           <tr>
-            <td class="mono">${escapeHtml(r.period)}</td>
+            <td class="mono">${escapeHtml(formatPeriodForMode(r.period, 'POOL'))}</td>
             <td>${singleColorChipHtml(color)}</td>
-            <td><span class="text-cyan" style="font-weight:600;font-size:0.8rem;">90% Pool Shield</span></td>
           </tr>
         `;
       }).join('');
@@ -1335,7 +1356,7 @@
       const numCls = getRoundBallClass(r);
       return `
         <tr>
-          <td class="mono">${escapeHtml(r.period)}</td>
+          <td class="mono">${escapeHtml(formatPeriodForMode(r.period, 'CLASSIC'))}</td>
           <td><span class="hist-num-pill ${numCls}">${escapeHtml(r.number)}</span></td>
           <td><span class="size-tag ${(r.size || '').toLowerCase()}">${escapeHtml(r.size)}</span></td>
           <td>${colorChipsHtml(r)}</td>
@@ -1349,20 +1370,11 @@
 
     const headEl = $('historyTableHead');
     if (headEl) {
-      if (currentGameMode === 'SAFE') {
+      if (currentGameMode === 'SAFE' || currentGameMode === 'POOL') {
         headEl.innerHTML = `
           <tr>
             <th>Period</th>
-            <th>Winning Color</th>
-            <th>Protection</th>
-          </tr>
-        `;
-      } else if (currentGameMode === 'POOL') {
-        headEl.innerHTML = `
-          <tr>
-            <th>Period</th>
-            <th>Winning Pool</th>
-            <th>Liquidity Shield</th>
+            <th>Winning</th>
           </tr>
         `;
       } else {
@@ -1384,19 +1396,22 @@
           const color = (r.safeResultColor || (r.number % 2 === 1 ? 'GREEN' : 'RED')).toUpperCase();
           const cls = color === 'GREEN' ? 'n-green' : 'n-red';
           const letter = color === 'GREEN' ? 'G' : 'R';
-          return `<span class="recent-dot-ball ${cls}" title="Safe Protect: ${color}">${letter}</span>`;
+          const p = formatPeriodForMode(r.period, 'SAFE');
+          return `<span class="recent-dot-ball ${cls}" title="Period ${p}: ${color}">${letter}</span>`;
         }).join('');
       } else if (currentGameMode === 'POOL') {
         dotsEl.innerHTML = history.slice(0, 14).map((r) => {
           const color = (r.poolResultColor || (r.number % 2 === 1 ? 'GREEN' : 'RED')).toUpperCase();
           const cls = color === 'GREEN' ? 'n-green' : 'n-red';
           const letter = color === 'GREEN' ? 'G' : 'R';
-          return `<span class="recent-dot-ball ${cls}" title="Pool Share: ${color}">${letter}</span>`;
+          const p = formatPeriodForMode(r.period, 'POOL');
+          return `<span class="recent-dot-ball ${cls}" title="Period ${p}: ${color}">${letter}</span>`;
         }).join('');
       } else {
         dotsEl.innerHTML = history.slice(0, 14).map((r) => {
           const cls = getRoundBallClass(r);
-          return `<span class="recent-dot-ball ${cls}" title="Period ${escapeHtml(r.period)}">${escapeHtml(r.number)}</span>`;
+          const p = formatPeriodForMode(r.period, 'CLASSIC');
+          return `<span class="recent-dot-ball ${cls}" title="Period ${p}">${escapeHtml(r.number)}</span>`;
         }).join('');
       }
     }
@@ -1429,15 +1444,19 @@
       if (!activeBets.length) {
         activeEl.innerHTML = '<div class="empty-state-box">No active bets placed in this round.</div>';
       } else {
-        activeEl.innerHTML = activeBets.map((b) => `
+        activeEl.innerHTML = activeBets.map((b) => {
+          const bMode = b.betType === 'SAFE_COLOR' ? 'SAFE' : (b.betType === 'POOL_SHARE' ? 'POOL' : 'CLASSIC');
+          const pDisp = formatPeriodForMode(b.period, bMode);
+          return `
           <div class="feed-card-item">
             <div>
               <strong>${escapeHtml(b.choice)}</strong> <small>(${escapeHtml(b.mode)})</small>
-              <div class="fc-sub">Period ${escapeHtml(b.period)} • ${formatShortINR(b.amount)}</div>
+              <div class="fc-sub">Period ${escapeHtml(pDisp)} • ${formatShortINR(b.amount)}</div>
             </div>
             <button type="button" class="btn-cancel-mini" data-cancel-bet="${escapeHtml(b.id)}" data-choice="${escapeHtml(b.choice)}" data-amt="${escapeHtml(b.amount)}" ${gameState.status !== 'BETTING' ? 'disabled' : ''}>Cancel</button>
           </div>
-        `).join('');
+        `;
+        }).join('');
       }
     }
 
@@ -1459,11 +1478,13 @@
           } else {
             rightText = '-' + formatShortINR(amt);
           }
+          const bMode = (b.type === 'SAFE_COLOR' || b.betType === 'SAFE_COLOR') ? 'SAFE' : ((b.type === 'POOL_SHARE' || b.betType === 'POOL_SHARE') ? 'POOL' : 'CLASSIC');
+          const pDisp = formatPeriodForMode(b.period, bMode);
           return `
             <div class="feed-card-item">
               <div>
                 <strong>${escapeHtml(b.choice)}</strong> <span class="badge-mode">${escapeHtml(b.mode)}</span>
-                <div class="fc-sub">Period ${escapeHtml(b.period)} • Stake ${formatShortINR(b.amount)}</div>
+                <div class="fc-sub">Period ${escapeHtml(pDisp)} • Stake ${formatShortINR(b.amount)}</div>
               </div>
               <div class="fc-right ${won ? 'text-green' : (payout > 0 ? 'text-amber' : 'text-red')}">
                 <strong>${rightText}</strong>
@@ -1713,16 +1734,20 @@
     const t = Math.max(0, Number(gameState.timeLeft || 0));
     const m = Math.floor(t / 60);
     const s = t % 60;
-    if ($('periodNumber')) $('periodNumber').textContent = gameState.period || '--------';
+    if ($('periodNumber')) $('periodNumber').textContent = formatPeriodForMode(gameState.period, currentGameMode);
     if ($('timerMin')) $('timerMin').textContent = String(m).padStart(2, '0');
     if ($('timerSec')) $('timerSec').textContent = String(s).padStart(2, '0');
 
     const cycleSec = Number(gameState.cycleDurationSeconds || 30);
     const lockSec = Number(gameState.betCloseSeconds || 5);
     if ($('modeTagDisplay')) {
-      $('modeTagDisplay').textContent = currentGameMode === 'SAFE'
-        ? `SAFE PROTECT • ${cycleSec}S`
-        : `WIN GO • ${cycleSec}S`;
+      if (currentGameMode === 'SAFE') {
+        $('modeTagDisplay').textContent = `SAFE PROTECT • ${cycleSec}S`;
+      } else if (currentGameMode === 'POOL') {
+        $('modeTagDisplay').textContent = `POOL SHARE • ${cycleSec}S`;
+      } else {
+        $('modeTagDisplay').textContent = `WIN GO • ${cycleSec}S`;
+      }
     }
     if ($('rulesCycleSecondsTxt')) $('rulesCycleSecondsTxt').textContent = `${cycleSec}s`;
     if ($('rulesLockSecondsTxt')) $('rulesLockSecondsTxt').textContent = `${lockSec}s`;
@@ -1787,6 +1812,7 @@
         $('modeTagDisplay').textContent = `WIN GO • ${cycleSec}S`;
       }
     }
+    if ($('periodNumber')) $('periodNumber').textContent = formatPeriodForMode(gameState.period, currentGameMode);
     renderGameHistory();
   }
 
