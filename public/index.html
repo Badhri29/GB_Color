@@ -233,7 +233,7 @@
 
       <!-- ========= VIEW 1: DASHBOARD (GAME & ADMIN MONITOR) ========= -->
       <section id="view-game" class="page-view active">
-        <!-- DUAL GAME MODE SELECTOR -->
+        <!-- THREE GAME MODES SELECTOR -->
         <div class="game-mode-selector-bar">
           <button type="button" class="game-mode-btn active" id="gameModeClassicBtn" data-mode="CLASSIC">
             <span class="gmb-icon">🎮</span>
@@ -245,8 +245,15 @@
           <button type="button" class="game-mode-btn" id="gameModeSafeBtn" data-mode="SAFE">
             <span class="gmb-icon">🛡️</span>
             <div class="gmb-text">
-              <strong>Safe Protect Game</strong>
-              <small>1.5x Win (50% Profit) + 80% Loss Refund</small>
+              <strong>Safe Protect (80/20)</strong>
+              <small>1.20x Win (+20% Profit) • 80% Loss Refund</small>
+            </div>
+          </button>
+          <button type="button" class="game-mode-btn" id="gameModePoolBtn" data-mode="POOL">
+            <span class="gmb-icon">🔰</span>
+            <div class="gmb-text">
+              <strong>Pool Share (90/10)</strong>
+              <small>Dynamic Win Share • 90% Loss Refund</small>
             </div>
           </button>
         </div>
@@ -371,20 +378,41 @@
               <!-- SAFE PROTECT GAME MODE CONTROLS (GREEN & RED ONLY) -->
               <div id="safeBettingContainer" class="safe-betting-container" style="display:none;">
                 <div class="safe-info-banner">
-                  <span>🛡️ <strong>Safe Protect Rules:</strong> Win pays <strong>1.5x</strong> (50% profit). If your color does not appear, you receive an <strong>80% refund</strong> (20% platform commission)!</span>
+                  <span>🛡️ <strong>Safe Protect Rules:</strong> Win pays <strong>1.20x</strong> (+20% profit). If your color does not appear, you receive an <strong>80% refund</strong> (20% platform commission)!</span>
                 </div>
                 <div class="safe-buttons-grid">
                   <button type="button" class="bet-btn safe-btn color-green" data-type="SAFE_COLOR" data-choice="GREEN">
                     <span class="bet-label">Green</span>
-                    <span class="bet-mult">1.5x Win (50% Profit)</span>
+                    <span class="bet-mult">1.20x Win (+20% Profit)</span>
                     <span class="safe-protect-pill">🛡️ 80% Refund on Loss</span>
                     <span id="badge-SAFE-GREEN" class="bet-badge" style="display:none;">₹0</span>
                   </button>
                   <button type="button" class="bet-btn safe-btn color-red" data-type="SAFE_COLOR" data-choice="RED">
                     <span class="bet-label">Red</span>
-                    <span class="bet-mult">1.5x Win (50% Profit)</span>
+                    <span class="bet-mult">1.20x Win (+20% Profit)</span>
                     <span class="safe-protect-pill">🛡️ 80% Refund on Loss</span>
                     <span id="badge-SAFE-RED" class="bet-badge" style="display:none;">₹0</span>
+                  </button>
+                </div>
+              </div>
+
+              <!-- POOL SHARE (90/10 DYNAMIC) GAME MODE CONTROLS -->
+              <div id="poolBettingContainer" class="pool-betting-container" style="display:none;">
+                <div class="pool-info-banner">
+                  <span>🔰 <strong>Pool Share Rules:</strong> Losers receive a guaranteed <strong>90% refund</strong> (10% fee collected). Winners dynamically share <strong>90% of the collected fee pool</strong> proportionally to their wager!</span>
+                </div>
+                <div class="pool-buttons-grid">
+                  <button type="button" class="bet-btn pool-btn color-green" data-type="POOL_SHARE" data-choice="GREEN">
+                    <span class="bet-label">Green Pool</span>
+                    <span class="bet-mult">Dynamic Pool Win</span>
+                    <span class="pool-protect-pill">🔰 90% Refund on Loss</span>
+                    <span id="badge-POOL-GREEN" class="bet-badge" style="display:none;">₹0</span>
+                  </button>
+                  <button type="button" class="bet-btn pool-btn color-red" data-type="POOL_SHARE" data-choice="RED">
+                    <span class="bet-label">Red Pool</span>
+                    <span class="bet-mult">Dynamic Pool Win</span>
+                    <span class="pool-protect-pill">🔰 90% Refund on Loss</span>
+                    <span id="badge-POOL-RED" class="bet-badge" style="display:none;">₹0</span>
                   </button>
                 </div>
               </div>

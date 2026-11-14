@@ -237,7 +237,7 @@
   }
 
   // =========================================================
-  // LIVE NON-REPEATING TICKER ENGINE
+  // LIVE NON-REPEATING TICKER ENGINE (Synchronized with Round Outcome)
   // =========================================================
   const LiveTickerEngine = (function () {
     const DUMMY_NAMES = [
@@ -247,7 +247,6 @@
       'Kiran_G', 'PoojaM', 'Siddharth', 'Riya_99', 'Vivek_C', 'Lakshmi_S',
       'Varun_X', 'SwathiJ', 'Gokul_P', 'ShrutiD', 'Ajay_Star', 'Bhavana_T'
     ];
-    const DUMMY_TARGETS = ['GREEN', 'RED', 'VIOLET', 'BIG', 'SMALL', 'Number 7', 'Number 0', 'Number 5', 'Number 9'];
     const DUMMY_AMOUNTS = [180, 200, 360, 450, 500, 720, 900, 1000, 1450, 1800, 2250, 3600, 4500, 9000];
 
     let realEvents = [];
@@ -255,6 +254,46 @@
     let dummyBag = [];
     const recentTexts = [];
     let rotationTimer = null;
+    let latestRoundResult = null;
+
+    function setLatestRoundResult(round) {
+      if (!round) return;
+      let colors = [];
+      if (Array.isArray(round.colors)) {
+        colors = round.colors.map((c) => String(c).trim().toUpperCase());
+      } else if (typeof round.colors === 'string') {
+        colors = round.colors.split(',').map((c) => c.trim().toUpperCase()).filter(Boolean);
+      }
+      latestRoundResult = {
+        number: round.number != null ? Number(round.number) : (round.winningNumber != null ? Number(round.winningNumber) : null),
+        colors: colors,
+        size: round.size ? String(round.size).trim().toUpperCase() : null
+      };
+      dummyBag = [];
+    }
+
+    function getSynchronizedTargets() {
+      const targets = [];
+      if (latestRoundResult) {
+        if (latestRoundResult.number != null) {
+          targets.push('Number ' + latestRoundResult.number);
+        }
+        if (latestRoundResult.colors && latestRoundResult.colors.length) {
+          latestRoundResult.colors.forEach((col) => {
+            targets.push(col);
+            targets.push('Safe ' + col);
+            targets.push('Pool ' + col);
+          });
+        }
+        if (latestRoundResult.size) {
+          targets.push(latestRoundResult.size);
+        }
+      }
+      if (targets.length === 0) {
+        return ['GREEN', 'BIG', 'Number 7', 'Safe GREEN', 'Pool GREEN'];
+      }
+      return targets;
+    }
 
     function shuffle(arr) {
       const copy = arr.slice();
@@ -270,13 +309,13 @@
     function buildDummyDeck() {
       const items = [];
       const names = shuffle(DUMMY_NAMES);
-      const targets = shuffle(DUMMY_TARGETS);
+      const targets = shuffle(getSynchronizedTargets());
       const amts = shuffle(DUMMY_AMOUNTS);
       for (let i = 0; i < names.length; i++) {
         const name = names[i];
         const amt = amts[(i * 3 + Math.floor(Math.random() * amts.length)) % amts.length];
         const target = targets[(i * 5 + Math.floor(Math.random() * targets.length)) % targets.length];
-        const text = (i % 5 === 0)
+        const text = (i % 4 === 0)
           ? `💸 ${name} withdrew ${formatShortINR(amt * 2)} to UPI (Verified)`
           : `🏆 ${name} won ${formatShortINR(amt)} on ${target}`;
         items.push({ id: 'dummy_' + Date.now() + '_' + i + '_' + Math.random().toString(36).slice(2, 6), text, isReal: false });
@@ -309,7 +348,7 @@
         batch.push(item);
       }
 
-      // Priority 2: Fill remainder with non-repeating random DUMMY wins
+      // Priority 2: Fill remainder with non-repeating random DUMMY wins synchronized with round result
       let dGuard = 0;
       while (batch.length < count && dGuard < 80) {
         dGuard++;
@@ -386,7 +425,66 @@
       }
     }
 
-    return { addEvents, start, stop, refresh: renderBatch };
+    return { addEvents, start, stop, refresh: renderBatch, setLatestRoundResult };
+  })();
+
+  // USER SIMULATED LIVE BET POOL ENGINE
+  // =========================================================
+  const UserSimulatedPoolEngine = (function () {
+    let currentPeriod = '';
+    let pools = {};
+
+    function hashPeriod(periodStr) {
+      let h = 0;
+      const s = String(periodStr || '1');
+      for (let i = 0; i < s.length; i++) {
+        h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
+      }
+      return Math.abs(h);
+    }
+
+    function resetForPeriod(periodStr) {
+      currentPeriod = String(periodStr || '');
+      const seed = hashPeriod(currentPeriod);
+      const base = 8000 + (seed % 6000);
+      pools = {
+        'GREEN': base + (seed % 3500),
+        'RED': base + ((seed * 7) % 3500),
+        'VIOLET': Math.floor(base * 0.35) + ((seed * 3) % 800),
+        'BIG': base + ((seed * 5) % 4000),
+        'SMALL': base + ((seed * 11) % 4000),
+        'SAFE-GREEN': Math.floor(base * 0.7) + ((seed * 2) % 2000),
+        'SAFE-RED': Math.floor(base * 0.7) + ((seed * 13) % 2000),
+        'POOL-GREEN': Math.floor(base * 0.6) + ((seed * 4) % 1800),
+        'POOL-RED': Math.floor(base * 0.6) + ((seed * 9) % 1800)
+      };
+      for (let i = 0; i <= 9; i++) {
+        pools[String(i)] = Math.floor(base * 0.22) + (((seed + i * 19) % 12) * 120);
+      }
+    }
+
+    function tick(timeLeft) {
+      if (timeLeft > 5) {
+        const keys = Object.keys(pools);
+        const numPicks = 2 + Math.floor(Math.random() * 3);
+        const increments = [100, 200, 500, 1000, 1500];
+        for (let k = 0; k < numPicks; k++) {
+          const key = keys[Math.floor(Math.random() * keys.length)];
+          const inc = increments[Math.floor(Math.random() * increments.length)];
+          pools[key] = (pools[key] || 0) + inc;
+        }
+      }
+    }
+
+    function getPool(key) {
+      return pools[key] || 0;
+    }
+
+    return {
+      resetForPeriod,
+      tick,
+      getPool
+    };
   })();
 
   // =========================================================
@@ -1121,7 +1219,7 @@
   function renderActiveBetBadges() {
     document.querySelectorAll('.bet-badge').forEach((b) => {
       b.style.display = 'none';
-      b.classList.remove('admin-pool-badge');
+      b.classList.remove('admin-pool-badge', 'user-sim-pool', 'user-my-bet');
       b.textContent = '₹0';
     });
 
@@ -1130,6 +1228,7 @@
       const lt = latestAdminAnalytics.liveTotals;
       const colors = lt.colors || {};
       const safeColors = lt.safeColors || {};
+      const poolShares = lt.poolShares || {};
       const sizes = lt.sizes || {};
       const numbers = lt.numbers || {};
 
@@ -1140,7 +1239,9 @@
         'BIG': sizes.BIG || 0,
         'SMALL': sizes.SMALL || 0,
         'SAFE-GREEN': safeColors.GREEN || 0,
-        'SAFE-RED': safeColors.RED || 0
+        'SAFE-RED': safeColors.RED || 0,
+        'POOL-GREEN': poolShares.GREEN || 0,
+        'POOL-RED': poolShares.RED || 0
       };
       for (let i = 0; i <= 9; i++) {
         pools[String(i)] = numbers[String(i)] || 0;
@@ -1158,18 +1259,34 @@
       return;
     }
 
-    if (!currentUser || !Array.isArray(currentUser.activeBets)) return;
-    const totals = {};
-    currentUser.activeBets.forEach((b) => {
-      if (b.period === gameState.period && isBetActive(b)) {
-        const key = (b.betType === 'SAFE_COLOR' ? 'SAFE-' : '') + b.choice;
-        totals[key] = (totals[key] || 0) + Number(b.amount || 0);
-      }
-    });
-    Object.keys(totals).forEach((choice) => {
-      const badge = $('badge-' + choice);
-      if (badge && totals[choice] > 0) {
-        badge.textContent = formatShortINR(totals[choice]);
+    // REGULAR USER SESSION: Show simulated active pool activity & personal bet pills
+    const myTotals = {};
+    if (currentUser && Array.isArray(currentUser.activeBets)) {
+      currentUser.activeBets.forEach((b) => {
+        if (b.period === gameState.period && isBetActive(b)) {
+          let prefix = '';
+          if (b.betType === 'SAFE_COLOR') prefix = 'SAFE-';
+          else if (b.betType === 'POOL_SHARE') prefix = 'POOL-';
+          const key = prefix + b.choice;
+          myTotals[key] = (myTotals[key] || 0) + Number(b.amount || 0);
+        }
+      });
+    }
+
+    const allKeys = ['GREEN', 'VIOLET', 'RED', 'BIG', 'SMALL', 'SAFE-GREEN', 'SAFE-RED', 'POOL-GREEN', 'POOL-RED'];
+    for (let i = 0; i <= 9; i++) allKeys.push(String(i));
+
+    allKeys.forEach((key) => {
+      const badge = $('badge-' + key);
+      if (!badge) return;
+      if (myTotals[key] && myTotals[key] > 0) {
+        badge.textContent = '✓ ' + formatShortINR(myTotals[key]);
+        badge.classList.add('user-my-bet');
+        badge.style.display = 'inline-block';
+      } else {
+        const simVal = UserSimulatedPoolEngine.getPool(key);
+        badge.textContent = formatShortINR(simVal);
+        badge.classList.add('user-sim-pool');
         badge.style.display = 'inline-block';
       }
     });
@@ -1247,16 +1364,28 @@
     const myBetsHtml = !betHistory.length
       ? '<div class="empty-state-box">No settled bets yet.</div>'
       : betHistory.slice(0, 40).map((b) => {
-          const won = b.status === 'WON';
+          const won = b.win === true || b.status === 'WON';
+          const payout = Number(b.payout || 0);
+          const amt = Number(b.amount || 0);
+          let rightText = '';
+          let rightSub = b.status || (won ? 'WON' : 'LOST');
+          if (won) {
+            rightText = '+' + formatShortINR(payout);
+          } else if (payout > 0) {
+            rightText = '+' + formatShortINR(payout) + ' (Refund)';
+            rightSub = 'REFUNDED';
+          } else {
+            rightText = '-' + formatShortINR(amt);
+          }
           return `
             <div class="feed-card-item">
               <div>
                 <strong>${escapeHtml(b.choice)}</strong> <span class="badge-mode">${escapeHtml(b.mode)}</span>
                 <div class="fc-sub">Period ${escapeHtml(b.period)} • Stake ${formatShortINR(b.amount)}</div>
               </div>
-              <div class="fc-right ${won ? 'text-green' : 'text-red'}">
-                <strong>${won ? '+' + formatShortINR(b.payout) : '-' + formatShortINR(b.amount)}</strong>
-                <small>${escapeHtml(b.status)}</small>
+              <div class="fc-right ${won ? 'text-green' : (payout > 0 ? 'text-amber' : 'text-red')}">
+                <strong>${rightText}</strong>
+                <small>${escapeHtml(rightSub)}</small>
               </div>
             </div>
           `;
@@ -1554,17 +1683,27 @@
   }
 
   function setGameMode(mode) {
-    currentGameMode = mode === 'SAFE' ? 'SAFE' : 'CLASSIC';
+    if (mode === 'SAFE') currentGameMode = 'SAFE';
+    else if (mode === 'POOL') currentGameMode = 'POOL';
+    else currentGameMode = 'CLASSIC';
+
     if ($('gameModeClassicBtn')) $('gameModeClassicBtn').classList.toggle('active', currentGameMode === 'CLASSIC');
     if ($('gameModeSafeBtn')) $('gameModeSafeBtn').classList.toggle('active', currentGameMode === 'SAFE');
+    if ($('gameModePoolBtn')) $('gameModePoolBtn').classList.toggle('active', currentGameMode === 'POOL');
+
     if ($('classicBettingContainer')) $('classicBettingContainer').style.display = currentGameMode === 'CLASSIC' ? '' : 'none';
     if ($('safeBettingContainer')) $('safeBettingContainer').style.display = currentGameMode === 'SAFE' ? '' : 'none';
+    if ($('poolBettingContainer')) $('poolBettingContainer').style.display = currentGameMode === 'POOL' ? '' : 'none';
 
     const cycleSec = Number(gameState.cycleDurationSeconds || 30);
     if ($('modeTagDisplay')) {
-      $('modeTagDisplay').textContent = currentGameMode === 'SAFE'
-        ? `SAFE PROTECT • ${cycleSec}S`
-        : `WIN GO • ${cycleSec}S`;
+      if (currentGameMode === 'SAFE') {
+        $('modeTagDisplay').textContent = `SAFE PROTECT • ${cycleSec}S`;
+      } else if (currentGameMode === 'POOL') {
+        $('modeTagDisplay').textContent = `POOL SHARE • ${cycleSec}S`;
+      } else {
+        $('modeTagDisplay').textContent = `WIN GO • ${cycleSec}S`;
+      }
     }
   }
 
@@ -1579,13 +1718,19 @@
     let mult = 2;
     if (pendingBet.type === 'NUMBER') mult = 9;
     else if (pendingBet.type === 'COLOR' && pendingBet.choice === 'VIOLET') mult = 4.5;
-    else if (pendingBet.type === 'SAFE_COLOR') mult = 1.5;
+    else if (pendingBet.type === 'SAFE_COLOR') mult = 1.2;
+    else if (pendingBet.type === 'POOL_SHARE') mult = 1.0;
 
     if ($('summaryTotalAmt')) $('summaryTotalAmt').textContent = formatShortINR(total);
     if ($('summaryEstPayout')) {
-      const payoutText = pendingBet.type === 'SAFE_COLOR'
-        ? `${formatShortINR(Math.round(total * mult * 100) / 100)} (or 80% refund ${formatShortINR(Math.floor(total * 0.8))})`
-        : formatShortINR(Math.round(total * mult * 100) / 100);
+      let payoutText;
+      if (pendingBet.type === 'SAFE_COLOR') {
+        payoutText = `${formatShortINR(Math.round(total * 1.2 * 100) / 100)} (or 80% refund ${formatShortINR(Math.floor(total * 0.8))})`;
+      } else if (pendingBet.type === 'POOL_SHARE') {
+        payoutText = `Stake + Pool Share (or 90% refund ${formatShortINR(Math.floor(total * 0.9))})`;
+      } else {
+        payoutText = formatShortINR(Math.round(total * mult * 100) / 100);
+      }
       $('summaryEstPayout').textContent = payoutText;
     }
   }
@@ -1600,7 +1745,9 @@
       return;
     }
     pendingBet = { type, choice, unit: 10, mult: 1 };
-    const typeLabel = type === 'SAFE_COLOR' ? 'Safe Protect' : type;
+    let typeLabel = type;
+    if (type === 'SAFE_COLOR') typeLabel = 'Safe Protect';
+    else if (type === 'POOL_SHARE') typeLabel = 'Pool Share';
     if ($('modalBetTarget')) $('modalBetTarget').textContent = `${choice} (${typeLabel})`;
     document.querySelectorAll('.unit-chip').forEach((b) => b.classList.toggle('active', b.dataset.unit === '10'));
     document.querySelectorAll('.mult-chip').forEach((b) => b.classList.toggle('active', b.dataset.mult === '1'));
@@ -1637,9 +1784,14 @@
         if (Array.isArray(payload.gameState.tickerEvents)) {
           LiveTickerEngine.addEvents(payload.gameState.tickerEvents);
         }
+        if (Array.isArray(payload.gameState.history) && payload.gameState.history.length > 0) {
+          LiveTickerEngine.setLatestRoundResult(payload.gameState.history[0]);
+        }
+        UserSimulatedPoolEngine.resetForPeriod(gameState.period);
       }
       renderUserSummary();
       renderGameHistory();
+      renderActiveBetBadges();
       updateClockAndLock();
       LiveTickerEngine.start();
 
@@ -1651,13 +1803,20 @@
       }
     });
 
+    let lastKnownPeriod = null;
     socket.on('game_tick', (tick) => {
       if (!tick) return;
+      if (tick.period && tick.period !== lastKnownPeriod) {
+        lastKnownPeriod = tick.period;
+        UserSimulatedPoolEngine.resetForPeriod(tick.period);
+      }
       gameState.period = tick.period || gameState.period;
       gameState.timeLeft = tick.timeLeft != null ? tick.timeLeft : gameState.timeLeft;
       gameState.status = tick.status || gameState.status;
       if (tick.cycleDurationSeconds) gameState.cycleDurationSeconds = tick.cycleDurationSeconds;
       if (tick.betCloseSeconds) gameState.betCloseSeconds = tick.betCloseSeconds;
+      UserSimulatedPoolEngine.tick(gameState.timeLeft);
+      renderActiveBetBadges();
       updateClockAndLock();
     });
 
@@ -1704,6 +1863,13 @@
       if (!data) return;
       if (Array.isArray(data.history)) gameState.history = data.history;
       if (Array.isArray(data.newTickerEvents)) LiveTickerEngine.addEvents(data.newTickerEvents);
+      if (data.result) {
+        LiveTickerEngine.setLatestRoundResult(data.result);
+      } else if (data.round) {
+        LiveTickerEngine.setLatestRoundResult(data.round);
+      } else if (Array.isArray(data.history) && data.history.length > 0) {
+        LiveTickerEngine.setLatestRoundResult(data.history[0]);
+      }
       if (currentUser) currentUser.activeBets = [];
       renderGameHistory();
       renderUserSummary();
@@ -2147,9 +2313,10 @@
       }
     });
 
-    // Game Mode Switcher (Game 1 Classic vs Game 2 Safe Protect)
+    // Game Mode Switcher (Game 1 Classic vs Game 2 Safe Protect vs Game 3 Pool Share)
     if ($('gameModeClassicBtn')) $('gameModeClassicBtn').addEventListener('click', () => setGameMode('CLASSIC'));
     if ($('gameModeSafeBtn')) $('gameModeSafeBtn').addEventListener('click', () => setGameMode('SAFE'));
+    if ($('gameModePoolBtn')) $('gameModePoolBtn').addEventListener('click', () => setGameMode('POOL'));
 
     // Game History Pagination
     if ($('histPrevPageBtn')) {

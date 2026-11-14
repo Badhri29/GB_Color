@@ -48,7 +48,7 @@ class GameRuleEngineTest {
         assertEquals(450L, engine.evaluateBetOutcome(numBet, 7).payout());
         assertEquals(0L, engine.evaluateBetOutcome(numBet, 1).payout());
 
-        // Game 2: Safe Protect (1.5x Win + 80% Refund Protect on Loss)
+        // Game 2: Safe Protect (1.20x Win + 80% Refund Protect on Loss)
         BetEntity safeGreen = new BetEntity();
         safeGreen.setBetType(GameEnums.BetType.SAFE_COLOR);
         safeGreen.setChoice("GREEN");
@@ -56,11 +56,25 @@ class GameRuleEngineTest {
 
         var safeGreenWin = engine.evaluateBetOutcome(safeGreen, 3);
         assertTrue(safeGreenWin.win());
-        assertEquals(150L, safeGreenWin.payout()); // 1.5x payout (50% profit)
+        assertEquals(120L, safeGreenWin.payout()); // 1.20x payout (20% profit)
 
         var safeGreenLossRefund = engine.evaluateBetOutcome(safeGreen, 2);
         assertFalse(safeGreenLossRefund.win());
         assertEquals(80L, safeGreenLossRefund.payout()); // 80% refund protection!
+
+        // Game 3: Pool Share (Base 1.0x Win stake + 90% Refund Protect on Loss)
+        BetEntity poolGreen = new BetEntity();
+        poolGreen.setBetType(GameEnums.BetType.POOL_SHARE);
+        poolGreen.setChoice("GREEN");
+        poolGreen.setAmount(BigDecimal.valueOf(100));
+
+        var poolGreenWin = engine.evaluateBetOutcome(poolGreen, 3);
+        assertTrue(poolGreenWin.win());
+        assertEquals(100L, poolGreenWin.payout());
+
+        var poolGreenLossRefund = engine.evaluateBetOutcome(poolGreen, 2);
+        assertFalse(poolGreenLossRefund.win());
+        assertEquals(90L, poolGreenLossRefund.payout()); // 90% refund protection!
     }
 
     @Test

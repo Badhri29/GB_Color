@@ -361,8 +361,52 @@ public class GameLoopService {
             BigDecimal roundRealPayout = BigDecimal.ZERO;
             int winnersCount = 0;
 
+            // Pre-calculate POOL_SHARE payouts if any exist
+            Map<String, GameRuleEngine.BetEvalResult> poolShareEvalMap = new HashMap<>();
+            String winColor = (winningNumber == 1 || winningNumber == 3 || winningNumber == 5 || winningNumber == 7 || winningNumber == 9)
+                    ? "GREEN" : "RED";
+
+            for (GameEnums.ActiveMode m : GameEnums.ActiveMode.values()) {
+                List<BetEntity> poolBets = currentBets.stream()
+                        .filter(b -> b.getBetType() == GameEnums.BetType.POOL_SHARE && b.getMode() == m)
+                        .toList();
+                if (poolBets.isEmpty()) continue;
+
+                List<BetEntity> winners = poolBets.stream()
+                        .filter(b -> winColor.equalsIgnoreCase(b.getChoice()))
+                        .toList();
+                List<BetEntity> losers = poolBets.stream()
+                        .filter(b -> !winColor.equalsIgnoreCase(b.getChoice()))
+                        .toList();
+
+                long loserTotal = 0L;
+                long totalLoserRefunds = 0L;
+                for (BetEntity lb : losers) {
+                    long bAmt = lb.getAmount().longValue();
+                    long ref = (long) Math.floor(bAmt * 0.90);
+                    loserTotal += bAmt;
+                    totalLoserRefunds += ref;
+                    poolShareEvalMap.put(lb.getId(), new GameRuleEngine.BetEvalResult(false, 0.90, ref));
+                }
+
+                long feeCollected = loserTotal - totalLoserRefunds;
+                long adminFee = (long) Math.floor(feeCollected * 0.10);
+                long distributablePool = feeCollected - adminFee;
+                long winnerTotal = winners.stream().map(BetEntity::getAmount).mapToLong(BigDecimal::longValue).sum();
+
+                for (BetEntity wb : winners) {
+                    long bAmt = wb.getAmount().longValue();
+                    long profitShare = winnerTotal > 0 ? (long) Math.floor((double) distributablePool * bAmt / winnerTotal) : 0L;
+                    long payout = bAmt + profitShare;
+                    double mult = bAmt > 0 ? ((double) payout / bAmt) : 1.0;
+                    poolShareEvalMap.put(wb.getId(), new GameRuleEngine.BetEvalResult(true, mult, payout));
+                }
+            }
+
             for (BetEntity bet : currentBets) {
-                GameRuleEngine.BetEvalResult eval = ruleEngine.evaluateBetOutcome(bet, winningNumber);
+                GameRuleEngine.BetEvalResult eval = bet.getBetType() == GameEnums.BetType.POOL_SHARE
+                        ? poolShareEvalMap.getOrDefault(bet.getId(), ruleEngine.evaluateBetOutcome(bet, winningNumber))
+                        : ruleEngine.evaluateBetOutcome(bet, winningNumber);
                 BigDecimal amtBd = bet.getAmount();
                 BigDecimal payoutBd = BigDecimal.valueOf(eval.payout());
                 BigDecimal netProfitBd = payoutBd.subtract(amtBd);
@@ -378,7 +422,7 @@ public class GameLoopService {
                     settings.setTotalDemoPayouts(settings.getTotalDemoPayouts().add(payoutBd));
                 }
 
-                bet.setStatus(eval.win() ? GameEnums.BetStatus.WON : (payoutBd.compareTo(BigDecimal.ZERO) > 0 ? GameEnums.BetStatus.WON : GameEnums.BetStatus.LOST));
+                bet.setStatus(eval.win() ? GameEnums.BetStatus.WON : GameEnums.BetStatus.LOST);
                 bet.setPayout(payoutBd);
                 bet.setNetProfit(netProfitBd);
                 bet.setResultNumber(winningNumber);
@@ -541,6 +585,11 @@ public class GameLoopService {
         if (betType == GameEnums.BetType.SAFE_COLOR) {
             if (!"GREEN".equals(choice) && !"RED".equals(choice)) {
                 return Map.of("success", false, "message", "Game 2 Safe Protect mode only accepts GREEN or RED.");
+            }
+        }
+        if (betType == GameEnums.BetType.POOL_SHARE) {
+            if (!"GREEN".equals(choice) && !"RED".equals(choice)) {
+                return Map.of("success", false, "message", "Game 3 Pool Share mode only accepts GREEN or RED.");
             }
         }
 
@@ -2110,9 +2159,16 @@ public class GameLoopService {
     private Map<String, Object> buildRealWinTickerEvent(BetEntity bet) {
         String masked = maskEmail(bet.getEmail());
         long payout = bet.getPayout() != null ? bet.getPayout().longValue() : 0L;
-        String label = bet.getBetType() == GameEnums.BetType.NUMBER
-                ? "Number " + bet.getChoice()
-                : bet.getChoice();
+        String label;
+        if (bet.getBetType() == GameEnums.BetType.NUMBER) {
+            label = "Number " + bet.getChoice();
+        } else if (bet.getBetType() == GameEnums.BetType.SAFE_COLOR) {
+            label = "Safe " + bet.getChoice();
+        } else if (bet.getBetType() == GameEnums.BetType.POOL_SHARE) {
+            label = "Pool " + bet.getChoice();
+        } else {
+            label = bet.getChoice();
+        }
         return Map.of(
                 "id", "TKR_" + bet.getId(),
                 "text", "🎉 " + masked + " won ₹" + formatInr(payout) + " on " + label,

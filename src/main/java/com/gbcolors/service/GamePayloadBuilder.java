@@ -211,6 +211,10 @@ public class GamePayloadBuilder {
         safeColorTotals.put("GREEN", 0L);
         safeColorTotals.put("RED", 0L);
 
+        Map<String, Long> poolShareTotals = new LinkedHashMap<>();
+        poolShareTotals.put("GREEN", 0L);
+        poolShareTotals.put("RED", 0L);
+
         Map<String, Long> sizeTotals = new LinkedHashMap<>();
         sizeTotals.put("BIG", 0L);
         sizeTotals.put("SMALL", 0L);
@@ -236,6 +240,9 @@ public class GamePayloadBuilder {
                 colorTotals.merge(bet.getChoice(), amt, Long::sum);
             } else if (bet.getBetType() == GameEnums.BetType.SAFE_COLOR) {
                 safeColorTotals.merge(bet.getChoice(), amt, Long::sum);
+                colorTotals.merge(bet.getChoice(), amt, Long::sum);
+            } else if (bet.getBetType() == GameEnums.BetType.POOL_SHARE) {
+                poolShareTotals.merge(bet.getChoice(), amt, Long::sum);
                 colorTotals.merge(bet.getChoice(), amt, Long::sum);
             } else if (bet.getBetType() == GameEnums.BetType.SIZE) {
                 sizeTotals.merge(bet.getChoice(), amt, Long::sum);
@@ -312,6 +319,7 @@ public class GamePayloadBuilder {
         Map<String, Object> liveTotals = new LinkedHashMap<>();
         liveTotals.put("colors", colorTotals);
         liveTotals.put("safeColors", safeColorTotals);
+        liveTotals.put("poolShares", poolShareTotals);
         liveTotals.put("sizes", sizeTotals);
         liveTotals.put("numbers", numberTotals);
         liveTotals.put("totalBetAmount", totalBetAmount);

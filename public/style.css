@@ -2180,13 +2180,37 @@ html, body {
   margin-bottom: 14px;
 }
 .num-btn {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
-  height: 54px;
+  height: 56px;
   border-radius: 12px;
-  font-size: 1.2rem;
+  font-size: 1.15rem;
   font-weight: 800;
   background: var(--card-inner, #192440);
   border: 2px solid rgba(255, 255, 255, 0.1);
+  padding: 4px 2px;
+  overflow: hidden;
+}
+.num-btn > span:first-child {
+  line-height: 1.1;
+  font-size: 1.15rem;
+}
+.num-btn .bet-badge {
+  position: static !important;
+  margin-top: 3px !important;
+  font-size: 0.60rem !important;
+  font-weight: 800 !important;
+  padding: 1px 4px !important;
+  line-height: 1.1 !important;
+  border-radius: 4px !important;
+  max-width: 95% !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  box-shadow: none !important;
 }
 .num-btn.n1, .num-btn.n3, .num-btn.n7, .num-btn.n9 { border-color: #10b981; color: #34d399; }
 .num-btn.n2, .num-btn.n4, .num-btn.n6, .num-btn.n8 { border-color: #ef4444; color: #f87171; }
@@ -2333,6 +2357,7 @@ html, body {
 .fc-right small { font-size: 0.7rem; color: #94a3b8; }
 .text-green { color: #34d399; }
 .text-red { color: #f87171; }
+.text-amber { color: #fbbf24; }
 .badge-mode {
   font-size: 0.68rem;
   background: rgba(255,255,255,0.09);
@@ -3839,10 +3864,10 @@ body {
   color: #38bdf8;
 }
 
-/* Dual Game Mode Selector Bar */
+/* Three Game Modes Selector Bar */
 .game-mode-selector-bar {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 12px;
   margin-bottom: 16px;
   width: 100%;
@@ -3890,7 +3915,7 @@ body {
   opacity: 0.8;
 }
 
-/* Safe Protect Game (1.5x Win + 80% Refund) */
+/* Safe Protect Game (1.20x Win + 80% Refund) */
 .safe-betting-container {
   width: 100%;
 }
@@ -3932,6 +3957,48 @@ body {
   color: #fff;
 }
 
+/* Pool Share Game (90/10 Dynamic Win Share) */
+.pool-betting-container {
+  width: 100%;
+}
+
+.pool-info-banner {
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  color: #93c5fd;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  margin-bottom: 14px;
+}
+
+.pool-buttons-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.bet-btn.pool-btn {
+  padding: 24px 14px;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+.pool-protect-pill {
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.18);
+  padding: 2px 8px;
+  border-radius: 9999px;
+  letter-spacing: 0.3px;
+  color: #fff;
+}
+
 /* Admin Live Monitor Mode & Badges */
 .admin-monitor-banner {
   background: rgba(245, 158, 11, 0.12);
@@ -3963,6 +4030,46 @@ body {
   border-radius: 6px !important;
   letter-spacing: 0.2px !important;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.num-btn .bet-badge.admin-pool-badge {
+  position: static !important;
+  font-size: 0.58rem !important;
+  padding: 1px 3px !important;
+  letter-spacing: -0.2px !important;
+  box-shadow: none !important;
+  margin-top: 2px !important;
+  max-width: 96% !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.bet-badge.user-sim-pool {
+  background: rgba(148, 163, 184, 0.25) !important;
+  color: #cbd5e1 !important;
+  font-weight: 700 !important;
+  font-size: 0.68rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: none;
+}
+
+.num-btn .bet-badge.user-sim-pool {
+  position: static !important;
+  font-size: 0.56rem !important;
+  padding: 1px 3px !important;
+  margin-top: 2px !important;
+  max-width: 96% !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.bet-badge.user-my-bet {
+  background: #10b981 !important;
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  box-shadow: 0 0 10px rgba(16, 185, 129, 0.5) !important;
 }
 
 /* Admin Dashboard Locked Upcoming Preview */

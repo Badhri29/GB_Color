@@ -112,10 +112,20 @@ public class GameRuleEngine {
                     ? "green" : "red";
             if (choice.equals(winningColor)) {
                 win = true;
-                multiplier = 1.5;
+                multiplier = 1.2;
             } else {
                 win = false;
                 multiplier = 0.8;
+            }
+        } else if (bet.getBetType() == GameEnums.BetType.POOL_SHARE) {
+            String winningColor = (winningNumber == 1 || winningNumber == 3 || winningNumber == 5 || winningNumber == 7 || winningNumber == 9)
+                    ? "green" : "red";
+            if (choice.equals(winningColor)) {
+                win = true;
+                multiplier = 1.0;
+            } else {
+                win = false;
+                multiplier = 0.9;
             }
         }
 
@@ -163,9 +173,33 @@ public class GameRuleEngine {
 
         for (int num = 0; num <= 9; num++) {
             long totalPayout = 0L;
+            long poolShareLoserTotal = 0L;
+            long poolShareWinnerTotal = 0L;
+            String winCol = (num == 1 || num == 3 || num == 5 || num == 7 || num == 9) ? "green" : "red";
+
             for (BetEntity bet : targetBets) {
-                totalPayout += evaluateBetOutcome(bet, num).payout();
+                if (bet.getBetType() == GameEnums.BetType.POOL_SHARE) {
+                    long bAmt = bet.getAmount() != null ? bet.getAmount().longValue() : 0L;
+                    String ch = bet.getChoice() == null ? "" : bet.getChoice().trim().toLowerCase();
+                    if (ch.equals(winCol)) {
+                        poolShareWinnerTotal += bAmt;
+                    } else {
+                        poolShareLoserTotal += bAmt;
+                    }
+                } else {
+                    totalPayout += evaluateBetOutcome(bet, num).payout();
+                }
             }
+
+            if (poolShareLoserTotal > 0 || poolShareWinnerTotal > 0) {
+                long loserRefund = (long) Math.floor(poolShareLoserTotal * 0.90);
+                long feeCollected = poolShareLoserTotal - loserRefund;
+                long adminFee = (long) Math.floor(feeCollected * 0.10);
+                long winnerPool = feeCollected - adminFee;
+                long winnerPayout = poolShareWinnerTotal > 0 ? (poolShareWinnerTotal + winnerPool) : 0L;
+                totalPayout += (loserRefund + winnerPayout);
+            }
+
             long houseProfit = totalCollected - totalPayout;
             if (houseProfit > maxProfit) {
                 maxProfit = houseProfit;

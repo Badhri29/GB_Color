@@ -111,6 +111,26 @@ class WebSocketAndBetFlowTest {
         JsonNode userAfterCancel = waitForEvent(messages, buffered, "user_updated");
         assertEquals(1000L, userAfterCancel.get("data").get("demoBalance").asLong());
 
+        // 3b. Place and cancel POOL_SHARE bet
+        String poolBetPayload = objectMapper.writeValueAsString(Map.of(
+                "event", "place_bet",
+                "reqId", "req_pool",
+                "data", Map.of("type", "POOL_SHARE", "choice", "GREEN", "amount", 100)
+        ));
+        ws.sendText(poolBetPayload, true).get(3, TimeUnit.SECONDS);
+        JsonNode poolAck = waitForAck(messages, buffered, "req_pool");
+        assertTrue(poolAck.get("payload").get("success").asBoolean());
+        String poolBetId = poolAck.get("payload").get("bet").get("id").asText();
+
+        ws.sendText(objectMapper.writeValueAsString(Map.of(
+                "event", "cancel_bet",
+                "reqId", "req_pool_cancel",
+                "data", poolBetId
+        )), true).get(3, TimeUnit.SECONDS);
+        JsonNode poolCancelAck = waitForAck(messages, buffered, "req_pool_cancel");
+        assertTrue(poolCancelAck.get("payload").get("success").asBoolean());
+        waitForEvent(messages, buffered, "user_updated");
+
         // 4. Deposit request -> Admin approval -> Withdrawal -> Offline Paid -> Next Login Notification
         ws.sendText(objectMapper.writeValueAsString(Map.of(
                 "event", "submit_deposit",
