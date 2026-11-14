@@ -1217,6 +1217,21 @@
       }
     }
 
+    if ($('headerUserUid')) {
+      if (isAdminSession) {
+        $('headerUserUid').textContent = 'ADMIN';
+      } else {
+        $('headerUserUid').textContent = `UID: ${currentUser.userId || '—'}`;
+      }
+    }
+    if ($('headerUserEmail')) {
+      if (isAdminSession) {
+        $('headerUserEmail').textContent = 'gbcolor@admin.com';
+      } else {
+        $('headerUserEmail').textContent = currentUser.email || currentUser.username || 'user@example.com';
+      }
+    }
+
     if ($('headerWalletLabel')) $('headerWalletLabel').textContent = isReal ? 'REAL CASH' : 'DEMO COINS';
     if ($('activeBalanceDisplay')) $('activeBalanceDisplay').textContent = formatINR(activeBal);
     if ($('modeDemoBtn')) $('modeDemoBtn').classList.toggle('active', !isReal);
@@ -2737,32 +2752,65 @@
       });
     }
 
-    // Notifications Modals
+    // Notifications Popover & Modals
     if ($('notifModalAckBtn')) $('notifModalAckBtn').addEventListener('click', () => acknowledgeActivePopup(false));
     if ($('notifModalViewStatusBtn')) $('notifModalViewStatusBtn').addEventListener('click', () => acknowledgeActivePopup(true));
     if ($('notifBellBtn')) {
-      $('notifBellBtn').addEventListener('click', () => {
-        renderNotificationsInbox();
-        if ($('notificationsHistoryModal')) $('notificationsHistoryModal').style.display = 'flex';
+      $('notifBellBtn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const popover = $('notifDropdownPopover');
+        if (popover) {
+          const isShown = popover.style.display !== 'none';
+          if (isShown) {
+            popover.style.display = 'none';
+          } else {
+            renderNotificationsInbox();
+            popover.style.display = 'flex';
+          }
+        }
       });
     }
     if ($('drawerNotifBtn')) {
-      $('drawerNotifBtn').addEventListener('click', () => {
+      $('drawerNotifBtn').addEventListener('click', (e) => {
+        e.stopPropagation();
         closeUserDrawer();
-        renderNotificationsInbox();
-        if ($('notificationsHistoryModal')) $('notificationsHistoryModal').style.display = 'flex';
+        const popover = $('notifDropdownPopover');
+        if (popover) {
+          renderNotificationsInbox();
+          popover.style.display = 'flex';
+        }
       });
     }
-    if ($('closeNotifsHistoryModal')) {
-      $('closeNotifsHistoryModal').addEventListener('click', () => { $('notificationsHistoryModal').style.display = 'none'; });
+    if ($('notifDropdownMarkReadBtn')) {
+      $('notifDropdownMarkReadBtn').addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const unreadIds = sessionNotifications.filter((n) => !n.isRead).map((n) => n.id);
+        if (unreadIds.length > 0) {
+          await markNotificationsAsRead(unreadIds);
+        }
+        showToast('All notifications marked as read', 'success');
+      });
     }
     if ($('markAllNotifsReadBtn')) {
       $('markAllNotifsReadBtn').addEventListener('click', async () => {
         const unreadIds = sessionNotifications.filter((n) => !n.isRead).map((n) => n.id);
-        await markNotificationsAsRead(unreadIds);
+        if (unreadIds.length > 0) {
+          await markNotificationsAsRead(unreadIds);
+        }
         showToast('All notifications marked as read', 'success');
       });
     }
+
+    // Dismiss notification dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      const popover = $('notifDropdownPopover');
+      if (popover && popover.style.display !== 'none') {
+        const wrap = $('notifBellWrapper');
+        if (wrap && !wrap.contains(e.target)) {
+          popover.style.display = 'none';
+        }
+      }
+    });
 
     // Blocked Modal Ack
     if ($('blockedModalAckBtn')) {
