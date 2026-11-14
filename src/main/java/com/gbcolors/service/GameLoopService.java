@@ -97,6 +97,7 @@ public class GameLoopService {
     private Integer lockedWinningNumber = null;
     private String lockedSafeColor = null;
     private String lockedPoolColor = null;
+    private volatile Map<String, Object> lastWinningResult = null;
     private final List<BetEntity> currentBets = new ArrayList<>();
 
     public GameLoopService(
@@ -258,39 +259,53 @@ public class GameLoopService {
             int closeSecs = getEffectiveCloseSeconds(settings);
 
             timeLeft--;
-            if (timeLeft <= closeSecs && timeLeft > 0) {
-                if (!"LOCKED".equals(currentStatus) || lockedWinningNumber == null) {
-                    currentStatus = "LOCKED";
-                    lockedWinningNumber = computeUpcomingWinningNumber(settings);
-                    lockedSafeColor = computeUpcomingSafeColor(settings);
-                    lockedPoolColor = computeUpcomingPoolColor(settings);
-                    logLockedPreview(buildAdminAnalyticsSnapshot());
+            if ("BETTING".equals(currentStatus) && timeLeft <= closeSecs && timeLeft > 0) {
+                currentStatus = "LOCKED";
+                lockedWinningNumber = computeUpcomingWinningNumber(settings);
+                lockedSafeColor = computeUpcomingSafeColor(settings);
+                lockedPoolColor = computeUpcomingPoolColor(settings);
+                logLockedPreview(buildAdminAnalyticsSnapshot());
+            } else if ("REVEAL".equals(currentStatus)) {
+                if (timeLeft <= 0) {
+                    currentStatus = "BETTING";
+                    settings = loadOrInitSettings();
+                    cycleSecs = settings.getCycleDurationSeconds();
+                    closeSecs = getEffectiveCloseSeconds(settings);
+                    timeLeft = cycleSecs;
+                    currentBets.clear();
+                    lastWinningResult = null;
                 }
             } else if (timeLeft <= 0) {
                 SettlementResult settlement = settleRoundInsideTx();
                 roundResultBroadcast = settlement.roundResultBroadcast();
                 settledUserPayloads = settlement.settledUserPayloads();
+                if (roundResultBroadcast != null && roundResultBroadcast.containsKey("result")) {
+                    //noinspection unchecked
+                    lastWinningResult = (Map<String, Object>) roundResultBroadcast.get("result");
+                }
 
                 lockedWinningNumber = null;
                 lockedSafeColor = null;
                 lockedPoolColor = null;
                 forcedNextResult = null;
-                currentStatus = "BETTING";
-                // Reload settings in case cycle duration was updated
+
+                currentStatus = "REVEAL";
                 settings = loadOrInitSettings();
-                cycleSecs = settings.getCycleDurationSeconds();
-                closeSecs = getEffectiveCloseSeconds(settings);
-                timeLeft = cycleSecs;
-                currentBets.clear();
+                int resultSecs = settings.getResultDisplaySeconds();
+                timeLeft = resultSecs > 0 ? resultSecs : 3;
             }
 
             tickPayload = new LinkedHashMap<>();
             tickPayload.put("period", currentPeriod);
-            tickPayload.put("timeLeft", timeLeft);
+            tickPayload.put("timeLeft", Math.max(0, timeLeft));
             tickPayload.put("status", currentStatus);
             tickPayload.put("activeBetsCount", currentBets.size());
             tickPayload.put("cycleDurationSeconds", cycleSecs);
             tickPayload.put("betCloseSeconds", closeSecs);
+            tickPayload.put("resultDisplaySeconds", settings.getResultDisplaySeconds());
+            if (lastWinningResult != null) {
+                tickPayload.put("winningResult", lastWinningResult);
+            }
 
             adminAnalyticsSnapshot = buildAdminAnalyticsSnapshot();
         } finally {
@@ -609,6 +624,10 @@ public class GameLoopService {
                 gameState.put("status", currentStatus);
                 gameState.put("cycleDurationSeconds", settings.getCycleDurationSeconds());
                 gameState.put("betCloseSeconds", getEffectiveCloseSeconds(settings));
+                gameState.put("resultDisplaySeconds", settings.getResultDisplaySeconds());
+                if (lastWinningResult != null) {
+                    gameState.put("winningResult", lastWinningResult);
+                }
                 gameState.put("history", getHistoryTop25());
                 gameState.put("tickerEvents", getTickerEventsSnapshot());
 
@@ -689,7 +708,7 @@ public class GameLoopService {
         try {
             PlatformSettingsEntity settings = loadOrInitSettings();
             int closeSecs = getEffectiveCloseSeconds(settings);
-            if ("LOCKED".equals(currentStatus) || timeLeft <= closeSecs) {
+            if (!"BETTING".equals(currentStatus) || timeLeft <= closeSecs) {
                 return Map.of("success", false, "message", "Round is locked! Please wait for the next period.");
             }
 
@@ -1391,9 +1410,20 @@ public class GameLoopService {
     }
 
     public Map<String, Object> updateGameConfig(Integer cycleSeconds, Integer closeSeconds, Integer minProfitPct) {
+        return updateGameConfig(cycleSeconds, closeSeconds, minProfitPct, null, null);
+    }
+
+    public Map<String, Object> updateGameConfig(
+            Integer cycleSeconds,
+            Integer closeSeconds,
+            Integer minProfitPct,
+            Integer resultDisplaySeconds,
+            BigDecimal defaultDemoBalance
+    ) {
         int cycle = cycleSeconds != null ? cycleSeconds : 30;
         int close = closeSeconds != null ? closeSeconds : 5;
         int margin = minProfitPct != null ? minProfitPct : 15;
+        int resultSecs = resultDisplaySeconds != null && resultDisplaySeconds >= 1 ? resultDisplaySeconds : 3;
 
         if (cycle < 15 || cycle > 300) {
             return Map.of("success", false, "message", "Cycle time must be between 15 and 300 seconds.");
@@ -1403,6 +1433,9 @@ public class GameLoopService {
         }
         if (margin < 0 || margin > 100) {
             return Map.of("success", false, "message", "Admin profit margin % must be between 0 and 100.");
+        }
+        if (resultSecs < 1 || resultSecs > 15) {
+            return Map.of("success", false, "message", "Result display time must be between 1 and 15 seconds.");
         }
 
         Map<String, Object> tickPayload;
@@ -1415,6 +1448,10 @@ public class GameLoopService {
                 s.setCycleDurationSeconds(cycle);
                 s.setBetCloseSeconds(close);
                 s.setAdminMinProfitPercent(margin);
+                s.setResultDisplaySeconds(resultSecs);
+                if (defaultDemoBalance != null && defaultDemoBalance.compareTo(BigDecimal.ZERO) > 0) {
+                    s.setDefaultDemoBalance(defaultDemoBalance);
+                }
                 settingsRepo.save(s);
 
                 if ("BETTING".equals(currentStatus)) {
@@ -1437,6 +1474,10 @@ public class GameLoopService {
             tickPayload.put("activeBetsCount", currentBets.size());
             tickPayload.put("cycleDurationSeconds", cycle);
             tickPayload.put("betCloseSeconds", close);
+            tickPayload.put("resultDisplaySeconds", resultSecs);
+            if (lastWinningResult != null) {
+                tickPayload.put("winningResult", lastWinningResult);
+            }
 
             adminSnapshot = buildAdminAnalyticsSnapshot();
             if ("LOCKED".equals(currentStatus)) {
@@ -1450,7 +1491,34 @@ public class GameLoopService {
         wsHub.emitToAdmin("admin_live_update", adminSnapshot);
         return Map.of(
                 "success", true,
-                "message", "Game config updated! Cycle: " + cycle + "s | Close: " + close + "s | Margin: " + margin + "%"
+                "message", "Game config updated! Cycle: " + cycle + "s | Close: " + close + "s | Reveal: " + resultSecs + "s | Margin: " + margin + "%"
+        );
+    }
+
+    public Map<String, Object> resetUserDemoBalance(String email) {
+        if (email == null || email.isBlank()) {
+            return Map.of("success", false, "message", "User email is required.");
+        }
+        PlatformSettingsEntity settings = loadOrInitSettings();
+        BigDecimal defaultDemo = settings.getDefaultDemoBalance();
+        AtomicReference<Map<String, Object>> sanitizedRef = new AtomicReference<>();
+        txTemplate.executeWithoutResult(status -> {
+            UserEntity user = userRepo.findByEmail(email).orElse(null);
+            if (user != null) {
+                user.setDemoBalance(defaultDemo);
+                userRepo.save(user);
+                sanitizedRef.set(buildSanitizedUser(user));
+            }
+        });
+        Map<String, Object> sanitized = sanitizedRef.get();
+        if (sanitized == null) {
+            return Map.of("success", false, "message", "User account not found.");
+        }
+        wsHub.emitToUser(email, "user_updated", sanitized);
+        return Map.of(
+                "success", true,
+                "message", "Demo balance reset to ₹" + defaultDemo.stripTrailingZeros().toPlainString(),
+                "demoBalance", defaultDemo
         );
     }
 

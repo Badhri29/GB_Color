@@ -207,10 +207,6 @@
           <button type="button" class="drawer-nav-item" data-view="payment"><span>💳</span> Payment (Recharge &amp; Withdraw)</button>
           <button type="button" class="drawer-nav-item" data-view="profile"><span>👤</span> Profile &amp; Settings</button>
           <button type="button" class="drawer-nav-item" data-view="rules"><span>📘</span> Rules &amp; Payouts</button>
-          <button type="button" class="drawer-nav-item" id="drawerNotifBtn">
-            <span>🔔</span> Notifications
-            <em id="drawerNotifBadge" class="drawer-pill-badge" style="display:none;">0</em>
-          </button>
         </div>
 
         <div id="adminDrawerSection" class="drawer-admin-section" style="display:none;">
@@ -240,22 +236,22 @@
           <button type="button" class="game-mode-btn active" id="gameModeClassicBtn" data-mode="CLASSIC">
             <span class="gmb-icon">🎮</span>
             <div class="gmb-text">
-              <strong>Win Go 30s</strong>
+              <strong>Classic Win Go</strong>
               <small>Classic Colors (2x), Numbers (9x), Big/Small</small>
             </div>
           </button>
           <button type="button" class="game-mode-btn" id="gameModeSafeBtn" data-mode="SAFE">
             <span class="gmb-icon">🛡️</span>
             <div class="gmb-text">
-              <strong>Safe Protect (80/20)</strong>
-              <small>1.20x Win (+20% Profit) • 80% Loss Refund</small>
+              <strong>Safe Shield (80/20)</strong>
+              <small>Guaranteed 80% Refund • +20% Win</small>
             </div>
           </button>
           <button type="button" class="game-mode-btn" id="gameModePoolBtn" data-mode="POOL">
             <span class="gmb-icon">🔰</span>
             <div class="gmb-text">
-              <strong>Pool Share (90/10)</strong>
-              <small>Dynamic Win Share • 90% Loss Refund</small>
+              <strong>Royal Pool (90/10)</strong>
+              <small>Dynamic Profit Share • 90% Refund</small>
             </div>
           </button>
         </div>
@@ -303,97 +299,145 @@
                 <span>🛡️ <strong>Admin Live Monitor:</strong> Viewing live real pools wagered by players. Betting is disabled for Admin.</span>
               </div>
 
-              <div id="lockOverlay" class="lock-overlay" style="display:none;">
-                <div class="lock-badge">
-                  <span>⏳ BETTING CLOSED</span>
-                  <small id="lockOverlayHint">Calculating round result...</small>
-                </div>
-              </div>
-
               <!-- CLASSIC GAME MODE CONTROLS -->
               <div id="classicBettingContainer">
+                <!-- ROW 1: COLORS (Green, Violet, Red) -->
                 <div class="color-buttons-grid">
                   <button type="button" class="bet-btn color-green" data-type="COLOR" data-choice="GREEN">
+                    <div class="bet-card-top-row">
+                      <span id="mybadge-GREEN" class="user-bet-badge" style="display:none;">₹0</span>
+                      <span id="badge-GREEN" class="total-pool-badge">₹0</span>
+                    </div>
                     <span class="bet-label">Green</span>
                     <span class="bet-mult">2x</span>
-                    <span id="badge-GREEN" class="bet-badge" style="display:none;">₹0</span>
                   </button>
                   <button type="button" class="bet-btn color-violet" data-type="COLOR" data-choice="VIOLET">
+                    <div class="bet-card-top-row">
+                      <span id="mybadge-VIOLET" class="user-bet-badge" style="display:none;">₹0</span>
+                      <span id="badge-VIOLET" class="total-pool-badge">₹0</span>
+                    </div>
                     <span class="bet-label">Violet</span>
                     <span class="bet-mult">4.5x</span>
-                    <span id="badge-VIOLET" class="bet-badge" style="display:none;">₹0</span>
                   </button>
                   <button type="button" class="bet-btn color-red" data-type="COLOR" data-choice="RED">
+                    <div class="bet-card-top-row">
+                      <span id="mybadge-RED" class="user-bet-badge" style="display:none;">₹0</span>
+                      <span id="badge-RED" class="total-pool-badge">₹0</span>
+                    </div>
                     <span class="bet-label">Red</span>
                     <span class="bet-mult">2x</span>
-                    <span id="badge-RED" class="bet-badge" style="display:none;">₹0</span>
                   </button>
                 </div>
 
-                <div class="numbers-grid">
-                  <button type="button" class="bet-btn num-btn n0" data-type="NUMBER" data-choice="0">
-                    <span>0</span><span id="badge-0" class="bet-badge" style="display:none;">₹0</span>
-                  </button>
-                  <button type="button" class="bet-btn num-btn n1" data-type="NUMBER" data-choice="1">
-                    <span>1</span><span id="badge-1" class="bet-badge" style="display:none;">₹0</span>
-                  </button>
-                  <button type="button" class="bet-btn num-btn n2" data-type="NUMBER" data-choice="2">
-                    <span>2</span><span id="badge-2" class="bet-badge" style="display:none;">₹0</span>
-                  </button>
-                  <button type="button" class="bet-btn num-btn n3" data-type="NUMBER" data-choice="3">
-                    <span>3</span><span id="badge-3" class="bet-badge" style="display:none;">₹0</span>
-                  </button>
-                  <button type="button" class="bet-btn num-btn n4" data-type="NUMBER" data-choice="4">
-                    <span>4</span><span id="badge-4" class="bet-badge" style="display:none;">₹0</span>
-                  </button>
-                  <button type="button" class="bet-btn num-btn n5" data-type="NUMBER" data-choice="5">
-                    <span>5</span><span id="badge-5" class="bet-badge" style="display:none;">₹0</span>
-                  </button>
-                  <button type="button" class="bet-btn num-btn n6" data-type="NUMBER" data-choice="6">
-                    <span>6</span><span id="badge-6" class="bet-badge" style="display:none;">₹0</span>
-                  </button>
-                  <button type="button" class="bet-btn num-btn n7" data-type="NUMBER" data-choice="7">
-                    <span>7</span><span id="badge-7" class="bet-badge" style="display:none;">₹0</span>
-                  </button>
-                  <button type="button" class="bet-btn num-btn n8" data-type="NUMBER" data-choice="8">
-                    <span>8</span><span id="badge-8" class="bet-badge" style="display:none;">₹0</span>
-                  </button>
-                  <button type="button" class="bet-btn num-btn n9" data-type="NUMBER" data-choice="9">
-                    <span>9</span><span id="badge-9" class="bet-badge" style="display:none;">₹0</span>
-                  </button>
-                </div>
+                <!-- 2-COLUMN SPLIT: SMALL (0-4) ON LEFT, BIG (5-9) ON RIGHT -->
+                <div class="arena-split-columns">
+                  <!-- LEFT COLUMN: SMALL (0-4) -->
+                  <div class="arena-size-column col-small">
+                    <button type="button" class="bet-btn size-box-btn size-small" data-type="SIZE" data-choice="SMALL">
+                      <div class="bet-card-top-row">
+                        <span id="mybadge-SMALL" class="user-bet-badge" style="display:none;">₹0</span>
+                        <span id="badge-SMALL" class="total-pool-badge">₹0</span>
+                      </div>
+                      <span class="bet-label">SMALL (0–4)</span>
+                      <span class="bet-mult">2x</span>
+                    </button>
 
-                <div class="size-buttons-grid">
-                  <button type="button" class="bet-btn size-big" data-type="SIZE" data-choice="BIG">
-                    <span class="bet-label">BIG (5–9)</span>
-                    <span class="bet-mult">2x</span>
-                    <span id="badge-BIG" class="bet-badge" style="display:none;">₹0</span>
-                  </button>
-                  <button type="button" class="bet-btn size-small" data-type="SIZE" data-choice="SMALL">
-                    <span class="bet-label">SMALL (0–4)</span>
-                    <span class="bet-mult">2x</span>
-                    <span id="badge-SMALL" class="bet-badge" style="display:none;">₹0</span>
-                  </button>
+                    <!-- Circular Numbers 0-4 (Left: Total Bet, Center: Round Number, Right: User Bet) -->
+                    <div class="round-numbers-list">
+                      <div class="num-round-item">
+                        <span id="badge-0" class="num-side-amount total-amt">₹0</span>
+                        <button type="button" class="bet-btn num-circle-btn n0" data-type="NUMBER" data-choice="0">0</button>
+                        <span id="mybadge-0" class="num-side-amount user-amt" style="display:none;">₹0</span>
+                      </div>
+                      <div class="num-round-item">
+                        <span id="badge-1" class="num-side-amount total-amt">₹0</span>
+                        <button type="button" class="bet-btn num-circle-btn n1" data-type="NUMBER" data-choice="1">1</button>
+                        <span id="mybadge-1" class="num-side-amount user-amt" style="display:none;">₹0</span>
+                      </div>
+                      <div class="num-round-item">
+                        <span id="badge-2" class="num-side-amount total-amt">₹0</span>
+                        <button type="button" class="bet-btn num-circle-btn n2" data-type="NUMBER" data-choice="2">2</button>
+                        <span id="mybadge-2" class="num-side-amount user-amt" style="display:none;">₹0</span>
+                      </div>
+                      <div class="num-round-item">
+                        <span id="badge-3" class="num-side-amount total-amt">₹0</span>
+                        <button type="button" class="bet-btn num-circle-btn n3" data-type="NUMBER" data-choice="3">3</button>
+                        <span id="mybadge-3" class="num-side-amount user-amt" style="display:none;">₹0</span>
+                      </div>
+                      <div class="num-round-item">
+                        <span id="badge-4" class="num-side-amount total-amt">₹0</span>
+                        <button type="button" class="bet-btn num-circle-btn n4" data-type="NUMBER" data-choice="4">4</button>
+                        <span id="mybadge-4" class="num-side-amount user-amt" style="display:none;">₹0</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- RIGHT COLUMN: BIG (5-9) -->
+                  <div class="arena-size-column col-big">
+                    <button type="button" class="bet-btn size-box-btn size-big" data-type="SIZE" data-choice="BIG">
+                      <div class="bet-card-top-row">
+                        <span id="mybadge-BIG" class="user-bet-badge" style="display:none;">₹0</span>
+                        <span id="badge-BIG" class="total-pool-badge">₹0</span>
+                      </div>
+                      <span class="bet-label">BIG (5–9)</span>
+                      <span class="bet-mult">2x</span>
+                    </button>
+
+                    <!-- Circular Numbers 5-9 (Left: Total Bet, Center: Round Number, Right: User Bet) -->
+                    <div class="round-numbers-list">
+                      <div class="num-round-item">
+                        <span id="badge-5" class="num-side-amount total-amt">₹0</span>
+                        <button type="button" class="bet-btn num-circle-btn n5" data-type="NUMBER" data-choice="5">5</button>
+                        <span id="mybadge-5" class="num-side-amount user-amt" style="display:none;">₹0</span>
+                      </div>
+                      <div class="num-round-item">
+                        <span id="badge-6" class="num-side-amount total-amt">₹0</span>
+                        <button type="button" class="bet-btn num-circle-btn n6" data-type="NUMBER" data-choice="6">6</button>
+                        <span id="mybadge-6" class="num-side-amount user-amt" style="display:none;">₹0</span>
+                      </div>
+                      <div class="num-round-item">
+                        <span id="badge-7" class="num-side-amount total-amt">₹0</span>
+                        <button type="button" class="bet-btn num-circle-btn n7" data-type="NUMBER" data-choice="7">7</button>
+                        <span id="mybadge-7" class="num-side-amount user-amt" style="display:none;">₹0</span>
+                      </div>
+                      <div class="num-round-item">
+                        <span id="badge-8" class="num-side-amount total-amt">₹0</span>
+                        <button type="button" class="bet-btn num-circle-btn n8" data-type="NUMBER" data-choice="8">8</button>
+                        <span id="mybadge-8" class="num-side-amount user-amt" style="display:none;">₹0</span>
+                      </div>
+                      <div class="num-round-item">
+                        <span id="badge-9" class="num-side-amount total-amt">₹0</span>
+                        <button type="button" class="bet-btn num-circle-btn n9" data-type="NUMBER" data-choice="9">9</button>
+                        <span id="mybadge-9" class="num-side-amount user-amt" style="display:none;">₹0</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               <!-- SAFE PROTECT GAME MODE CONTROLS (GREEN & RED ONLY) -->
               <div id="safeBettingContainer" class="safe-betting-container" style="display:none;">
                 <div class="safe-info-banner">
-                  <span>🛡️ <strong>Safe Protect Rules:</strong> Win pays <strong>1.20x</strong> (+20% profit). If your color does not appear, you receive an <strong>80% refund</strong> (20% platform commission)!</span>
+                  <span>🛡️ <strong>Safe Shield Rules:</strong> Win pays <strong>1.20x</strong> (+20% profit). If your color does not appear, you receive an <strong>80% refund</strong> (20% platform commission)!</span>
                 </div>
                 <div class="safe-buttons-grid">
                   <button type="button" class="bet-btn safe-btn color-green" data-type="SAFE_COLOR" data-choice="GREEN">
+                    <div class="bet-card-top-row">
+                      <span id="mybadge-SAFE-GREEN" class="user-bet-badge" style="display:none;">₹0</span>
+                      <span id="badge-SAFE-GREEN" class="total-pool-badge">₹0</span>
+                    </div>
                     <span class="bet-label">Green</span>
                     <span class="bet-mult">1.20x Win (+20% Profit)</span>
                     <span class="safe-protect-pill">🛡️ 80% Refund on Loss</span>
-                    <span id="badge-SAFE-GREEN" class="bet-badge" style="display:none;">₹0</span>
                   </button>
                   <button type="button" class="bet-btn safe-btn color-red" data-type="SAFE_COLOR" data-choice="RED">
+                    <div class="bet-card-top-row">
+                      <span id="mybadge-SAFE-RED" class="user-bet-badge" style="display:none;">₹0</span>
+                      <span id="badge-SAFE-RED" class="total-pool-badge">₹0</span>
+                    </div>
                     <span class="bet-label">Red</span>
                     <span class="bet-mult">1.20x Win (+20% Profit)</span>
                     <span class="safe-protect-pill">🛡️ 80% Refund on Loss</span>
-                    <span id="badge-SAFE-RED" class="bet-badge" style="display:none;">₹0</span>
                   </button>
                 </div>
               </div>
@@ -401,20 +445,26 @@
               <!-- POOL SHARE (90/10 DYNAMIC) GAME MODE CONTROLS -->
               <div id="poolBettingContainer" class="pool-betting-container" style="display:none;">
                 <div class="pool-info-banner">
-                  <span>🔰 <strong>Pool Share Rules:</strong> Losers receive a guaranteed <strong>90% refund</strong> (10% fee collected). Winners dynamically share <strong>90% of the collected fee pool</strong> proportionally to their wager!</span>
+                  <span>🔰 <strong>Royal Pool Rules:</strong> Losers receive a guaranteed <strong>90% refund</strong> (10% fee collected). Winners dynamically share <strong>90% of the collected fee pool</strong> proportionally to their wager!</span>
                 </div>
                 <div class="pool-buttons-grid">
                   <button type="button" class="bet-btn pool-btn color-green" data-type="POOL_SHARE" data-choice="GREEN">
+                    <div class="bet-card-top-row">
+                      <span id="mybadge-POOL-GREEN" class="user-bet-badge" style="display:none;">₹0</span>
+                      <span id="badge-POOL-GREEN" class="total-pool-badge">₹0</span>
+                    </div>
                     <span class="bet-label">Green Pool</span>
                     <span class="bet-mult">Dynamic Pool Win</span>
                     <span class="pool-protect-pill">🔰 90% Refund on Loss</span>
-                    <span id="badge-POOL-GREEN" class="bet-badge" style="display:none;">₹0</span>
                   </button>
                   <button type="button" class="bet-btn pool-btn color-red" data-type="POOL_SHARE" data-choice="RED">
+                    <div class="bet-card-top-row">
+                      <span id="mybadge-POOL-RED" class="user-bet-badge" style="display:none;">₹0</span>
+                      <span id="badge-POOL-RED" class="total-pool-badge">₹0</span>
+                    </div>
                     <span class="bet-label">Red Pool</span>
                     <span class="bet-mult">Dynamic Pool Win</span>
                     <span class="pool-protect-pill">🔰 90% Refund on Loss</span>
-                    <span id="badge-POOL-RED" class="bet-badge" style="display:none;">₹0</span>
                   </button>
                 </div>
               </div>
@@ -571,18 +621,6 @@
                 </div>
               </div>
 
-              <!-- PRACTICE DEMO RELOAD -->
-              <div class="demo-reload-strip">
-                <div>
-                  <strong>🎯 Practice Demo Coins Top-Up</strong>
-                  <small>Free play coins for learning rules (separate from Real Cash)</small>
-                </div>
-                <div class="demo-chip-actions">
-                  <button type="button" class="btn-demo-add" data-demoamt="1000">+₹1,000</button>
-                  <button type="button" class="btn-demo-add" data-demoamt="5000">+₹5,000</button>
-                  <button type="button" class="btn-demo-add" data-demoamt="10000">+₹10,000</button>
-                </div>
-              </div>
             </div>
 
             <div class="pay-status-col">
@@ -727,64 +765,57 @@
           </div>
         </div>
 
-        <div id="changePasswordCard" class="payment-card single-col-card" style="margin-top:16px;">
-          <div class="pay-card-head">
-            <h3>🔐 Change Password</h3>
-            <span id="tempPassAlertBadge" class="status-pill amber" style="display:none;">Temporary Password Active</span>
-          </div>
-          <div class="bank-dual-grid">
-            <div class="form-group">
-              <label for="profCurPassword">Current / Temporary Password</label>
-              <input id="profCurPassword" type="password" class="big-touch-field" placeholder="Current password" />
+        <div class="profile-settings-grid">
+          <div id="changePasswordCard" class="payment-card single-col-card">
+            <div class="pay-card-head">
+              <h3>🔐 Change Password</h3>
+              <span id="tempPassAlertBadge" class="status-pill amber" style="display:none;">Temporary Password Active</span>
             </div>
-            <div class="form-group">
-              <label for="profNewPassword">New Password</label>
-              <input id="profNewPassword" type="password" class="big-touch-field" placeholder="Min 8 chars, Upper, Lower, Num, Sym" />
+            <div class="bank-dual-grid">
+              <div class="form-group">
+                <label for="profCurPassword">Current / Temporary Password</label>
+                <input id="profCurPassword" type="password" class="big-touch-field" placeholder="Current password" />
+              </div>
+              <div class="form-group">
+                <label for="profNewPassword">New Password</label>
+                <input id="profNewPassword" type="password" class="big-touch-field" placeholder="Min 8 chars, Upper, Lower, Num, Sym" />
+              </div>
             </div>
-          </div>
-          <button type="button" id="profChangePassBtn" class="btn-accent-outline">Update Password</button>
-        </div>
-
-        <div class="payment-card single-col-card" style="margin-top:16px;">
-          <div class="pay-card-head">
-            <h3>⚙️ Preferences &amp; Audio</h3>
-          </div>
-          <div class="setting-toggle-row">
-            <div>
-              <strong>🔊 Sound Effects (Clicks, Countdown, Wins)</strong>
-              <small>Play synthesized audio cues during betting and round reveals</small>
-            </div>
-            <label class="switch-toggle"><input type="checkbox" id="settingSfx" checked /><span class="slider-round"></span></label>
+            <button type="button" id="profChangePassBtn" class="btn-accent-outline">Update Password</button>
           </div>
 
-          <div class="setting-toggle-row">
-            <div>
-              <strong>🎵 Ambient Background Music</strong>
-              <small>Subtle low-volume loop while arena is active</small>
+          <div class="payment-card single-col-card">
+            <div class="pay-card-head">
+              <h3>⚙️ Preferences &amp; Audio</h3>
             </div>
-            <label class="switch-toggle"><input type="checkbox" id="settingBgm" /><span class="slider-round"></span></label>
-          </div>
-
-          <div class="setting-toggle-row">
-            <div>
-              <strong>📳 Haptic Vibration (Mobile)</strong>
-              <small>Gentle vibration feedback when placing bets or winning</small>
+            <div class="setting-toggle-row">
+              <div>
+                <strong>🔊 Sound Effects (Clicks, Countdown, Wins)</strong>
+                <small>Play synthesized audio cues during betting and round reveals</small>
+              </div>
+              <label class="switch-toggle"><input type="checkbox" id="settingSfx" checked /><span class="slider-round"></span></label>
             </div>
-            <label class="switch-toggle"><input type="checkbox" id="settingVibrate" checked /><span class="slider-round"></span></label>
-          </div>
 
-          <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
-            <button type="button" id="testAudioBtn" class="btn-accent-outline">🔊 Test Win Sound</button>
-          </div>
-        </div>
+            <div class="setting-toggle-row">
+              <div>
+                <strong>🎵 Ambient Background Music</strong>
+                <small>Subtle low-volume loop while arena is active</small>
+              </div>
+              <label class="switch-toggle"><input type="checkbox" id="settingBgm" /><span class="slider-round"></span></label>
+            </div>
 
-        <div class="pay-wallet-summary-grid" style="margin-top:16px;">
-          <div class="pw-stat-card accent-green"><span>Real Balance</span><strong id="profRealBal">₹0.00</strong></div>
-          <div class="pw-stat-card accent-amber"><span>Demo Balance</span><strong id="profDemoBal">₹0.00</strong></div>
-          <div class="pw-stat-card accent-green"><span>Total Won</span><strong id="profTotalWon">₹0.00</strong></div>
-          <div class="pw-stat-card accent-red"><span>Total Lost</span><strong id="profTotalLost">₹0.00</strong></div>
-          <div class="pw-stat-card accent-blue"><span>Total Recharged</span><strong id="profTotalRecharged">₹0.00</strong></div>
-          <div class="pw-stat-card accent-violet"><span>Total Withdrawn</span><strong id="profTotalWithdrawn">₹0.00</strong></div>
+            <div class="setting-toggle-row">
+              <div>
+                <strong>📳 Haptic Vibration (Mobile)</strong>
+                <small>Gentle vibration feedback when placing bets or winning</small>
+              </div>
+              <label class="switch-toggle"><input type="checkbox" id="settingVibrate" checked /><span class="slider-round"></span></label>
+            </div>
+
+            <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;">
+              <button type="button" id="testAudioBtn" class="btn-accent-outline">🔊 Test Win Sound</button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -793,14 +824,14 @@
         <div class="page-header-bar">
           <div>
             <h2>📘 Game Rules &amp; Payouts</h2>
-            <p class="page-subtitle">Transparent payout rules for Game 1 (Win Go 30s) and Game 2 (Safe Protect 1.5x)</p>
+            <p class="page-subtitle">Transparent payout rules for all 3 game modes</p>
           </div>
           <button type="button" class="btn-secondary-nav" data-nav="game">← Back to Dashboard</button>
         </div>
 
-        <div class="payment-grid">
+        <div class="payment-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
           <div class="payment-card">
-            <h3>🎮 Game 1: Classic Win Go (30s)</h3>
+            <h3>🎮 Mode 1: Classic Win Go</h3>
             <ul class="rules-list">
               <li><strong>Green (1, 3, 7, 9):</strong> Pays <strong>2x</strong> your stake. If outcome is <strong>5</strong> (Green+Violet), pays <strong>1.5x</strong>.</li>
               <li><strong>Red (2, 4, 6, 8):</strong> Pays <strong>2x</strong> your stake. If outcome is <strong>0</strong> (Red+Violet), pays <strong>1.5x</strong>.</li>
@@ -810,12 +841,19 @@
             </ul>
           </div>
           <div class="payment-card">
-            <h3>🛡️ Game 2: Safe Protect Game (50% Profit + Refund)</h3>
+            <h3>🛡️ Mode 2: Safe Shield (80/20)</h3>
             <ul class="rules-list">
               <li><strong>Only 2 Colors:</strong> Bet on either <strong>Green</strong> or <strong>Red</strong>.</li>
-              <li><strong>1.5x Win Payout (50% Pure Profit):</strong> E.g. ₹100 bet returns <strong>₹150</strong> on winning color!</li>
-              <li><strong>80% Loss Refund Protection:</strong> If the opposing color lands, you do NOT lose your stake! Platform withholds only 20% platform commission and <strong>refunds 80% directly back to your balance</strong>! E.g. ₹100 bet returns ₹80 refund.</li>
-              <li><strong>Round Timing:</strong> Cycle runs every <strong id="rulesCycleSecondsTxt">30s</strong>; betting closes <strong id="rulesLockSecondsTxt">5s</strong> before reveal.</li>
+              <li><strong>1.20x Win Payout (+20% Pure Profit):</strong> E.g. ₹100 bet returns <strong>₹120</strong> on winning color!</li>
+              <li><strong>80% Loss Refund Protection:</strong> If the opposing color lands, platform withholds 20% and <strong>refunds 80% directly back to your balance</strong>! E.g. ₹100 bet returns ₹80 refund.</li>
+            </ul>
+          </div>
+          <div class="payment-card">
+            <h3>👑 Mode 3: Royal Pool (90/10)</h3>
+            <ul class="rules-list">
+              <li><strong>Dynamic Profit Pool:</strong> Bet on either <strong>Green</strong> or <strong>Red</strong>.</li>
+              <li><strong>Proportional Win Share:</strong> Winners receive their full stake back plus their proportional share of 10% deducted from the losing pool!</li>
+              <li><strong>90% Loss Refund Protection:</strong> If your color loses, you receive a massive <strong>90% refund directly back to your balance</strong> (only 10% deducted into winners' pool)!</li>
             </ul>
           </div>
         </div>

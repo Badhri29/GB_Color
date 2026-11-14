@@ -155,18 +155,22 @@
         });
 
         // Save Game Timing & Profit Margin (Settings Tab + Inline Margin)
-        async function saveGameConfig(cycleVal, closeVal, marginVal) {
+        async function saveGameConfig(cycleVal, closeVal, marginVal, resultSecVal, defaultDemoVal) {
+            const payload = {
+                cycleDurationSeconds: cycleVal,
+                betCloseSeconds: closeVal,
+                adminMinProfitPercent: marginVal
+            };
+            if (resultSecVal != null) payload.resultDisplaySeconds = resultSecVal;
+            if (defaultDemoVal != null) payload.defaultDemoBalance = defaultDemoVal;
+
             const res = await fetch(window.apiUrl('/api/admin/game-config'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${adminToken}`
                 },
-                body: JSON.stringify({
-                    cycleDurationSeconds: cycleVal,
-                    betCloseSeconds: closeVal,
-                    adminMinProfitPercent: marginVal
-                })
+                body: JSON.stringify(payload)
             });
             const data = await res.json();
             window.showToast(data.message);
@@ -176,7 +180,9 @@
             const c = parseInt(document.getElementById('cfgCycleSeconds').value, 10);
             const cl = parseInt(document.getElementById('cfgBetCloseSeconds').value, 10);
             const m = parseInt(document.getElementById('cfgAdminMarginPct').value, 10);
-            saveGameConfig(c, cl, m);
+            const r = parseInt(document.getElementById('cfgResultDisplaySeconds')?.value || '3', 10);
+            const d = parseFloat(document.getElementById('cfgDefaultDemoBalance')?.value || '1000');
+            saveGameConfig(c, cl, m, r, d);
         });
 
         document.getElementById('admSaveInlineMarginBtn')?.addEventListener('click', () => {
@@ -712,6 +718,12 @@
             gameConfigPopulated = true;
             document.getElementById('cfgCycleSeconds').value = data.cycleDurationSeconds || 30;
             document.getElementById('cfgBetCloseSeconds').value = data.betCloseSeconds || 5;
+            if (document.getElementById('cfgResultDisplaySeconds')) {
+                document.getElementById('cfgResultDisplaySeconds').value = data.resultDisplaySeconds || 3;
+            }
+            if (document.getElementById('cfgDefaultDemoBalance')) {
+                document.getElementById('cfgDefaultDemoBalance').value = data.defaultDemoBalance || 1000;
+            }
             document.getElementById('cfgAdminMarginPct').value = data.adminMinProfitPercent ?? 15;
             const inlineM = document.getElementById('admInlineMarginInput');
             if (inlineM) inlineM.value = data.adminMinProfitPercent ?? 15;

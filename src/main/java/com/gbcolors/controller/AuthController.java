@@ -14,9 +14,11 @@ import java.util.Map;
 public class AuthController {
 
     private final AuthService authService;
+    private final com.gbcolors.service.GameLoopService gameLoopService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, com.gbcolors.service.GameLoopService gameLoopService) {
         this.authService = authService;
+        this.gameLoopService = gameLoopService;
     }
 
     @GetMapping("/health")
@@ -84,5 +86,18 @@ public class AuthController {
         String newPassword = body == null ? "" : String.valueOf(body.getOrDefault("newPassword", ""));
         AuthService.AuthResult result = authService.changePassword(authHeader, currentPassword, newPassword);
         return ResponseEntity.status(result.statusCode()).body(result.body());
+    }
+
+    @PostMapping("/api/auth/reset-demo")
+    public ResponseEntity<Map<String, Object>> resetDemo(
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
+        var sessOpt = authService.resolveSession(authHeader);
+        if (sessOpt.isEmpty()) {
+            return ResponseEntity.status(401).body(Map.of("success", false, "message", "Authentication required."));
+        }
+        Map<String, Object> res = gameLoopService.resetUserDemoBalance(sessOpt.get().getEmail());
+        int status = Boolean.TRUE.equals(res.get("success")) ? 200 : 400;
+        return ResponseEntity.status(status).body(res);
     }
 }

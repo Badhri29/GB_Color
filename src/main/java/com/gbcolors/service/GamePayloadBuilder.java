@@ -409,6 +409,8 @@ public class GamePayloadBuilder {
         payload.put("status", status);
         payload.put("cycleDurationSeconds", settings.getCycleDurationSeconds());
         payload.put("betCloseSeconds", settings.getBetCloseSeconds());
+        payload.put("resultDisplaySeconds", settings.getResultDisplaySeconds());
+        payload.put("defaultDemoBalance", settings.getDefaultDemoBalance());
         payload.put("adminMinProfitPercent", settings.getAdminMinProfitPercent());
         payload.put("requiredMinProfit", summary.requiredMinProfit());
         payload.put("outcomeMode", settings.getOutcomeMode().name());

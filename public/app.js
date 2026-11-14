@@ -376,16 +376,14 @@
     function renderBatch() {
       const track = $('liveTickerTrack');
       if (!track) return;
-      const batch = drawBatch(8);
-      track.innerHTML = batch.map((ev) => {
+      const batch = drawBatch(16);
+      const itemsHtml = batch.map((ev) => {
         const cls = ev.isReal ? 'ticker-item real-win' : 'ticker-item';
         return `<span class="${cls}">${escapeHtml(ev.text)}</span>`;
       }).join('');
 
-      // Restart smooth right-to-left sweep animation with fresh batch each cycle
-      track.style.animation = 'none';
-      void track.offsetWidth;
-      track.style.animation = 'gbTickerSweep 28s linear 1 forwards';
+      // Two identical mirrored blocks for seamless, gap-free infinite scrolling marquee
+      track.innerHTML = `<div class="ticker-block">${itemsHtml}</div><div class="ticker-block">${itemsHtml}</div>`;
     }
 
     function addEvents(events) {
@@ -408,20 +406,14 @@
     }
 
     function start() {
-      const track = $('liveTickerTrack');
-      if (track && !track.dataset.boundAnim) {
-        track.dataset.boundAnim = '1';
-        track.addEventListener('animationend', () => {
-          renderBatch();
-        });
-      }
       renderBatch();
       if (rotationTimer) clearInterval(rotationTimer);
+      // Periodically refresh items seamlessly in background without breaking continuous animation
       rotationTimer = setInterval(() => {
         if (!document.hidden && $('gameAppRoot') && $('gameAppRoot').style.display !== 'none') {
           renderBatch();
         }
-      }, 28500);
+      }, 42000);
     }
 
     function stop() {
@@ -1237,6 +1229,18 @@
     if ($('modeDemoBtn')) $('modeDemoBtn').classList.toggle('active', !isReal);
     if ($('modeRealBtn')) $('modeRealBtn').classList.toggle('active', isReal);
 
+    if ($('headerRechargeBtn')) {
+      if (isReal) {
+        $('headerRechargeBtn').textContent = '+';
+        $('headerRechargeBtn').title = 'Recharge / Add Funds';
+        $('headerRechargeBtn').classList.remove('demo-reset-btn');
+      } else {
+        $('headerRechargeBtn').textContent = '🔄';
+        $('headerRechargeBtn').title = 'Reset Demo Coins to Default';
+        $('headerRechargeBtn').classList.add('demo-reset-btn');
+      }
+    }
+
     // Drawer summary
     const uname = currentUser.username || 'Player';
     if ($('drawerAvatar')) $('drawerAvatar').textContent = uname.charAt(0).toUpperCase();
@@ -1264,10 +1268,75 @@
     return Boolean(b && (b.status === 'ACTIVE' || b.status === 'PENDING'));
   }
 
+  function freezeAllBettingButtons() {
+    document.querySelectorAll('.bet-btn').forEach((btn) => {
+      btn.classList.remove('winning-highlight');
+      btn.classList.add('frozen');
+    });
+  }
+
+  function unfreezeAllBettingButtons() {
+    document.querySelectorAll('.bet-btn').forEach((btn) => {
+      btn.classList.remove('frozen', 'winning-highlight');
+    });
+  }
+
+  function highlightWinningButtons(result) {
+    freezeAllBettingButtons();
+    if (!result) return;
+
+    if (currentGameMode === 'CLASSIC') {
+      if (result.number != null) {
+        const numBtn = document.querySelector(`.bet-btn[data-type="NUMBER"][data-choice="${result.number}"]`);
+        if (numBtn) {
+          numBtn.classList.remove('frozen');
+          numBtn.classList.add('winning-highlight');
+        }
+      }
+      const colors = Array.isArray(result.colors)
+        ? result.colors
+        : (result.color ? String(result.color).split('+') : []);
+      colors.forEach((c) => {
+        const cClean = String(c).trim().toUpperCase();
+        const colBtn = document.querySelector(`.bet-btn[data-type="COLOR"][data-choice="${cClean}"]`);
+        if (colBtn) {
+          colBtn.classList.remove('frozen');
+          colBtn.classList.add('winning-highlight');
+        }
+      });
+      if (result.size) {
+        const sz = String(result.size).trim().toUpperCase();
+        const sizeBtn = document.querySelector(`.bet-btn[data-type="SIZE"][data-choice="${sz}"]`);
+        if (sizeBtn) {
+          sizeBtn.classList.remove('frozen');
+          sizeBtn.classList.add('winning-highlight');
+        }
+      }
+    } else if (currentGameMode === 'SAFE') {
+      const safeColor = String(result.safeResultColor || (result.number % 2 === 1 ? 'GREEN' : 'RED')).toUpperCase();
+      const safeBtn = document.querySelector(`.bet-btn[data-type="SAFE_COLOR"][data-choice="${safeColor}"]`);
+      if (safeBtn) {
+        safeBtn.classList.remove('frozen');
+        safeBtn.classList.add('winning-highlight');
+      }
+    } else if (currentGameMode === 'POOL') {
+      const poolColor = String(result.poolResultColor || (result.number % 2 === 1 ? 'GREEN' : 'RED')).toUpperCase();
+      const poolBtn = document.querySelector(`.bet-btn[data-type="POOL_SHARE"][data-choice="${poolColor}"]`);
+      if (poolBtn) {
+        poolBtn.classList.remove('frozen');
+        poolBtn.classList.add('winning-highlight');
+      }
+    }
+  }
+
   function renderActiveBetBadges() {
-    document.querySelectorAll('.bet-badge').forEach((b) => {
+    // Hide user personal bet badges by default
+    document.querySelectorAll('.user-bet-badge').forEach((b) => {
       b.style.display = 'none';
-      b.classList.remove('admin-pool-badge', 'user-sim-pool', 'user-my-bet');
+      b.textContent = '₹0';
+    });
+    document.querySelectorAll('.num-side-amount.user-amt').forEach((b) => {
+      b.style.visibility = 'hidden';
       b.textContent = '₹0';
     });
 
@@ -1301,13 +1370,13 @@
           const val = Number(pools[key] || 0);
           badge.textContent = '₹' + val.toLocaleString('en-IN');
           badge.classList.add('admin-pool-badge');
-          badge.style.display = 'inline-block';
+          badge.classList.remove('user-sim-pool');
         }
       });
       return;
     }
 
-    // REGULAR USER SESSION: Show simulated active pool activity & personal bet pills
+    // REGULAR USER SESSION: Show total pool amounts & separate personal user bets
     const myTotals = {};
     if (currentUser && Array.isArray(currentUser.activeBets)) {
       currentUser.activeBets.forEach((b) => {
@@ -1325,17 +1394,32 @@
     for (let i = 0; i <= 9; i++) allKeys.push(String(i));
 
     allKeys.forEach((key) => {
+      // 1. Total Pool Badge (on Right for colors/sizes, on Left for round numbers)
       const badge = $('badge-' + key);
-      if (!badge) return;
-      if (myTotals[key] && myTotals[key] > 0) {
-        badge.textContent = '✓ ' + formatShortINR(myTotals[key]);
-        badge.classList.add('user-my-bet');
-        badge.style.display = 'inline-block';
-      } else {
+      if (badge) {
         const simVal = UserSimulatedPoolEngine.getPool(key);
         badge.textContent = formatShortINR(simVal);
         badge.classList.add('user-sim-pool');
-        badge.style.display = 'inline-block';
+        badge.classList.remove('admin-pool-badge');
+      }
+
+      // 2. Personal User Bet Badge (on Left for colors/sizes, on Right for round numbers)
+      const myBadge = $('mybadge-' + key);
+      if (myBadge) {
+        if (myTotals[key] && myTotals[key] > 0) {
+          myBadge.textContent = '✓ ' + formatShortINR(myTotals[key]);
+          if (myBadge.classList.contains('user-amt')) {
+            myBadge.style.visibility = 'visible';
+          } else {
+            myBadge.style.display = 'inline-block';
+          }
+        } else {
+          if (myBadge.classList.contains('user-amt')) {
+            myBadge.style.visibility = 'hidden';
+          } else {
+            myBadge.style.display = 'none';
+          }
+        }
       }
     });
   }
@@ -1757,33 +1841,40 @@
     const lockSec = Number(gameState.betCloseSeconds || 5);
     if ($('modeTagDisplay')) {
       if (currentGameMode === 'SAFE') {
-        $('modeTagDisplay').textContent = `SAFE PROTECT • ${cycleSec}S`;
+        $('modeTagDisplay').textContent = `SAFE SHIELD • ${cycleSec}S`;
       } else if (currentGameMode === 'POOL') {
-        $('modeTagDisplay').textContent = `POOL SHARE • ${cycleSec}S`;
+        $('modeTagDisplay').textContent = `ROYAL POOL • ${cycleSec}S`;
       } else {
         $('modeTagDisplay').textContent = `WIN GO • ${cycleSec}S`;
       }
     }
     if ($('rulesCycleSecondsTxt')) $('rulesCycleSecondsTxt').textContent = `${cycleSec}s`;
     if ($('rulesLockSecondsTxt')) $('rulesLockSecondsTxt').textContent = `${lockSec}s`;
-    if ($('lockOverlayHint')) $('lockOverlayHint').textContent = `Closing in final ${lockSec}s — revealing soon...`;
 
-    const isLocked = gameState.status !== 'BETTING';
-    const overlay = $('lockOverlay');
-    if (overlay) overlay.style.display = isLocked ? 'flex' : 'none';
+    const isReveal = gameState.status === 'REVEAL';
+    const isLocked = gameState.status === 'LOCKED' || (gameState.status === 'BETTING' && t <= lockSec);
+
+    if (isReveal) {
+      highlightWinningButtons(gameState.winningResult);
+    } else if (isLocked) {
+      freezeAllBettingButtons();
+    } else {
+      unfreezeAllBettingButtons();
+    }
+
     const clockEl = $('countdownClock');
-    if (clockEl) clockEl.classList.toggle('urgent', isLocked || t <= lockSec);
+    if (clockEl) clockEl.classList.toggle('urgent', isLocked || isReveal || t <= lockSec);
 
     // Admin Real-Time Upcoming Result Lock Preview on Dashboard
     const previewEl = $('adminDashLockPreview');
     if (previewEl) {
-      if (isAdminSession && (isLocked || t <= lockSec) && latestAdminAnalytics && latestAdminAnalytics.upcomingResult) {
+      if (isAdminSession && (isLocked || isReveal) && latestAdminAnalytics && latestAdminAnalytics.upcomingResult) {
         const up = latestAdminAnalytics.upcomingResult;
         const cols = Array.isArray(up.colors) ? up.colors.join(' + ') : '';
         previewEl.style.display = 'block';
         previewEl.innerHTML = `
           <div class="lock-preview-banner">
-            <span class="lpb-tag">🔒 Admin Real-Time Lock Preview (Revealing in ${t}s)</span>
+            <span class="lpb-tag">🔒 Admin Real-Time Lock Preview (${isReveal ? 'Revealing Now' : 'Revealing in ' + t + 's'})</span>
             <div class="lpb-content">
               <span class="lpb-num ball-${up.number}">${up.number}</span>
               <span class="lpb-pill ${(up.size || '').toLowerCase()}">${escapeHtml(up.size || '')}</span>
@@ -1796,10 +1887,10 @@
       }
     }
 
-    if (isLocked && $('betModal') && $('betModal').style.display !== 'none') {
+    if ((isLocked || isReveal) && $('betModal') && $('betModal').style.display !== 'none') {
       $('betModal').style.display = 'none';
     }
-    if (isLocked && t > 0) {
+    if (isLocked && t > 0 && !isReveal) {
       SoundEngine.tick();
     }
   }
@@ -1820,15 +1911,16 @@
     const cycleSec = Number(gameState.cycleDurationSeconds || 30);
     if ($('modeTagDisplay')) {
       if (currentGameMode === 'SAFE') {
-        $('modeTagDisplay').textContent = `SAFE PROTECT • ${cycleSec}S`;
+        $('modeTagDisplay').textContent = `SAFE SHIELD • ${cycleSec}S`;
       } else if (currentGameMode === 'POOL') {
-        $('modeTagDisplay').textContent = `POOL SHARE • ${cycleSec}S`;
+        $('modeTagDisplay').textContent = `ROYAL POOL • ${cycleSec}S`;
       } else {
         $('modeTagDisplay').textContent = `WIN GO • ${cycleSec}S`;
       }
     }
     if ($('periodNumber')) $('periodNumber').textContent = formatPeriodForMode(gameState.period, currentGameMode);
     renderGameHistory();
+    updateClockAndLock();
   }
 
   // =========================================================
@@ -1864,14 +1956,16 @@
       showToast('Admin Mode: Betting is disabled. Viewing live pools only.', 'info');
       return;
     }
-    if (gameState.status !== 'BETTING') {
+    const lockSec = Number(gameState.betCloseSeconds || 5);
+    const timeLeft = Number(gameState.timeLeft || 0);
+    if (gameState.status !== 'BETTING' || timeLeft <= lockSec) {
       showToast('Betting is closed for this round', 'error');
       return;
     }
     pendingBet = { type, choice, unit: 10, mult: 1 };
     let typeLabel = type;
-    if (type === 'SAFE_COLOR') typeLabel = 'Safe Protect';
-    else if (type === 'POOL_SHARE') typeLabel = 'Pool Share';
+    if (type === 'SAFE_COLOR') typeLabel = 'Safe Shield';
+    else if (type === 'POOL_SHARE') typeLabel = 'Royal Pool';
     if ($('modalBetTarget')) $('modalBetTarget').textContent = `${choice} (${typeLabel})`;
     document.querySelectorAll('.unit-chip').forEach((b) => b.classList.toggle('active', b.dataset.unit === '10'));
     document.querySelectorAll('.mult-chip').forEach((b) => b.classList.toggle('active', b.dataset.mult === '1'));
@@ -1905,6 +1999,9 @@
       if (payload.user) currentUser = payload.user;
       if (payload.gameState) {
         gameState = Object.assign(gameState, payload.gameState);
+        if (payload.gameState.winningResult) {
+          gameState.winningResult = payload.gameState.winningResult;
+        }
         if (Array.isArray(payload.gameState.tickerEvents)) {
           LiveTickerEngine.addEvents(payload.gameState.tickerEvents);
         }
@@ -1939,6 +2036,11 @@
       gameState.status = tick.status || gameState.status;
       if (tick.cycleDurationSeconds) gameState.cycleDurationSeconds = tick.cycleDurationSeconds;
       if (tick.betCloseSeconds) gameState.betCloseSeconds = tick.betCloseSeconds;
+      if (tick.winningResult) {
+        gameState.winningResult = tick.winningResult;
+      } else if (tick.status === 'BETTING') {
+        gameState.winningResult = null;
+      }
       UserSimulatedPoolEngine.tick(gameState.timeLeft);
       renderActiveBetBadges();
       updateClockAndLock();
@@ -1988,15 +2090,19 @@
       if (Array.isArray(data.history)) gameState.history = data.history;
       if (Array.isArray(data.newTickerEvents)) LiveTickerEngine.addEvents(data.newTickerEvents);
       if (data.result) {
+        gameState.winningResult = data.result;
         LiveTickerEngine.setLatestRoundResult(data.result);
       } else if (data.round) {
+        gameState.winningResult = data.round;
         LiveTickerEngine.setLatestRoundResult(data.round);
       } else if (Array.isArray(data.history) && data.history.length > 0) {
+        gameState.winningResult = data.history[0];
         LiveTickerEngine.setLatestRoundResult(data.history[0]);
       }
       if (currentUser) currentUser.activeBets = [];
       renderGameHistory();
       renderUserSummary();
+      updateClockAndLock();
 
       const settled = lastPeriodSettledBets.slice();
       lastPeriodSettledBets = [];
@@ -2407,7 +2513,38 @@
     if ($('closeUserDrawerBtn')) $('closeUserDrawerBtn').addEventListener('click', closeUserDrawer);
     if ($('userDrawerBackdrop')) $('userDrawerBackdrop').addEventListener('click', closeUserDrawer);
     if ($('brandHomeBtn')) $('brandHomeBtn').addEventListener('click', () => navigateToView('game'));
-    if ($('headerRechargeBtn')) $('headerRechargeBtn').addEventListener('click', () => navigateToView('payment', 'recharge'));
+    if ($('headerRechargeBtn')) {
+      $('headerRechargeBtn').addEventListener('click', async () => {
+        if (!currentUser) return;
+        const isReal = currentUser.mode === 'REAL';
+        if (isReal) {
+          navigateToView('payment', 'recharge');
+        } else {
+          try {
+            $('headerRechargeBtn').disabled = true;
+            $('headerRechargeBtn').style.opacity = '0.6';
+            const res = await apiFetch('/api/auth/reset-demo', { method: 'POST' });
+            if (res && res.success) {
+              if (res.data && res.data.demoBalance != null) {
+                currentUser.demoBalance = res.data.demoBalance;
+              }
+              renderUserSummary();
+              showToast(`🔄 Demo Coins reset to ${formatINR(currentUser.demoBalance)}!`, 'success');
+              SoundEngine.click();
+            } else {
+              showToast(res.message || 'Failed to reset demo balance', 'error');
+            }
+          } catch (e) {
+            showToast('Failed to reset demo balance: ' + (e.message || 'Network error'), 'error');
+          } finally {
+            if ($('headerRechargeBtn')) {
+              $('headerRechargeBtn').disabled = false;
+              $('headerRechargeBtn').style.opacity = '1';
+            }
+          }
+        }
+      });
+    }
     if ($('paymentNavBtn')) $('paymentNavBtn').addEventListener('click', () => navigateToView('payment', 'recharge'));
     if ($('adminHeaderToggleBtn')) {
       $('adminHeaderToggleBtn').addEventListener('click', () => {

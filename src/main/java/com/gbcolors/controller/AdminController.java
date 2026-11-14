@@ -157,7 +157,14 @@ public class AdminController {
         Integer cycleSeconds = parseInt(body == null ? null : body.get("cycleDurationSeconds"));
         Integer closeSeconds = parseInt(body == null ? null : body.get("betCloseSeconds"));
         Integer minProfitPct = parseInt(body == null ? null : body.get("adminMinProfitPercent"));
-        Map<String, Object> res = gameLoopService.updateGameConfig(cycleSeconds, closeSeconds, minProfitPct);
+        Integer resultSeconds = parseInt(body == null ? null : body.get("resultDisplaySeconds"));
+        java.math.BigDecimal defaultDemo = null;
+        if (body != null && body.get("defaultDemoBalance") != null) {
+            try {
+                defaultDemo = new java.math.BigDecimal(String.valueOf(body.get("defaultDemoBalance")).trim());
+            } catch (Exception ignored) {}
+        }
+        Map<String, Object> res = gameLoopService.updateGameConfig(cycleSeconds, closeSeconds, minProfitPct, resultSeconds, defaultDemo);
         int status = Boolean.TRUE.equals(res.get("success")) ? 200 : 400;
         return ResponseEntity.status(status).body(res);
     }

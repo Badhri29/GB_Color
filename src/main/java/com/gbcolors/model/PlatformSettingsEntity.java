@@ -69,6 +69,12 @@ public class PlatformSettingsEntity {
     @Column(name = "bet_close_seconds")
     private Integer betCloseSeconds = 5;
 
+    @Column(name = "result_display_seconds")
+    private Integer resultDisplaySeconds = 3;
+
+    @Column(name = "default_demo_balance", precision = 14, scale = 2)
+    private BigDecimal defaultDemoBalance = new BigDecimal("1000.00");
+
     @Column(name = "admin_min_profit_percent")
     private Integer adminMinProfitPercent = 15;
 
@@ -179,6 +185,20 @@ public class PlatformSettingsEntity {
     }
     public void setBetCloseSeconds(Integer betCloseSeconds) {
         this.betCloseSeconds = betCloseSeconds != null ? betCloseSeconds : 5;
+    }
+
+    public int getResultDisplaySeconds() {
+        return resultDisplaySeconds != null && resultDisplaySeconds >= 1 ? resultDisplaySeconds : 3;
+    }
+    public void setResultDisplaySeconds(Integer resultDisplaySeconds) {
+        this.resultDisplaySeconds = resultDisplaySeconds != null && resultDisplaySeconds >= 1 ? resultDisplaySeconds : 3;
+    }
+
+    public BigDecimal getDefaultDemoBalance() {
+        return defaultDemoBalance != null && defaultDemoBalance.compareTo(BigDecimal.ZERO) > 0 ? defaultDemoBalance : new BigDecimal("1000.00");
+    }
+    public void setDefaultDemoBalance(BigDecimal defaultDemoBalance) {
+        this.defaultDemoBalance = defaultDemoBalance != null && defaultDemoBalance.compareTo(BigDecimal.ZERO) > 0 ? defaultDemoBalance : new BigDecimal("1000.00");
     }
 
     public int getAdminMinProfitPercent() {

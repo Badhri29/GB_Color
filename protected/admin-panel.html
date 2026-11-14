@@ -126,7 +126,17 @@
                             <input type="number" id="cfgBetCloseSeconds" class="form-input" min="3" max="120" value="5">
                         </div>
                     </div>
-                    <label class="input-label" for="cfgAdminMarginPct">Target Admin Min Profit Margin (%)</label>
+                    <div class="dual-btn-row" style="margin-top:10px;">
+                        <div>
+                            <label class="input-label" for="cfgResultDisplaySeconds">Result Reveal Time (Seconds, 1–15)</label>
+                            <input type="number" id="cfgResultDisplaySeconds" class="form-input" min="1" max="15" value="3">
+                        </div>
+                        <div>
+                            <label class="input-label" for="cfgDefaultDemoBalance">Default Demo Balance (₹)</label>
+                            <input type="number" id="cfgDefaultDemoBalance" class="form-input" min="100" max="1000000" value="1000">
+                        </div>
+                    </div>
+                    <label class="input-label" for="cfgAdminMarginPct" style="margin-top:10px;">Target Admin Min Profit Margin (%)</label>
                     <input type="number" id="cfgAdminMarginPct" class="form-input" min="0" max="100" value="15">
 
                     <button class="btn-confirm-bet" id="saveGameConfigBtn" style="margin-top:14px;">Save Timer &amp; Profit Config</button>

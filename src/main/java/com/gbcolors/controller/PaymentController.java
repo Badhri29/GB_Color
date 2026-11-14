@@ -205,6 +205,19 @@ public class PaymentController {
         }
     }
 
+    @PostMapping("/reset-demo")
+    public ResponseEntity<Map<String, Object>> resetDemo(
+            @RequestHeader(value = "Authorization", required = false) String authHeader
+    ) {
+        SessionEntity session = resolveUserSession(authHeader);
+        if (session == null) {
+            return ResponseEntity.status(401).body(Map.of("success", false, "message", "Authentication required."));
+        }
+        Map<String, Object> res = gameLoopService.resetUserDemoBalance(session.getEmail());
+        int status = Boolean.TRUE.equals(res.get("success")) ? 200 : 400;
+        return ResponseEntity.status(status).body(res);
+    }
+
     private SessionEntity resolveUserSession(String authHeader) {
         return authService.resolveSession(authHeader)
                 .filter(s -> s.getRole() == GameEnums.SessionRole.USER || s.getRole() == GameEnums.SessionRole.ADMIN)
