@@ -2061,7 +2061,7 @@
     let lastKnownPeriod = null;
     socket.on('game_tick', (tick) => {
       if (!tick) return;
-      if (tick.period && tick.period !== lastKnownPeriod) {
+      if (tick.period && tick.period !== lastKnownPeriod && tick.status !== 'REVEAL') {
         lastKnownPeriod = tick.period;
         UserSimulatedPoolEngine.resetForPeriod(tick.period);
       }
@@ -2075,7 +2075,9 @@
       } else if (tick.status === 'BETTING') {
         gameState.winningResult = null;
       }
-      UserSimulatedPoolEngine.tick(gameState.timeLeft);
+      if (tick.status !== 'REVEAL') {
+        UserSimulatedPoolEngine.tick(gameState.timeLeft);
+      }
       renderActiveBetBadges();
       updateClockAndLock();
     });
@@ -2242,6 +2244,8 @@
     if (currentUser) {
       renderUserSummary();
     }
+    LiveTickerEngine.refresh();
+    renderActiveBetBadges();
   }
 
   async function mountAdminToolkit(adminInfo) {

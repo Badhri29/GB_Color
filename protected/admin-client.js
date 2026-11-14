@@ -714,51 +714,38 @@
             }
         }
 
+        function safeSet(id, val) {
+            const el = document.getElementById(id);
+            if (el && val !== undefined && val !== null) el.value = val;
+        }
+
         if (!gameConfigPopulated) {
             gameConfigPopulated = true;
-            document.getElementById('cfgCycleSeconds').value = data.cycleDurationSeconds || 30;
-            document.getElementById('cfgBetCloseSeconds').value = data.betCloseSeconds || 5;
-            if (document.getElementById('cfgResultDisplaySeconds')) {
-                document.getElementById('cfgResultDisplaySeconds').value = data.resultDisplaySeconds || 3;
-            }
-            if (document.getElementById('cfgDefaultDemoBalance')) {
-                document.getElementById('cfgDefaultDemoBalance').value = data.defaultDemoBalance || 1000;
-            }
-            document.getElementById('cfgAdminMarginPct').value = data.adminMinProfitPercent ?? 15;
+            safeSet('cfgCycleSeconds', data.cycleDurationSeconds || 30);
+            safeSet('cfgBetCloseSeconds', data.betCloseSeconds || 5);
+            safeSet('cfgResultDisplaySeconds', data.resultDisplaySeconds || 3);
+            safeSet('cfgDefaultDemoBalance', data.defaultDemoBalance || 1000);
+            safeSet('cfgAdminMarginPct', data.adminMinProfitPercent ?? 15);
             const inlineM = document.getElementById('admInlineMarginInput');
             if (inlineM) inlineM.value = data.adminMinProfitPercent ?? 15;
         }
 
         if (!paymentConfigPopulated && data.paymentConfig) {
             paymentConfigPopulated = true;
-            document.getElementById('cfgUpiId').value = data.paymentConfig.upiId || '';
-            document.getElementById('cfgUpiPayeeName').value = data.paymentConfig.upiPayeeName || '';
-            document.getElementById('cfgRzpKeyId').value = data.paymentConfig.razorpayKeyId || '';
-            document.getElementById('cfgMinDeposit').value = data.paymentConfig.minDeposit ?? 100;
-            document.getElementById('cfgMaxDeposit').value = data.paymentConfig.maxDeposit ?? 50000;
-            document.getElementById('cfgMinWithdraw').value = data.paymentConfig.minWithdraw ?? 200;
-            document.getElementById('cfgMaxWithdraw').value = data.paymentConfig.maxWithdraw ?? 50000;
-            if (document.getElementById('cfgActiveCurrency') && data.paymentConfig.activeCurrency) {
-                document.getElementById('cfgActiveCurrency').value = data.paymentConfig.activeCurrency;
-            }
-            if (document.getElementById('cfgUpiWebhookSecret') && data.paymentConfig.upiWebhookSecret) {
-                document.getElementById('cfgUpiWebhookSecret').value = data.paymentConfig.upiWebhookSecret;
-            }
-            if (document.getElementById('cfgSmsWebhookToken') && data.paymentConfig.smsWebhookToken) {
-                document.getElementById('cfgSmsWebhookToken').value = data.paymentConfig.smsWebhookToken;
-            }
-            if (document.getElementById('cfgPaypalClientId') && data.paymentConfig.paypalClientId) {
-                document.getElementById('cfgPaypalClientId').value = data.paymentConfig.paypalClientId;
-            }
-            if (document.getElementById('cfgPaypalMode') && data.paymentConfig.paypalMode) {
-                document.getElementById('cfgPaypalMode').value = data.paymentConfig.paypalMode;
-            }
-            if (data.paymentConfig.paypalEnabled && document.getElementById('cfgPaypalClientSecret')) {
-                document.getElementById('cfgPaypalClientSecret').value = '********';
-            }
-            if (data.paymentConfig.razorpayEnabled) {
-                document.getElementById('cfgRzpKeySecret').value = '********';
-            }
+            safeSet('cfgUpiId', data.paymentConfig.upiId || '');
+            safeSet('cfgUpiPayeeName', data.paymentConfig.upiPayeeName || '');
+            safeSet('cfgRzpKeyId', data.paymentConfig.razorpayKeyId || '');
+            safeSet('cfgMinDeposit', data.paymentConfig.minDeposit ?? 100);
+            safeSet('cfgMaxDeposit', data.paymentConfig.maxDeposit ?? 50000);
+            safeSet('cfgMinWithdraw', data.paymentConfig.minWithdraw ?? 200);
+            safeSet('cfgMaxWithdraw', data.paymentConfig.maxWithdraw ?? 50000);
+            if (data.paymentConfig.activeCurrency) safeSet('cfgActiveCurrency', data.paymentConfig.activeCurrency);
+            if (data.paymentConfig.upiWebhookSecret) safeSet('cfgUpiWebhookSecret', data.paymentConfig.upiWebhookSecret);
+            if (data.paymentConfig.smsWebhookToken) safeSet('cfgSmsWebhookToken', data.paymentConfig.smsWebhookToken);
+            if (data.paymentConfig.paypalClientId) safeSet('cfgPaypalClientId', data.paymentConfig.paypalClientId);
+            if (data.paymentConfig.paypalMode) safeSet('cfgPaypalMode', data.paymentConfig.paypalMode);
+            if (data.paymentConfig.paypalEnabled) safeSet('cfgPaypalClientSecret', '********');
+            if (data.paymentConfig.razorpayEnabled) safeSet('cfgRzpKeySecret', '********');
         }
         const rzpBadge = document.getElementById('admRzpStatusBadge');
         if (rzpBadge && data.paymentConfig) {
@@ -768,13 +755,13 @@
 
         if (!smtpFormPopulated && data.smtpStatus) {
             smtpFormPopulated = true;
-            document.getElementById('cfgAdminEmail').value = data.smtpStatus.adminEmail || '';
-            document.getElementById('cfgSmtpHost').value = data.smtpStatus.host || 'smtp.gmail.com';
-            document.getElementById('cfgSmtpPort').value = data.smtpStatus.port || 587;
-            document.getElementById('cfgSmtpUser').value = data.smtpStatus.authUser || '';
-            document.getElementById('cfgFromName').value = data.smtpStatus.fromName || 'GB_Colors';
+            safeSet('cfgAdminEmail', data.smtpStatus.adminEmail || '');
+            safeSet('cfgSmtpHost', data.smtpStatus.host || 'smtp.gmail.com');
+            safeSet('cfgSmtpPort', data.smtpStatus.port || 587);
+            safeSet('cfgSmtpUser', data.smtpStatus.authUser || '');
+            safeSet('cfgFromName', data.smtpStatus.fromName || 'GB_Colors');
             if (data.smtpStatus.isConfigured) {
-                document.getElementById('cfgSmtpPass').value = '********';
+                safeSet('cfgSmtpPass', '********');
             }
         }
         const smtpBadge = document.getElementById('smtpConfigStatusBadge');

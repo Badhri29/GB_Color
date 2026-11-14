@@ -447,67 +447,86 @@ html, body {
     width: 100%;
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 768px) {
     .site-wrapper {
         min-height: 100vh;
         height: auto;
         overflow: visible;
     }
     .dashboard-grid {
-        height: auto;
-        overflow: visible;
-        padding: 16px 20px 24px 20px;
+        display: grid !important;
+        grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr) !important;
+        gap: 16px !important;
+        align-items: stretch !important;
+        padding: 16px 20px 24px 20px !important;
+        height: auto !important;
     }
-    .game-arena-column {
-        height: auto;
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-    }
+    .game-arena-column,
     .side-panel-column {
-        height: auto;
-        display: flex;
-        flex-direction: column;
-        overflow: visible;
+        height: 100% !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 16px !important;
+        min-height: 0 !important;
     }
     .records-card {
-        height: 100%;
-        max-height: 540px;
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-        overflow: hidden;
+        height: 100% !important;
+        max-height: none !important;
+        display: flex !important;
+        flex-direction: column !important;
+        flex: 1 1 0 !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
     }
-    .tab-content {
-        flex: 1;
+    .tab-content, .rec-panel {
+        flex: 1 1 0 !important;
         display: none;
-        height: auto;
-        overflow: hidden;
+        height: 100% !important;
+        min-height: 0 !important;
     }
-    .tab-content.active {
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
+    .tab-content.active, .rec-panel.active {
+        display: flex !important;
+        flex-direction: column !important;
+        flex: 1 1 0 !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        overflow: hidden !important;
     }
     .table-scroll-wrapper, .scroll-container {
-        flex: 1;
-        min-height: 0;
-        max-height: 400px;
-        overflow-x: auto;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
+        flex: 1 1 0 !important;
+        min-height: 250px !important;
+        max-height: none !important;
+        overflow-x: auto !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
     }
-    .betting-section {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        justify-content: space-evenly;
+    .betting-section,
+    .safe-betting-container,
+    .pool-betting-container {
+        flex: 1 1 auto !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: space-between !important;
+        min-height: 0 !important;
+    }
+    .safe-buttons-grid,
+    .pool-buttons-grid {
+        flex: 1 1 auto !important;
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 16px !important;
+        align-items: stretch !important;
+    }
+    .bet-btn.safe-btn,
+    .bet-btn.pool-btn {
+        height: 100% !important;
+        min-height: 140px !important;
     }
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 767px) {
     .dashboard-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
         padding: 12px;
         gap: 16px;
     }
