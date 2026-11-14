@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20261114_11" />
+  <link rel="stylesheet" href="style.css?v=20261114_09" />
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
@@ -149,7 +149,7 @@
             <span class="wallet-mode-cap" id="headerWalletLabel">DEMO WALLET</span>
             <strong id="activeBalanceDisplay" class="wallet-amount">₹0.00</strong>
           </div>
-          <button id="headerRechargeBtn" class="wallet-plus-btn demo-reset-btn" type="button" title="Reset Demo Coins">🔄</button>
+          <button id="headerRechargeBtn" class="wallet-plus-btn" type="button" title="Recharge / Payments">+</button>
         </div>
 
         <button id="adminHeaderToggleBtn" class="header-action-pill admin-pill-btn" type="button" title="Admin Command Center" style="display:none;">🛡️ <span>Admin Tools</span></button>
@@ -303,7 +303,7 @@
               </div>
 
               <!-- CLASSIC GAME MODE CONTROLS -->
-              <div id="classicBettingContainer" class="betting-container-mode">
+              <div id="classicBettingContainer">
                 <!-- ROW 1: COLORS (Green, Violet, Red) -->
                 <div class="color-buttons-grid">
                   <button type="button" class="bet-btn color-green" data-type="COLOR" data-choice="GREEN">
@@ -419,7 +419,7 @@
               </div>
 
               <!-- SAFE PROTECT GAME MODE CONTROLS (GREEN & RED ONLY) -->
-              <div id="safeBettingContainer" class="betting-container-mode safe-betting-container mode-inactive" style="display:none;">
+              <div id="safeBettingContainer" class="safe-betting-container" style="display:none;">
                 <div class="safe-info-banner">
                   <span>🛡️ <strong>Safe Shield Rules:</strong> Win pays <strong>1.20x</strong> (+20% profit). If your color does not appear, you receive an <strong>80% refund</strong> (20% platform commission)!</span>
                 </div>
@@ -446,7 +446,7 @@
               </div>
 
               <!-- POOL SHARE (90/10 DYNAMIC) GAME MODE CONTROLS -->
-              <div id="poolBettingContainer" class="betting-container-mode pool-betting-container mode-inactive" style="display:none;">
+              <div id="poolBettingContainer" class="pool-betting-container" style="display:none;">
                 <div class="pool-info-banner">
                   <span>🔰 <strong>Royal Pool Rules:</strong> Losers receive a guaranteed <strong>90% refund</strong> (10% fee collected). Winners dynamically share <strong>90% of the collected fee pool</strong> proportionally to their wager!</span>
                 </div>
@@ -963,8 +963,8 @@
   <!-- TOAST -->
   <div id="toast" class="toast-banner"></div>
 
-  <script src="vendor/gb-ws.js?v=20261114_11"></script>
-  <script src="config.js?v=20261114_11"></script>
-  <script src="app.js?v=20261114_11"></script>
+  <script src="vendor/gb-ws.js?v=20261114_09"></script>
+  <script src="config.js?v=20261114_09"></script>
+  <script src="app.js?v=20261114_09"></script>
 </body>
 </html>
