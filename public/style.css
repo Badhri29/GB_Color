@@ -35,13 +35,10 @@
 
 html, body {
     width: 100%;
-    height: 100%;
-    max-height: 100vh;
+    min-height: 100vh;
     background-color: var(--bg-dark);
     color: var(--text-primary);
-    overflow: hidden !important;
-    margin: 0;
-    padding: 0;
+    overflow-x: hidden;
 }
 
 /* ========================================================
@@ -203,9 +200,7 @@ html, body {
 .site-wrapper {
     width: 100vw;
     max-width: 100%;
-    height: 100vh;
-    max-height: 100vh;
-    overflow: hidden !important;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
     background-color: var(--bg-dark);
@@ -454,29 +449,25 @@ html, body {
 
 @media (min-width: 768px) {
     .site-wrapper {
-        height: 100vh !important;
-        max-height: 100vh !important;
-        overflow: hidden !important;
+        min-height: 100vh;
+        height: auto;
+        overflow: visible;
     }
     .dashboard-grid {
         display: grid !important;
         grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr) !important;
-        gap: 12px !important;
+        gap: 16px !important;
         align-items: stretch !important;
-        padding: 0 !important;
-        height: 100% !important;
-        max-height: 100% !important;
-        overflow: hidden !important;
+        padding: 16px 20px 24px 20px !important;
+        height: auto !important;
     }
     .game-arena-column,
     .side-panel-column {
         height: 100% !important;
-        max-height: 100% !important;
         display: flex !important;
         flex-direction: column !important;
-        gap: 6px !important;
+        gap: 16px !important;
         min-height: 0 !important;
-        overflow: hidden !important;
     }
     .records-card {
         height: 100% !important;
@@ -1473,9 +1464,9 @@ html, body {
 html, body {
   width: 100%;
   max-width: 100%;
-  height: 100vh;
-  max-height: 100vh;
-  overflow: hidden !important;
+  height: auto;
+  overflow-x: clip !important;
+  overflow-y: auto;
   margin: 0;
   padding: 0;
   background: var(--bg-dark, #070d1e);
@@ -1483,20 +1474,19 @@ html, body {
   font-family: 'Outfit', system-ui, -apple-system, sans-serif;
 }
 
-/* Strict zero-scroll viewport-fit containment */
+/* Eliminate horizontal overflow while keeping full vertical document scrolling */
 .auth-screen-wrapper,
 .site-wrapper,
 .admin-dashboard-shell {
   width: 100% !important;
   max-width: 100% !important;
-  height: 100vh !important;
-  max-height: 100vh !important;
-  overflow: hidden !important;
+  overflow-x: clip;
+  overflow-y: visible;
 }
 
 .site-wrapper {
-  height: 100vh !important;
-  max-height: 100vh !important;
+  min-height: 100vh;
+  height: auto;
   display: flex;
   flex-direction: column;
 }
@@ -3398,7 +3388,7 @@ html, body {
 /* =========================================================
    MOBILE & TABLET RESPONSIVE GUARANTEES (ZERO OVERFLOW)
    ========================================================= */
-@media (max-width: 767px) {
+@media (max-width: 1023px) {
   .dashboard-grid,
   .payment-grid,
   .adm-split-grid {
@@ -3892,20 +3882,20 @@ html, body {
   }
 }
 
-/* Zero-scroll viewport fit: Strict 100vh guarantee without page scrolling */
+/* Strict horizontal zero-overflow containment without blocking vertical page scrolling */
 html,
 body,
 .site-wrapper {
   width: 100% !important;
   max-width: 100% !important;
-  height: 100vh !important;
-  max-height: 100vh !important;
-  overflow: hidden !important;
+  height: auto !important;
+  overflow-x: clip !important;
+  overflow-y: visible;
 }
 
 html,
 body {
-  overflow: hidden !important;
+  overflow-y: auto !important;
 }
 
 .app-views-root,
@@ -3999,7 +3989,7 @@ body {
   object-fit: contain;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 1024px) {
   .app-views-root,
   .page-view,
   #view-admin,
@@ -4011,41 +4001,30 @@ body {
   }
 
   .app-views-root {
-    padding: 6px 14px 8px !important;
-    height: calc(100vh - 72px) !important;
-    max-height: calc(100vh - 72px) !important;
-    overflow: hidden !important;
-    box-sizing: border-box;
+    padding: 12px 18px 28px;
   }
 
   #view-game.active .dashboard-grid {
-    display: grid !important;
-    grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr) !important;
-    gap: 10px !important;
+    display: grid;
+    grid-template-columns: minmax(0, 1.03fr) minmax(0, 0.97fr);
+    gap: 14px;
     align-items: stretch !important;
-    height: 100% !important;
-    max-height: 100% !important;
-    overflow: hidden !important;
-    padding: 0 !important;
   }
 
   #view-game .game-arena-column {
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: space-between !important;
-    gap: 5px !important;
-    height: 100% !important;
-    max-height: 100% !important;
-    overflow: hidden !important;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    height: 100%;
   }
 
   #view-game .period-code {
-    font-size: 1.02rem;
+    font-size: 1.15rem;
   }
 
   #view-game .clock-digit {
-    padding: 2px 6px;
-    font-size: 1.12rem;
+    padding: 5px 10px;
+    font-size: 1.32rem;
   }
 
   #view-game .betting-section {
@@ -4053,33 +4032,31 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    padding: 6px 10px !important;
-    overflow: hidden;
+    padding: 14px;
   }
 
   #view-game .color-buttons-grid {
-    gap: 6px;
-    margin-bottom: 4px;
+    gap: 8px;
+    margin-bottom: 8px;
   }
 
   #view-game .color-buttons-grid .bet-btn {
-    padding: 4px 8px !important;
-    min-height: 32px !important;
+    padding: 6px 10px !important;
+    min-height: 38px !important;
   }
 
   #view-game .numbers-grid {
-    gap: 6px;
-    margin-bottom: 4px;
+    gap: 8px;
+    margin-bottom: 8px;
   }
 
   #view-game .num-btn {
-    height: 34px;
-    font-size: 0.98rem;
+    height: 40px;
+    font-size: 1.05rem;
   }
 
   #view-game .size-buttons-grid .bet-btn {
-    padding: 4px 10px;
-    min-height: 28px;
+    padding: 7px 12px;
   }
 
   #view-game .side-panel-column {
@@ -4092,24 +4069,15 @@ body {
   #view-game .records-card {
     flex: 1 1 auto;
     height: 100% !important;
-    max-height: 100% !important;
     display: flex !important;
     flex-direction: column !important;
-    justify-content: space-between !important;
     min-height: 0;
-    padding: 8px 10px !important;
-    overflow: hidden !important;
+    padding: 10px 12px;
   }
 
   #view-game .records-tabs {
     flex-shrink: 0;
-    margin-bottom: 4px;
-    height: 30px;
-  }
-
-  #view-game .records-tabs .rec-tab-btn {
-    padding: 3px 8px;
-    font-size: 0.76rem;
+    margin-bottom: 8px;
   }
 
   #view-game .records-card .rec-panel.active,
@@ -4119,22 +4087,22 @@ body {
     max-height: none !important;
     display: flex !important;
     flex-direction: column !important;
-    justify-content: space-between !important;
-    overflow: hidden !important;
+    overflow: hidden;
   }
 
   #view-game .table-scroll-wrapper,
   .is-admin-session #view-game .table-scroll-wrapper {
     flex: 1 1 0 !important;
-    min-height: 0 !important;
+    min-height: 200px !important;
     max-height: none !important;
-    overflow: hidden !important;
+    overflow-x: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
   #view-game .cards-feed-list {
-    flex: 1 1 0 !important;
-    min-height: 0 !important;
-    overflow-y: auto !important;
+    max-height: 380px;
+    overflow-y: auto;
   }
 
   #view-game .records-table thead th {
@@ -4142,15 +4110,12 @@ body {
     top: 0;
     background: var(--card-bg, #111a30);
     z-index: 2;
-    padding: 3px 6px !important;
-    font-size: 0.72rem !important;
   }
 
   #view-game .records-table th,
   #view-game .records-table td {
-    padding: 3px 6px !important;
-    font-size: 0.75rem !important;
-    line-height: 1.15 !important;
+    padding: 5px 8px !important;
+    font-size: 0.8rem !important;
   }
 }
 
