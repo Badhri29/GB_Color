@@ -1946,14 +1946,24 @@
     if ($('gameModeSafeBtn')) $('gameModeSafeBtn').classList.toggle('active', currentGameMode === 'SAFE');
     if ($('gameModePoolBtn')) $('gameModePoolBtn').classList.toggle('active', currentGameMode === 'POOL');
 
-    if ($('classicBettingContainer')) {
-      $('classicBettingContainer').style.setProperty('display', currentGameMode === 'CLASSIC' ? 'block' : 'none', 'important');
+    const classicBox = $('classicBettingContainer');
+    const safeBox = $('safeBettingContainer');
+    const poolBox = $('poolBettingContainer');
+
+    if (classicBox) {
+      const isClassic = (currentGameMode === 'CLASSIC');
+      classicBox.classList.toggle('mode-inactive', !isClassic);
+      classicBox.style.setProperty('display', isClassic ? 'block' : 'none', 'important');
     }
-    if ($('safeBettingContainer')) {
-      $('safeBettingContainer').style.setProperty('display', currentGameMode === 'SAFE' ? 'flex' : 'none', 'important');
+    if (safeBox) {
+      const isSafe = (currentGameMode === 'SAFE');
+      safeBox.classList.toggle('mode-inactive', !isSafe);
+      safeBox.style.setProperty('display', isSafe ? 'flex' : 'none', 'important');
     }
-    if ($('poolBettingContainer')) {
-      $('poolBettingContainer').style.setProperty('display', currentGameMode === 'POOL' ? 'flex' : 'none', 'important');
+    if (poolBox) {
+      const isPool = (currentGameMode === 'POOL');
+      poolBox.classList.toggle('mode-inactive', !isPool);
+      poolBox.style.setProperty('display', isPool ? 'flex' : 'none', 'important');
     }
 
     const cycleSec = Number(gameState.cycleDurationSeconds || 30);
@@ -2658,6 +2668,7 @@
     if ($('gameModeClassicBtn')) $('gameModeClassicBtn').addEventListener('click', () => setGameMode('CLASSIC'));
     if ($('gameModeSafeBtn')) $('gameModeSafeBtn').addEventListener('click', () => setGameMode('SAFE'));
     if ($('gameModePoolBtn')) $('gameModePoolBtn').addEventListener('click', () => setGameMode('POOL'));
+    setGameMode('CLASSIC');
 
     // Game History Pagination
     if ($('histPrevPageBtn')) {
