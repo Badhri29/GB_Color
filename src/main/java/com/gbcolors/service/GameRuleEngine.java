@@ -134,6 +134,16 @@ public class GameRuleEngine {
         return new BetEvalResult(win, multiplier, payout);
     }
 
+    public BetEvalResult evaluateSafeBetOutcome(BetEntity bet, String safeResultColor) {
+        String choice = bet.getChoice() != null ? bet.getChoice().trim().toLowerCase() : "";
+        String winningColor = safeResultColor != null ? safeResultColor.trim().toLowerCase() : "green";
+        boolean win = choice.equalsIgnoreCase(winningColor);
+        double multiplier = win ? 1.20 : 0.80;
+        double amt = bet.getAmount() != null ? bet.getAmount().doubleValue() : 0.0;
+        long payout = (long) Math.floor(amt * multiplier);
+        return new BetEvalResult(win, multiplier, payout);
+    }
+
     public ProjectionSummary computeRoundProjections(List<BetEntity> allCurrentBets) {
         return computeRoundProjections(allCurrentBets, 100);
     }

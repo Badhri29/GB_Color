@@ -267,7 +267,9 @@
       latestRoundResult = {
         number: round.number != null ? Number(round.number) : (round.winningNumber != null ? Number(round.winningNumber) : null),
         colors: colors,
-        size: round.size ? String(round.size).trim().toUpperCase() : null
+        size: round.size ? String(round.size).trim().toUpperCase() : null,
+        safeColor: round.safeResultColor ? String(round.safeResultColor).trim().toUpperCase() : null,
+        poolColor: round.poolResultColor ? String(round.poolResultColor).trim().toUpperCase() : null
       };
       dummyBag = [];
     }
@@ -281,9 +283,13 @@
         if (latestRoundResult.colors && latestRoundResult.colors.length) {
           latestRoundResult.colors.forEach((col) => {
             targets.push(col);
-            targets.push('Safe ' + col);
-            targets.push('Pool ' + col);
           });
+        }
+        if (latestRoundResult.safeColor) {
+          targets.push('Safe ' + latestRoundResult.safeColor);
+        }
+        if (latestRoundResult.poolColor) {
+          targets.push('Pool ' + latestRoundResult.poolColor);
         }
         if (latestRoundResult.size) {
           targets.push(latestRoundResult.size);
@@ -445,21 +451,19 @@
 
     function resetForPeriod(periodStr) {
       currentPeriod = String(periodStr || '');
-      const seed = hashPeriod(currentPeriod);
-      const base = 8000 + (seed % 6000);
       pools = {
-        'GREEN': base + (seed % 3500),
-        'RED': base + ((seed * 7) % 3500),
-        'VIOLET': Math.floor(base * 0.35) + ((seed * 3) % 800),
-        'BIG': base + ((seed * 5) % 4000),
-        'SMALL': base + ((seed * 11) % 4000),
-        'SAFE-GREEN': Math.floor(base * 0.7) + ((seed * 2) % 2000),
-        'SAFE-RED': Math.floor(base * 0.7) + ((seed * 13) % 2000),
-        'POOL-GREEN': Math.floor(base * 0.6) + ((seed * 4) % 1800),
-        'POOL-RED': Math.floor(base * 0.6) + ((seed * 9) % 1800)
+        'GREEN': 0,
+        'RED': 0,
+        'VIOLET': 0,
+        'BIG': 0,
+        'SMALL': 0,
+        'SAFE-GREEN': 0,
+        'SAFE-RED': 0,
+        'POOL-GREEN': 0,
+        'POOL-RED': 0
       };
       for (let i = 0; i <= 9; i++) {
-        pools[String(i)] = Math.floor(base * 0.22) + (((seed + i * 19) % 12) * 120);
+        pools[String(i)] = 0;
       }
     }
 
@@ -1169,6 +1173,12 @@
     }).join('')}</span>`;
   }
 
+  function singleColorChipHtml(colorName) {
+    const cls = String(colorName || 'green').toLowerCase();
+    const label = cls.charAt(0).toUpperCase() + cls.slice(1);
+    return `<span class="color-chips-wrap"><span class="color-dot-pill ${escapeHtml(cls)}"><span class="color-circle-dot"></span>${escapeHtml(label)}</span></span>`;
+  }
+
   function renderUserSummary() {
     if (!currentUser) return;
     const isReal = currentUser.mode === 'REAL';
@@ -1294,7 +1304,32 @@
 
   function buildHistoryRowsHtml(history) {
     if (!Array.isArray(history) || !history.length) {
-      return '<tr><td colspan="4" class="empty-cell">No rounds completed yet.</td></tr>';
+      const colSpan = currentGameMode === 'CLASSIC' ? 4 : 3;
+      return `<tr><td colspan="${colSpan}" class="empty-cell">No rounds completed yet.</td></tr>`;
+    }
+    if (currentGameMode === 'SAFE') {
+      return history.map((r) => {
+        const color = (r.safeResultColor || (r.number % 2 === 1 ? 'GREEN' : 'RED')).toUpperCase();
+        return `
+          <tr>
+            <td class="mono">${escapeHtml(r.period)}</td>
+            <td>${singleColorChipHtml(color)}</td>
+            <td><span class="text-green" style="font-weight:600;font-size:0.8rem;">80% Refund Shield</span></td>
+          </tr>
+        `;
+      }).join('');
+    }
+    if (currentGameMode === 'POOL') {
+      return history.map((r) => {
+        const color = (r.poolResultColor || (r.number % 2 === 1 ? 'GREEN' : 'RED')).toUpperCase();
+        return `
+          <tr>
+            <td class="mono">${escapeHtml(r.period)}</td>
+            <td>${singleColorChipHtml(color)}</td>
+            <td><span class="text-cyan" style="font-weight:600;font-size:0.8rem;">90% Pool Shield</span></td>
+          </tr>
+        `;
+      }).join('');
     }
     return history.map((r) => {
       const numCls = getRoundBallClass(r);
@@ -1311,12 +1346,59 @@
 
   function renderGameHistory() {
     const history = gameState.history || [];
+
+    const headEl = $('historyTableHead');
+    if (headEl) {
+      if (currentGameMode === 'SAFE') {
+        headEl.innerHTML = `
+          <tr>
+            <th>Period</th>
+            <th>Winning Color</th>
+            <th>Protection</th>
+          </tr>
+        `;
+      } else if (currentGameMode === 'POOL') {
+        headEl.innerHTML = `
+          <tr>
+            <th>Period</th>
+            <th>Winning Pool</th>
+            <th>Liquidity Shield</th>
+          </tr>
+        `;
+      } else {
+        headEl.innerHTML = `
+          <tr>
+            <th>Period</th>
+            <th>Number</th>
+            <th>Size</th>
+            <th>Color</th>
+          </tr>
+        `;
+      }
+    }
+
     const dotsEl = $('recentDotsList');
     if (dotsEl) {
-      dotsEl.innerHTML = history.slice(0, 14).map((r) => {
-        const cls = getRoundBallClass(r);
-        return `<span class="recent-dot-ball ${cls}" title="Period ${escapeHtml(r.period)}">${escapeHtml(r.number)}</span>`;
-      }).join('');
+      if (currentGameMode === 'SAFE') {
+        dotsEl.innerHTML = history.slice(0, 14).map((r) => {
+          const color = (r.safeResultColor || (r.number % 2 === 1 ? 'GREEN' : 'RED')).toUpperCase();
+          const cls = color === 'GREEN' ? 'n-green' : 'n-red';
+          const letter = color === 'GREEN' ? 'G' : 'R';
+          return `<span class="recent-dot-ball ${cls}" title="Safe Protect: ${color}">${letter}</span>`;
+        }).join('');
+      } else if (currentGameMode === 'POOL') {
+        dotsEl.innerHTML = history.slice(0, 14).map((r) => {
+          const color = (r.poolResultColor || (r.number % 2 === 1 ? 'GREEN' : 'RED')).toUpperCase();
+          const cls = color === 'GREEN' ? 'n-green' : 'n-red';
+          const letter = color === 'GREEN' ? 'G' : 'R';
+          return `<span class="recent-dot-ball ${cls}" title="Pool Share: ${color}">${letter}</span>`;
+        }).join('');
+      } else {
+        dotsEl.innerHTML = history.slice(0, 14).map((r) => {
+          const cls = getRoundBallClass(r);
+          return `<span class="recent-dot-ball ${cls}" title="Period ${escapeHtml(r.period)}">${escapeHtml(r.number)}</span>`;
+        }).join('');
+      }
     }
 
     const totalRecords = history.length;
@@ -1705,6 +1787,7 @@
         $('modeTagDisplay').textContent = `WIN GO • ${cycleSec}S`;
       }
     }
+    renderGameHistory();
   }
 
   // =========================================================
@@ -1880,12 +1963,15 @@
         const totalPayout = settled.reduce((s, b) => s + Number(b.payout || 0), 0);
         const totalStake = settled.reduce((s, b) => s + Number(b.amount || 0), 0);
         const res = data.result || {};
-        if (totalPayout > 0) {
+        if (totalPayout > totalStake) {
           SoundEngine.win();
-          showToast(`🏆 #${res.number != null ? res.number : '?'} — Won +${formatShortINR(totalPayout)}!`, 'success');
+          showToast(`🏆 Round Won! +${formatShortINR(totalPayout - totalStake)} (Payout: ${formatShortINR(totalPayout)})`, 'success');
+        } else if (totalPayout > 0) {
+          SoundEngine.win();
+          showToast(`🛡️ Protected Round: Received refund of ${formatShortINR(totalPayout)}`, 'info');
         } else {
           SoundEngine.loss();
-          showToast(`Result #${res.number != null ? res.number : '?'} — -${formatShortINR(totalStake)}`, 'info');
+          showToast(`Round Settled: -${formatShortINR(totalStake)}`, 'info');
         }
       }
     });

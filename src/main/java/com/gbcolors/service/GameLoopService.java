@@ -95,6 +95,8 @@ public class GameLoopService {
     private String currentPeriod = "";
     private Integer forcedNextResult = null;
     private Integer lockedWinningNumber = null;
+    private String lockedSafeColor = null;
+    private String lockedPoolColor = null;
     private final List<BetEntity> currentBets = new ArrayList<>();
 
     public GameLoopService(
@@ -260,6 +262,8 @@ public class GameLoopService {
                 if (!"LOCKED".equals(currentStatus) || lockedWinningNumber == null) {
                     currentStatus = "LOCKED";
                     lockedWinningNumber = computeUpcomingWinningNumber(settings);
+                    lockedSafeColor = computeUpcomingSafeColor(settings);
+                    lockedPoolColor = computeUpcomingPoolColor(settings);
                     logLockedPreview(buildAdminAnalyticsSnapshot());
                 }
             } else if (timeLeft <= 0) {
@@ -268,6 +272,8 @@ public class GameLoopService {
                 settledUserPayloads = settlement.settledUserPayloads();
 
                 lockedWinningNumber = null;
+                lockedSafeColor = null;
+                lockedPoolColor = null;
                 forcedNextResult = null;
                 currentStatus = "BETTING";
                 // Reload settings in case cycle duration was updated
@@ -313,15 +319,78 @@ public class GameLoopService {
         if (forcedNextResult != null && forcedNextResult >= 0 && forcedNextResult <= 9) {
             return forcedNextResult;
         }
-        if (settings.getOutcomeMode() == GameEnums.OutcomeMode.SMART_PROFIT && !currentBets.isEmpty()) {
+        List<BetEntity> mode1Bets = currentBets.stream()
+                .filter(b -> b.getBetType() == GameEnums.BetType.COLOR || b.getBetType() == GameEnums.BetType.NUMBER || b.getBetType() == GameEnums.BetType.SIZE)
+                .toList();
+        if (settings.getOutcomeMode() == GameEnums.OutcomeMode.SMART_PROFIT && !mode1Bets.isEmpty()) {
             GameRuleEngine.ProjectionSummary summary = ruleEngine.computeRoundProjections(
-                    currentBets,
+                    mode1Bets,
                     settings.getAdminMinProfitPercent()
             );
             List<GameRuleEngine.NumberProjection> best = summary.bestCandidates();
             return best.get(RANDOM.nextInt(best.size())).number();
         }
         return RANDOM.nextInt(10);
+    }
+
+    private String computeUpcomingSafeColor(PlatformSettingsEntity settings) {
+        List<BetEntity> safeBets = currentBets.stream()
+                .filter(b -> b.getBetType() == GameEnums.BetType.SAFE_COLOR)
+                .toList();
+        List<BetEntity> realSafeBets = safeBets.stream()
+                .filter(b -> b.getMode() == GameEnums.ActiveMode.REAL)
+                .toList();
+        List<BetEntity> targetSafe = !realSafeBets.isEmpty() ? realSafeBets : safeBets;
+
+        if (settings.getOutcomeMode() == GameEnums.OutcomeMode.SMART_PROFIT && !targetSafe.isEmpty()) {
+            long greenAmt = targetSafe.stream()
+                    .filter(b -> "GREEN".equalsIgnoreCase(b.getChoice()))
+                    .map(BetEntity::getAmount)
+                    .mapToLong(BigDecimal::longValue)
+                    .sum();
+            long redAmt = targetSafe.stream()
+                    .filter(b -> "RED".equalsIgnoreCase(b.getChoice()))
+                    .map(BetEntity::getAmount)
+                    .mapToLong(BigDecimal::longValue)
+                    .sum();
+
+            if (greenAmt < redAmt) {
+                return "GREEN";
+            } else if (redAmt < greenAmt) {
+                return "RED";
+            }
+        }
+        return RANDOM.nextBoolean() ? "GREEN" : "RED";
+    }
+
+    private String computeUpcomingPoolColor(PlatformSettingsEntity settings) {
+        List<BetEntity> poolBets = currentBets.stream()
+                .filter(b -> b.getBetType() == GameEnums.BetType.POOL_SHARE)
+                .toList();
+        List<BetEntity> realPoolBets = poolBets.stream()
+                .filter(b -> b.getMode() == GameEnums.ActiveMode.REAL)
+                .toList();
+        List<BetEntity> targetPool = !realPoolBets.isEmpty() ? realPoolBets : poolBets;
+
+        if (settings.getOutcomeMode() == GameEnums.OutcomeMode.SMART_PROFIT && !targetPool.isEmpty()) {
+            long greenAmt = targetPool.stream()
+                    .filter(b -> "GREEN".equalsIgnoreCase(b.getChoice()))
+                    .map(BetEntity::getAmount)
+                    .mapToLong(BigDecimal::longValue)
+                    .sum();
+            long redAmt = targetPool.stream()
+                    .filter(b -> "RED".equalsIgnoreCase(b.getChoice()))
+                    .map(BetEntity::getAmount)
+                    .mapToLong(BigDecimal::longValue)
+                    .sum();
+
+            if (greenAmt < redAmt) {
+                return "GREEN";
+            } else if (redAmt < greenAmt) {
+                return "RED";
+            }
+        }
+        return RANDOM.nextBoolean() ? "GREEN" : "RED";
     }
 
     private record SettlementResult(
@@ -361,10 +430,16 @@ public class GameLoopService {
             BigDecimal roundRealPayout = BigDecimal.ZERO;
             int winnersCount = 0;
 
+            String safeResultColor = (lockedSafeColor != null && !lockedSafeColor.isBlank())
+                    ? lockedSafeColor
+                    : computeUpcomingSafeColor(settings);
+
+            String poolResultColor = (lockedPoolColor != null && !lockedPoolColor.isBlank())
+                    ? lockedPoolColor
+                    : computeUpcomingPoolColor(settings);
+
             // Pre-calculate POOL_SHARE payouts if any exist
             Map<String, GameRuleEngine.BetEvalResult> poolShareEvalMap = new HashMap<>();
-            String winColor = (winningNumber == 1 || winningNumber == 3 || winningNumber == 5 || winningNumber == 7 || winningNumber == 9)
-                    ? "GREEN" : "RED";
 
             for (GameEnums.ActiveMode m : GameEnums.ActiveMode.values()) {
                 List<BetEntity> poolBets = currentBets.stream()
@@ -373,10 +448,10 @@ public class GameLoopService {
                 if (poolBets.isEmpty()) continue;
 
                 List<BetEntity> winners = poolBets.stream()
-                        .filter(b -> winColor.equalsIgnoreCase(b.getChoice()))
+                        .filter(b -> poolResultColor.equalsIgnoreCase(b.getChoice()))
                         .toList();
                 List<BetEntity> losers = poolBets.stream()
-                        .filter(b -> !winColor.equalsIgnoreCase(b.getChoice()))
+                        .filter(b -> !poolResultColor.equalsIgnoreCase(b.getChoice()))
                         .toList();
 
                 long loserTotal = 0L;
@@ -404,9 +479,19 @@ public class GameLoopService {
             }
 
             for (BetEntity bet : currentBets) {
-                GameRuleEngine.BetEvalResult eval = bet.getBetType() == GameEnums.BetType.POOL_SHARE
-                        ? poolShareEvalMap.getOrDefault(bet.getId(), ruleEngine.evaluateBetOutcome(bet, winningNumber))
-                        : ruleEngine.evaluateBetOutcome(bet, winningNumber);
+                GameRuleEngine.BetEvalResult eval;
+                if (bet.getBetType() == GameEnums.BetType.POOL_SHARE) {
+                    eval = poolShareEvalMap.getOrDefault(bet.getId(),
+                            new GameRuleEngine.BetEvalResult(
+                                    poolResultColor.equalsIgnoreCase(bet.getChoice()),
+                                    poolResultColor.equalsIgnoreCase(bet.getChoice()) ? 1.0 : 0.9,
+                                    (long) Math.floor((bet.getAmount() != null ? bet.getAmount().doubleValue() : 0.0) * (poolResultColor.equalsIgnoreCase(bet.getChoice()) ? 1.0 : 0.9))
+                            ));
+                } else if (bet.getBetType() == GameEnums.BetType.SAFE_COLOR) {
+                    eval = ruleEngine.evaluateSafeBetOutcome(bet, safeResultColor);
+                } else {
+                    eval = ruleEngine.evaluateBetOutcome(bet, winningNumber);
+                }
                 BigDecimal amtBd = bet.getAmount();
                 BigDecimal payoutBd = BigDecimal.valueOf(eval.payout());
                 BigDecimal netProfitBd = payoutBd.subtract(amtBd);
@@ -468,6 +553,8 @@ public class GameLoopService {
             roundEntity.setWinningNumber(winningNumber);
             roundEntity.setColors(String.join(",", props.colors()));
             roundEntity.setSize(props.size());
+            roundEntity.setSafeResultColor(safeResultColor);
+            roundEntity.setPoolResultColor(poolResultColor);
             roundEntity.setTotalCollected(roundRealCollected);
             roundEntity.setTotalPayout(roundRealPayout);
             roundEntity.setHouseProfit(roundRealCollected.subtract(roundRealPayout));

@@ -26,6 +26,12 @@ public class GameRoundEntity {
     @Column(name = "size", nullable = false, length = 16)
     private String size;
 
+    @Column(name = "safe_result_color", length = 16)
+    private String safeResultColor = "GREEN";
+
+    @Column(name = "pool_result_color", length = 16)
+    private String poolResultColor = "RED";
+
     @Column(name = "total_collected", precision = 14, scale = 2)
     private java.math.BigDecimal totalCollected = java.math.BigDecimal.ZERO;
 
@@ -52,6 +58,12 @@ public class GameRoundEntity {
 
     public String getSize() { return size; }
     public void setSize(String size) { this.size = size; }
+
+    public String getSafeResultColor() { return safeResultColor != null ? safeResultColor : "GREEN"; }
+    public void setSafeResultColor(String safeResultColor) { this.safeResultColor = safeResultColor; }
+
+    public String getPoolResultColor() { return poolResultColor != null ? poolResultColor : "RED"; }
+    public void setPoolResultColor(String poolResultColor) { this.poolResultColor = poolResultColor; }
 
     public java.math.BigDecimal getTotalCollected() { return totalCollected != null ? totalCollected : java.math.BigDecimal.ZERO; }
     public void setTotalCollected(java.math.BigDecimal totalCollected) { this.totalCollected = totalCollected; }

@@ -117,6 +117,8 @@ public class GamePayloadBuilder {
         map.put("colors", colorList);
         map.put("color", String.join("+", colorList));
         map.put("size", r.getSize());
+        map.put("safeResultColor", r.getSafeResultColor() != null ? r.getSafeResultColor() : ((r.getWinningNumber() % 2 == 1) ? "GREEN" : "RED"));
+        map.put("poolResultColor", r.getPoolResultColor() != null ? r.getPoolResultColor() : ((r.getWinningNumber() % 2 == 1) ? "GREEN" : "RED"));
         map.put("totalCollected", toLong(r.getTotalCollected()));
         map.put("totalPayout", toLong(r.getTotalPayout()));
         map.put("houseProfit", toLong(r.getHouseProfit()));
