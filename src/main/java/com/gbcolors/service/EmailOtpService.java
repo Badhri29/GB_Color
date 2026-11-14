@@ -105,7 +105,7 @@ public class EmailOtpService {
         String smtpUser = settings.getSmtpUser() == null ? "" : settings.getSmtpUser().trim();
         String smtpPass = settings.getSmtpPass() == null ? "" : settings.getSmtpPass().replaceAll("\\s+", "");
         if (smtpUser.isEmpty() || smtpPass.isEmpty()) {
-            throw new IllegalStateException("SMTP Email Service is not configured. Admin must save Gmail SMTP credentials first.");
+            throw new IllegalStateException("Email Service is not configured. Admin must save email credentials first.");
         }
 
         String host = settings.getSmtpHost() == null || settings.getSmtpHost().isBlank()

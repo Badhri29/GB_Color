@@ -303,6 +303,7 @@ public class GamePayloadBuilder {
                 .count();
         long pendingDepositCount = depositRequests.stream()
                 .filter(d -> d.getStatus() == GameEnums.DepositStatus.PENDING)
+                .filter(d -> !"RAZORPAY".equalsIgnoreCase(d.getMethod()) || d.getProofImage() != null)
                 .count();
 
         Map<String, Object> finStats = new LinkedHashMap<>();

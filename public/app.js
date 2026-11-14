@@ -1400,11 +1400,16 @@
           badge.classList.add('admin-pool-badge');
           badge.classList.remove('user-sim-pool');
         }
-        // Admin never wagers: right user-bet badge is always hidden
+        // Right user-bet badge: for circular numbers, keep slot with visibility:hidden so number remains centered
         const myBadge = $('mybadge-' + key);
         if (myBadge) {
-          myBadge.style.display = 'none';
-          myBadge.style.visibility = 'hidden';
+          myBadge.textContent = '';
+          if (myBadge.classList.contains('user-amt')) {
+            myBadge.style.display = 'block';
+            myBadge.style.visibility = 'hidden';
+          } else {
+            myBadge.style.display = 'none';
+          }
         }
       });
       return;
@@ -1443,12 +1448,15 @@
         if (myTotals[key] && myTotals[key] > 0) {
           myBadge.textContent = '✓ ' + formatShortINR(myTotals[key]);
           if (myBadge.classList.contains('user-amt')) {
+            myBadge.style.display = 'block';
             myBadge.style.visibility = 'visible';
           } else {
             myBadge.style.display = 'inline-block';
           }
         } else {
+          myBadge.textContent = '';
           if (myBadge.classList.contains('user-amt')) {
+            myBadge.style.display = 'block';
             myBadge.style.visibility = 'hidden';
           } else {
             myBadge.style.display = 'none';
@@ -1938,9 +1946,15 @@
     if ($('gameModeSafeBtn')) $('gameModeSafeBtn').classList.toggle('active', currentGameMode === 'SAFE');
     if ($('gameModePoolBtn')) $('gameModePoolBtn').classList.toggle('active', currentGameMode === 'POOL');
 
-    if ($('classicBettingContainer')) $('classicBettingContainer').style.display = currentGameMode === 'CLASSIC' ? '' : 'none';
-    if ($('safeBettingContainer')) $('safeBettingContainer').style.display = currentGameMode === 'SAFE' ? '' : 'none';
-    if ($('poolBettingContainer')) $('poolBettingContainer').style.display = currentGameMode === 'POOL' ? '' : 'none';
+    if ($('classicBettingContainer')) {
+      $('classicBettingContainer').style.setProperty('display', currentGameMode === 'CLASSIC' ? 'block' : 'none', 'important');
+    }
+    if ($('safeBettingContainer')) {
+      $('safeBettingContainer').style.setProperty('display', currentGameMode === 'SAFE' ? 'flex' : 'none', 'important');
+    }
+    if ($('poolBettingContainer')) {
+      $('poolBettingContainer').style.setProperty('display', currentGameMode === 'POOL' ? 'flex' : 'none', 'important');
+    }
 
     const cycleSec = Number(gameState.cycleDurationSeconds || 30);
     if ($('modeTagDisplay')) {
@@ -2292,7 +2306,16 @@
     if ($('authScreen')) $('authScreen').style.display = 'none';
     if ($('gameAppRoot')) $('gameAppRoot').style.display = 'block';
     renderUserSummary();
-    navigateToView('game');
+    if (!isAdmin && currentUser && currentUser.mustChangePassword) {
+      navigateToView('profile');
+      showToast('⚠️ Temporary password used: Please set a new permanent password.', 'warning');
+      setTimeout(() => {
+        const passIn = $('newPasswordInput');
+        if (passIn) passIn.focus();
+      }, 350);
+    } else {
+      navigateToView('game');
+    }
     loadPaymentConfig();
 
     if (isAdmin) {
@@ -2435,10 +2458,10 @@
           if (noticeBox) {
             noticeBox.textContent = res.data.devTempPassword
               ? `${res.data.message} (Dev Temp Password: ${res.data.devTempPassword})`
-              : (res.data.message || 'Temporary password sent via SMTP email.');
+              : (res.data.message || 'Temporary password sent to your email.');
             noticeBox.style.display = 'block';
           }
-          showToast('Temporary password dispatched via SMTP!', 'success');
+          showToast('Temporary password sent to your email!', 'success');
         } finally {
           if (btn) { btn.disabled = false; btn.textContent = '📧 Send Temporary Password'; }
         }
@@ -2575,15 +2598,18 @@
             $('headerRechargeBtn').disabled = true;
             $('headerRechargeBtn').style.opacity = '0.6';
             const res = await apiFetch('/api/auth/reset-demo', { method: 'POST' });
-            if (res && res.success) {
-              if (res.data && res.data.demoBalance != null) {
-                currentUser.demoBalance = res.data.demoBalance;
+            const isOk = res && (res.ok || (res.data && res.data.success));
+            if (isOk) {
+              const d = res.data || {};
+              if (d.demoBalance != null) {
+                currentUser.demoBalance = d.demoBalance;
               }
               renderUserSummary();
               showToast(`🔄 Demo Coins reset to ${formatINR(currentUser.demoBalance)}!`, 'success');
               SoundEngine.click();
             } else {
-              showToast(res.message || 'Failed to reset demo balance', 'error');
+              const errMsg = (res && res.data && (res.data.message || res.data.error)) || 'Failed to reset demo balance';
+              showToast(errMsg, 'error');
             }
           } catch (e) {
             showToast('Failed to reset demo balance: ' + (e.message || 'Network error'), 'error');
@@ -2623,7 +2649,7 @@
           closeUserDrawer();
           try { await apiFetch('/api/auth/logout', { method: 'POST' }); } catch {}
           performLogout();
-          window.location.href = '/';
+          window.location.href = '/?ts=' + Date.now();
         });
       }
     });

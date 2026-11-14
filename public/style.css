@@ -500,14 +500,28 @@ html, body {
         overflow-y: auto !important;
         -webkit-overflow-scrolling: touch !important;
     }
-    .betting-section,
+    .betting-section {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 0;
+    }
     .safe-betting-container,
     .pool-betting-container {
-        flex: 1 1 auto !important;
-        display: flex !important;
-        flex-direction: column !important;
-        justify-content: space-between !important;
-        min-height: 0 !important;
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        min-height: 0;
+    }
+    .safe-betting-container[style*="display: none"],
+    .pool-betting-container[style*="display: none"],
+    .betting-section[style*="display: none"],
+    #classicBettingContainer[style*="display: none"],
+    #safeBettingContainer[style*="display: none"],
+    #poolBettingContainer[style*="display: none"] {
+        display: none !important;
     }
     .safe-buttons-grid,
     .pool-buttons-grid {
@@ -2377,34 +2391,34 @@ html, body {
   width: 100%;
 }
 .num-round-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
-  padding: 4px 8px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
+  display: grid !important;
+  grid-template-columns: 1fr auto 1fr !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 3px 8px !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  border: 1px solid rgba(255, 255, 255, 0.05) !important;
+  border-radius: 10px !important;
 }
 .num-side-amount {
   font-size: 0.74rem;
   font-weight: 700;
-  min-width: 52px;
+  min-width: 44px;
 }
 .num-side-amount.total-amt {
-  text-align: left;
+  text-align: left !important;
   color: #94a3b8;
 }
 .num-side-amount.user-amt {
-  text-align: right;
+  text-align: right !important;
   color: #38bdf8;
   font-weight: 800;
 }
 .num-circle-btn {
-  width: 38px;
-  height: 38px;
+  width: 32px !important;
+  height: 32px !important;
   border-radius: 50% !important;
-  font-size: 1.15rem;
+  font-size: 1.05rem !important;
   font-weight: 900;
   display: inline-flex;
   align-items: center;
@@ -2415,6 +2429,8 @@ html, body {
   cursor: pointer;
   transition: all 0.2s ease;
   flex-shrink: 0;
+  justify-self: center !important;
+  margin: 0 auto !important;
 }
 .num-circle-btn.n1, .num-circle-btn.n3, .num-circle-btn.n7, .num-circle-btn.n9 {
   border-color: #10b981;
@@ -2728,33 +2744,34 @@ html, body {
 }
 
 .pay-split-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1.12fr) minmax(0, 0.88fr);
-  gap: 16px;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr) !important;
+  gap: 16px !important;
   align-items: stretch !important;
-  width: 100%;
+  width: 100% !important;
 }
 .pay-form-col,
 .pay-status-col {
-  min-width: 0;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
+  min-width: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  display: flex !important;
+  flex-direction: column !important;
 }
 .pay-flow-card,
 .pay-status-card {
-  width: 100%;
-  max-width: 100%;
-  height: 100%;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+  width: 100% !important;
+  max-width: 100% !important;
+  height: 100% !important;
+  flex: 1 1 auto !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: flex-start !important;
 }
 .pay-status-card .status-cards-stack {
-  flex: 1 1 0;
-  overflow-y: auto;
-  min-height: 200px;
+  flex: 1 1 auto !important;
+  overflow-y: auto !important;
+  max-height: 480px !important;
 }
 .pay-status-highlights {
   display: flex;
@@ -4019,26 +4036,27 @@ body {
   }
 
   #view-game .color-buttons-grid {
-    gap: 10px;
-    margin-bottom: 10px;
+    gap: 8px;
+    margin-bottom: 8px;
   }
 
   #view-game .color-buttons-grid .bet-btn {
-    padding: 11px 12px;
+    padding: 6px 10px !important;
+    min-height: 38px !important;
   }
 
   #view-game .numbers-grid {
-    gap: 9px;
-    margin-bottom: 10px;
+    gap: 8px;
+    margin-bottom: 8px;
   }
 
   #view-game .num-btn {
-    height: 46px;
-    font-size: 1.12rem;
+    height: 40px;
+    font-size: 1.05rem;
   }
 
   #view-game .size-buttons-grid .bet-btn {
-    padding: 11px 14px;
+    padding: 7px 12px;
   }
 
   #view-game .side-panel-column {
@@ -4054,12 +4072,12 @@ body {
     display: flex !important;
     flex-direction: column !important;
     min-height: 0;
-    padding: 12px 14px;
+    padding: 10px 12px;
   }
 
   #view-game .records-tabs {
     flex-shrink: 0;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
   }
 
   #view-game .records-card .rec-panel.active,
@@ -4075,7 +4093,7 @@ body {
   #view-game .table-scroll-wrapper,
   .is-admin-session #view-game .table-scroll-wrapper {
     flex: 1 1 0 !important;
-    min-height: 250px !important;
+    min-height: 200px !important;
     max-height: none !important;
     overflow-x: auto;
     overflow-y: auto;
@@ -4096,7 +4114,8 @@ body {
 
   #view-game .records-table th,
   #view-game .records-table td {
-    padding: 8px 8px;
+    padding: 5px 8px !important;
+    font-size: 0.8rem !important;
   }
 }
 
@@ -4459,12 +4478,8 @@ body {
 }
 
 .is-admin-session .num-side-amount.user-amt {
-  display: none !important;
-}
-
-.is-admin-session .num-round-item {
-  justify-content: flex-start !important;
-  gap: 14px !important;
+  visibility: hidden !important;
+  display: block !important;
 }
 
 @media (max-width: 768px) {

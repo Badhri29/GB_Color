@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20261114_06" />
+  <link rel="stylesheet" href="style.css?v=20261114_08" />
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
@@ -36,10 +36,10 @@
       </div>
 
       <!-- SIGN IN FORM -->
-      <form id="signInForm" class="auth-form" autocomplete="on">
+      <form id="signInForm" class="auth-form" autocomplete="off">
         <div class="form-group">
           <label for="loginEmail">Email ID / Username / UID</label>
-          <input id="loginEmail" type="text" placeholder="Email, Username or UID" required autocomplete="username" />
+          <input id="loginEmail" type="text" placeholder="Email ID, Username or UID" required autocomplete="off" />
         </div>
         <div class="form-group">
           <div class="label-split-row">
@@ -47,7 +47,7 @@
             <button id="openForgotPassBtn" type="button" class="link-inline-btn">Forgot Password?</button>
           </div>
           <div class="password-input-wrap">
-            <input id="loginPassword" type="password" placeholder="Enter your password" required autocomplete="current-password" />
+            <input id="loginPassword" type="password" placeholder="Enter your password" required autocomplete="new-password" />
             <button type="button" class="toggle-pass-btn" onclick="togglePassVis('loginPassword', this)" aria-label="Toggle password">👁</button>
           </div>
         </div>
@@ -55,13 +55,13 @@
         <button id="signInSubmitBtn" type="submit" class="btn-primary-glow full-w">Sign In to Arena</button>
       </form>
 
-      <!-- FORGOT PASSWORD FORM (Temporary Password via SMTP) -->
+      <!-- FORGOT PASSWORD FORM (Temporary Password via Email) -->
       <form id="forgotPassForm" class="auth-form" style="display:none;" autocomplete="off">
         <div class="form-group">
           <label for="forgotEmail">Registered Verified Email ID</label>
           <input id="forgotEmail" type="email" placeholder="you@example.com" required />
         </div>
-        <p class="auth-helper-note">We will email a <strong>Temporary Password</strong> via SMTP so you can sign in immediately.</p>
+        <p class="auth-helper-note">We will email a <strong>Temporary Password</strong> (valid for 15 minutes) so you can sign in immediately.</p>
         <div id="forgotNoticeBox" class="auth-notice-box" style="display:none;"></div>
         <div id="forgotErrorMsg" class="auth-error-box" style="display:none;"></div>
         <button id="forgotSubmitBtn" type="submit" class="btn-primary-glow full-w">📧 Send Temporary Password</button>
@@ -71,7 +71,7 @@
       <!-- SIGN UP FORM -->
       <form id="signUpForm" class="auth-form" style="display:none;" autocomplete="off">
         <div class="form-group">
-          <label for="regEmail">Email ID Only (Verified via SMTP OTP)</label>
+          <label for="regEmail">Email ID Only (Verified via Email OTP)</label>
           <div class="otp-row">
             <input id="regEmail" type="email" placeholder="you@example.com" required />
             <button id="sendOtpBtn" type="button" class="btn-accent-outline">Send OTP</button>
@@ -963,8 +963,8 @@
   <!-- TOAST -->
   <div id="toast" class="toast-banner"></div>
 
-  <script src="vendor/gb-ws.js?v=20261114_06"></script>
-  <script src="config.js?v=20261114_06"></script>
-  <script src="app.js?v=20261114_06"></script>
+  <script src="vendor/gb-ws.js?v=20261114_08"></script>
+  <script src="config.js?v=20261114_08"></script>
+  <script src="app.js?v=20261114_08"></script>
 </body>
 </html>

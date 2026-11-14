@@ -184,6 +184,15 @@ public class AuthService {
             ));
         }
 
+        if (user.isMustChangePassword() && user.getTempPasswordExpiresAt() != null) {
+            if (Instant.now().isAfter(user.getTempPasswordExpiresAt())) {
+                return new AuthResult(401, Map.of(
+                        "success", false,
+                        "message", "Temporary password has expired (valid for 15 minutes). Please request a new one via Forgot Password."
+                ));
+            }
+        }
+
         if (password.equals("User@123") || password.equals("Badhri@123")) {
             user.setPasswordHash(passwordService.hashPassword(password));
             userRepo.save(user);
@@ -299,6 +308,7 @@ public class AuthService {
 
         user.setPasswordHash(passwordService.hashPassword(tempPassword));
         user.setMustChangePassword(true);
+        user.setTempPasswordExpiresAt(Instant.now().plus(java.time.Duration.ofMinutes(15)));
         userRepo.save(user);
         sessionRepo.deleteByEmail(email);
 
@@ -337,6 +347,7 @@ public class AuthService {
         }
         user.setPasswordHash(passwordService.hashPassword(newPassword));
         user.setMustChangePassword(false);
+        user.setTempPasswordExpiresAt(null);
         userRepo.save(user);
         return new AuthResult(200, Map.of("success", true, "message", "Your password has been updated!"));
     }

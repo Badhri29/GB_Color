@@ -83,6 +83,9 @@ public class UserEntity {
     @Column(name = "must_change_password")
     private Boolean mustChangePassword = Boolean.FALSE;
 
+    @Column(name = "temp_password_expires_at")
+    private Instant tempPasswordExpiresAt;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
 
@@ -154,6 +157,9 @@ public class UserEntity {
 
     public boolean isMustChangePassword() { return Boolean.TRUE.equals(mustChangePassword); }
     public void setMustChangePassword(Boolean mustChangePassword) { this.mustChangePassword = Boolean.TRUE.equals(mustChangePassword); }
+
+    public Instant getTempPasswordExpiresAt() { return tempPasswordExpiresAt; }
+    public void setTempPasswordExpiresAt(Instant tempPasswordExpiresAt) { this.tempPasswordExpiresAt = tempPasswordExpiresAt; }
 
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }

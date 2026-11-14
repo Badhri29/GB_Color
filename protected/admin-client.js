@@ -80,8 +80,8 @@
         }
 
         // Logout buttons (managed by unified header/drawer, fallback wired if present)
-        document.getElementById('admLogoutBtn')?.addEventListener('click', () => window.performLogout());
-        document.getElementById('admDrawerLogoutBtn')?.addEventListener('click', () => window.performLogout());
+        document.getElementById('admLogoutBtn')?.addEventListener('click', () => { window.performLogout(); window.location.href = '/?ts=' + Date.now(); });
+        document.getElementById('admDrawerLogoutBtn')?.addEventListener('click', () => { window.performLogout(); window.location.href = '/?ts=' + Date.now(); });
 
         // Admin Notifications Chat Box Wiring
         let notifScope = 'ALL';
