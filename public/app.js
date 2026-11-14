@@ -338,6 +338,30 @@
       const batch = [];
       const chosenThisBatch = new Set();
 
+      // ADMIN SESSION: Only show real events or official administrative monitor notice - NEVER dummy player events!
+      if (isAdminSession) {
+        if (realEvents.length > 0) {
+          if (realBag.length === 0) realBag = shuffle(realEvents);
+          let guard = 0;
+          while (batch.length < count && realBag.length > 0 && guard < 30) {
+            guard++;
+            const item = realBag.pop();
+            if (!item || !item.text) continue;
+            if (chosenThisBatch.has(item.text)) continue;
+            chosenThisBatch.add(item.text);
+            rememberText(item.text);
+            batch.push(item);
+          }
+        }
+        if (batch.length === 0) {
+          return [
+            { id: 'adm_feed_1', text: '🛡️ Admin Real-Time Feed: Live real wager queue active (0 active)', isReal: true },
+            { id: 'adm_feed_2', text: '📊 Real-Time Auditing Active • Engine in SMART_PROFIT mode', isReal: true }
+          ];
+        }
+        return batch;
+      }
+
       // Priority 1: Pick unseen random REAL wins/withdrawals first
       if (realEvents.length > 0 && realBag.length === 0) {
         realBag = shuffle(realEvents);
@@ -443,19 +467,21 @@
 
     function resetForPeriod(periodStr) {
       currentPeriod = String(periodStr || '');
+      const h = hashPeriod(periodStr);
+      // Realistic positive base simulated pool amounts seeded deterministically
       pools = {
-        'GREEN': 0,
-        'RED': 0,
-        'VIOLET': 0,
-        'BIG': 0,
-        'SMALL': 0,
-        'SAFE-GREEN': 0,
-        'SAFE-RED': 0,
-        'POOL-GREEN': 0,
-        'POOL-RED': 0
+        'GREEN': 1500 + ((h * 13) % 25) * 100,
+        'RED': 1200 + ((h * 17) % 25) * 100,
+        'VIOLET': 300 + ((h * 7) % 10) * 100,
+        'BIG': 1800 + ((h * 23) % 30) * 100,
+        'SMALL': 1600 + ((h * 29) % 30) * 100,
+        'SAFE-GREEN': 2000 + ((h * 31) % 35) * 100,
+        'SAFE-RED': 1800 + ((h * 37) % 35) * 100,
+        'POOL-GREEN': 2200 + ((h * 41) % 40) * 100,
+        'POOL-RED': 2000 + ((h * 43) % 40) * 100
       };
       for (let i = 0; i <= 9; i++) {
-        pools[String(i)] = 0;
+        pools[String(i)] = 200 + (((h * (i + 5)) % 15) * 50);
       }
     }
 
@@ -473,7 +499,10 @@
     }
 
     function getPool(key) {
-      return pools[key] || 0;
+      if (!pools || Object.keys(pools).length === 0) {
+        resetForPeriod(currentPeriod || '8000');
+      }
+      return pools[key] || 300;
     }
 
     return {
@@ -1341,8 +1370,7 @@
     });
 
     if (isAdminSession) {
-      if (!latestAdminAnalytics || !latestAdminAnalytics.liveTotals) return;
-      const lt = latestAdminAnalytics.liveTotals;
+      const lt = (latestAdminAnalytics && latestAdminAnalytics.liveTotals) || {};
       const colors = lt.colors || {};
       const safeColors = lt.safeColors || {};
       const poolShares = lt.poolShares || {};
@@ -1371,6 +1399,12 @@
           badge.textContent = '₹' + val.toLocaleString('en-IN');
           badge.classList.add('admin-pool-badge');
           badge.classList.remove('user-sim-pool');
+        }
+        // Admin never wagers: right user-bet badge is always hidden
+        const myBadge = $('mybadge-' + key);
+        if (myBadge) {
+          myBadge.style.display = 'none';
+          myBadge.style.visibility = 'hidden';
         }
       });
       return;
@@ -2272,9 +2306,11 @@
 
   function performLogout(preserveError) {
     localStorage.removeItem(AUTH_TOKEN_KEY);
+    try { sessionStorage.clear(); } catch {}
     authToken = '';
     currentUser = null;
     currentAdminInfo = null;
+    isAdminSession = false;
     toggleAdminShellUi(false);
     sessionNotifications = [];
     popupQueue = [];
@@ -2287,7 +2323,16 @@
     if ($('adminPortalRoot')) {
       $('adminPortalRoot').innerHTML = '';
     }
-    if ($('gameAppRoot')) $('gameAppRoot').style.display = 'none';
+    if ($('loginEmail')) $('loginEmail').value = '';
+    if ($('loginPassword')) $('loginPassword').value = '';
+    if ($('signInForm')) $('signInForm').reset();
+    if ($('signUpForm')) $('signUpForm').reset();
+    if ($('forgotPassForm')) $('forgotPassForm').reset();
+    if ($('gameAppRoot')) {
+      $('gameAppRoot').style.display = 'none';
+      $('gameAppRoot').className = '';
+    }
+    document.body.classList.remove('is-admin-session');
     if ($('authScreen')) $('authScreen').style.display = 'flex';
     if (!preserveError && $('loginErrorMsg')) {
       $('loginErrorMsg').style.display = 'none';
@@ -2485,6 +2530,8 @@
         const password = String($('loginPassword').value || '');
         const btn = $('signInSubmitBtn');
         btn.disabled = true;
+        authToken = '';
+        localStorage.removeItem(AUTH_TOKEN_KEY);
         try {
           const res = await apiFetch('/api/auth/signin', {
             method: 'POST',
@@ -2572,7 +2619,7 @@
           closeUserDrawer();
           try { await apiFetch('/api/auth/logout', { method: 'POST' }); } catch {}
           performLogout();
-          showToast('Signed out cleanly', 'info');
+          window.location.href = '/';
         });
       }
     });

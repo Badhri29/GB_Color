@@ -3972,14 +3972,14 @@ body {
     display: grid;
     grid-template-columns: minmax(0, 1.03fr) minmax(0, 0.97fr);
     gap: 14px;
-    align-items: start;
+    align-items: stretch !important;
   }
 
   #view-game .game-arena-column {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    height: auto;
+    height: 100%;
   }
 
   #view-game .period-code {
@@ -3992,7 +3992,7 @@ body {
   }
 
   #view-game .betting-section {
-    flex: 1;
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -4025,14 +4025,15 @@ body {
   #view-game .side-panel-column {
     display: flex;
     flex-direction: column;
-    height: auto;
+    height: 100%;
     min-height: 0;
   }
 
   #view-game .records-card {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
+    flex: 1 1 auto;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
     min-height: 0;
     padding: 12px 14px;
   }
@@ -4044,19 +4045,19 @@ body {
 
   #view-game .records-card .rec-panel.active,
   .is-admin-session #view-game .records-card .rec-panel.active {
-    flex: 1;
-    min-height: 0;
-    max-height: 480px;
-    display: flex;
-    flex-direction: column;
+    flex: 1 1 0 !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    display: flex !important;
+    flex-direction: column !important;
     overflow: hidden;
   }
 
   #view-game .table-scroll-wrapper,
   .is-admin-session #view-game .table-scroll-wrapper {
-    flex: 1;
-    min-height: 0;
-    max-height: 380px;
+    flex: 1 1 0 !important;
+    min-height: 250px !important;
+    max-height: none !important;
     overflow-x: auto;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
@@ -4438,9 +4439,48 @@ body {
   100% { box-shadow: 0 0 16px rgba(251, 191, 36, 0.6); }
 }
 
+.is-admin-session .num-side-amount.user-amt {
+  display: none !important;
+}
+
+.is-admin-session .num-round-item {
+  justify-content: flex-start !important;
+  gap: 14px !important;
+}
+
 @media (max-width: 768px) {
   .game-mode-selector-bar {
-    grid-template-columns: 1fr;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    gap: 8px !important;
+    padding-bottom: 4px;
+    margin-bottom: 12px;
+  }
+
+  .game-mode-btn {
+    flex: 1 1 0 !important;
+    min-width: 100px !important;
+    padding: 8px 8px !important;
+    gap: 6px !important;
+    border-radius: 10px !important;
+  }
+
+  .game-mode-btn .gmb-icon {
+    font-size: 1.15rem !important;
+  }
+
+  .game-mode-btn .gmb-text strong {
+    font-size: 0.78rem !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .game-mode-btn .gmb-text small {
+    display: none !important;
   }
 }
 
