@@ -510,17 +510,22 @@ html, body {
     .safe-betting-container,
     .pool-betting-container {
         flex: 1 1 auto;
-        display: flex;
         flex-direction: column;
         justify-content: space-between;
         min-height: 0;
     }
     .safe-betting-container[style*="display: none"],
+    .safe-betting-container[style*="display:none"],
     .pool-betting-container[style*="display: none"],
+    .pool-betting-container[style*="display:none"],
     .betting-section[style*="display: none"],
+    .betting-section[style*="display:none"],
     #classicBettingContainer[style*="display: none"],
+    #classicBettingContainer[style*="display:none"],
     #safeBettingContainer[style*="display: none"],
-    #poolBettingContainer[style*="display: none"] {
+    #safeBettingContainer[style*="display:none"],
+    #poolBettingContainer[style*="display: none"],
+    #poolBettingContainer[style*="display:none"] {
         display: none !important;
     }
     .safe-buttons-grid,
@@ -3010,6 +3015,7 @@ html, body {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+  align-items: stretch;
 }
 .payment-card {
   background: var(--card-bg, #111a30);
@@ -3017,6 +3023,10 @@ html, body {
   border-radius: 15px;
   padding: 16px;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-sizing: border-box;
 }
 .single-col-card { max-width: 680px; }
 .pay-card-head {
@@ -3125,7 +3135,15 @@ html, body {
   cursor: pointer;
 }
 
-.status-cards-stack { display: flex; flex-direction: column; gap: 9px; }
+.status-cards-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  flex: 1 1 auto;
+  max-height: 520px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
 .status-card {
   background: var(--card-inner, #192440);
   border-left: 4px solid #64748b;
@@ -4646,14 +4664,17 @@ body {
   .app-header {
     display: flex !important;
     flex-direction: row !important;
+    flex-wrap: nowrap !important;
     align-items: center !important;
     justify-content: space-between !important;
     height: 40px !important;
     min-height: 40px !important;
-    padding: 4px 8px !important;
+    padding: 4px 6px !important;
     background: #0d1527 !important;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
     overflow: hidden !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
   .desktop-only-menu-btn,
   .desktop-only-profile,
@@ -4662,62 +4683,76 @@ body {
   }
   .header-left-group {
     display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
     align-items: center !important;
     flex: 0 0 auto !important;
+    gap: 4px !important;
   }
   .header-right-group {
     display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
     align-items: center !important;
-    gap: 6px !important;
+    gap: 4px !important;
     flex: 0 0 auto !important;
   }
   .mode-switch-pill {
-    display: flex !important;
+    display: inline-flex !important;
     padding: 2px !important;
     gap: 2px !important;
     background: rgba(255, 255, 255, 0.06) !important;
     border-radius: 9999px !important;
+    flex-shrink: 0 !important;
   }
   .mode-switch-pill .mode-btn {
-    padding: 4px 8px !important;
-    font-size: 0.68rem !important;
+    padding: 3px 6px !important;
+    font-size: 0.65rem !important;
     font-weight: 700 !important;
+    line-height: 1.2 !important;
   }
   .wallet-pill {
-    display: flex !important;
-    padding: 3px 8px !important;
-    gap: 5px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    padding: 2px 6px !important;
+    gap: 4px !important;
     background: rgba(16, 185, 129, 0.12) !important;
     border: 1px solid rgba(16, 185, 129, 0.3) !important;
     border-radius: 9999px !important;
+    flex-shrink: 0 !important;
   }
   .wallet-meta .wallet-mode-cap {
     display: none !important;
   }
   .wallet-meta .wallet-amount {
-    font-size: 0.8rem !important;
+    font-size: 0.76rem !important;
     font-weight: 800 !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
   }
   .wallet-plus-btn.demo-reset-btn {
-    font-size: 0.95rem !important;
+    font-size: 0.85rem !important;
     color: #10b981 !important;
     padding: 0 !important;
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
+    line-height: 1 !important;
+    cursor: pointer !important;
   }
   #soundToggleBtn {
-    width: 28px !important;
-    height: 28px !important;
-    font-size: 0.85rem !important;
+    width: 26px !important;
+    height: 26px !important;
+    font-size: 0.8rem !important;
     background: rgba(255, 255, 255, 0.06) !important;
     border: 1px solid rgba(255, 255, 255, 0.12) !important;
-    border-radius: 8px !important;
+    border-radius: 7px !important;
     color: #fff !important;
     padding: 0 !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
+    flex-shrink: 0 !important;
   }
   #adminHeaderToggleBtn {
     padding: 3px 6px !important;
@@ -4728,15 +4763,15 @@ body {
   .game-mode-selector-bar {
     display: grid !important;
     grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
-    gap: 4px !important;
-    padding: 3px !important;
+    gap: 3px !important;
+    padding: 2px !important;
     width: 100% !important;
     box-sizing: border-box !important;
     margin-bottom: 8px !important;
     overflow: hidden !important;
   }
   .game-mode-btn {
-    padding: 6px 2px !important;
+    padding: 5px 2px !important;
     min-width: 0 !important;
     width: 100% !important;
     border-radius: 8px !important;
@@ -4749,21 +4784,23 @@ body {
     overflow: hidden !important;
   }
   .game-mode-btn .gmb-icon {
-    font-size: 0.82rem !important;
+    font-size: 0.72rem !important;
     flex-shrink: 0 !important;
   }
   .game-mode-btn .gmb-text {
     min-width: 0 !important;
     overflow: hidden !important;
+    text-align: center !important;
   }
   .game-mode-btn .gmb-text strong {
-    font-size: 0.58rem !important;
+    font-size: clamp(0.46rem, 2.0vw, 0.58rem) !important;
     font-weight: 700 !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: clip !important;
     letter-spacing: -0.3px !important;
     display: block !important;
+    line-height: 1.1 !important;
   }
   .game-mode-btn .gmb-text small {
     display: none !important;
@@ -4873,10 +4910,17 @@ body {
     text-overflow: clip !important;
   }
   .num-circle-btn {
-    width: 24px !important;
-    height: 24px !important;
-    font-size: 0.8rem !important;
+    width: 22px !important;
+    height: 22px !important;
+    font-size: 0.75rem !important;
     border-width: 1.5px !important;
+  }
+  .recent-dots-row {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
+  }
+  .recent-dots-row::-webkit-scrollbar {
+    display: none !important;
   }
 
   /* HIDE ALL RULES/INFO BANNERS ON MOBILE IN ALL MODES */

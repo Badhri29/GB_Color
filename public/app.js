@@ -1340,7 +1340,9 @@
       if (isAdminSession) {
         $('mHeaderUid').textContent = 'ADMIN';
       } else {
-        $('mHeaderUid').textContent = currentUser.userId ? `UID: GB${currentUser.userId}` : 'GB COLORS';
+        const rawUid = (currentUser.userId || '').toString().trim();
+        const formattedUid = rawUid.startsWith('GB') ? rawUid : (rawUid ? 'GB' + rawUid : '—');
+        $('mHeaderUid').textContent = rawUid ? `UID: ${formattedUid}` : 'GB COLORS';
       }
     }
     if ($('headerUserEmail')) {
