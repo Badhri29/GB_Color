@@ -4567,6 +4567,8 @@ body {
 .desktop-only-menu-btn { display: inline-flex; }
 .desktop-only-profile { display: block; }
 .desktop-only-notif { display: inline-block; }
+.mode-name-desktop { display: block; }
+.mode-name-mobile { display: none; }
 
 /* Mobile Flipper Box (Bottom-to-Top Animation) */
 .mobile-flipper-box {
@@ -4792,15 +4794,26 @@ body {
     overflow: hidden !important;
     text-align: center !important;
   }
-  .game-mode-btn .gmb-text strong {
-    font-size: clamp(0.46rem, 2.0vw, 0.58rem) !important;
+  .mode-name-desktop {
+    display: none !important;
+  }
+  .mode-name-mobile {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    line-height: 1.15 !important;
+  }
+  .mode-name-mobile span {
+    font-size: 0.52rem !important;
     font-weight: 700 !important;
     white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: clip !important;
-    letter-spacing: -0.3px !important;
-    display: block !important;
-    line-height: 1.1 !important;
+  }
+  .mode-name-mobile .mode-tag-pill {
+    font-size: 0.46rem !important;
+    font-weight: 800 !important;
+    color: #10b981 !important;
+    letter-spacing: 0.3px !important;
   }
   .game-mode-btn .gmb-text small {
     display: none !important;
