@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20261115_02" />
+  <link rel="stylesheet" href="style.css?v=20261115_03" />
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
@@ -120,37 +120,46 @@
   ========================== -->
   <div id="gameAppRoot" class="site-wrapper" style="display:none;">
 
-    <!-- LIVE SCROLLING TICKER (Real Wins + Non-Repeating Fallback) -->
-    <div class="ticker-bar">
-      <div class="ticker-label">GB COLORS</div>
-      <div class="ticker-track-container">
-        <div class="ticker-track" id="liveTickerTrack"></div>
-      </div>
-    </div>
-
-    <!-- HEADER BAR -->
-    <header class="app-header">
-      <div class="header-left-group">
-        <button id="userMenuBtn" class="menu-hamburger-btn" type="button" aria-label="Open Navigation Menu" title="Open Menu">☰</button>
-        <div class="header-user-profile" id="headerUserProfile">
-          <div class="hup-uid" id="headerUserUid">UID: —</div>
-          <div class="hup-email" id="headerUserEmail">user@example.com</div>
-        </div>
-        <!-- MOBILE FLIPPER (GB COLORS <-> User UID/Email) -->
-        <div class="mobile-flipper-container" id="mobileHeaderFlipper">
+    <!-- ROW 1 (TOP BAR): SCROLLING TICKER + FLIPPER (MOBILE LEFT) + MENU (MOBILE RIGHT) -->
+    <div class="ticker-bar" id="topTickerBar">
+      <!-- On Desktop: Static Badge. On Mobile: Bottom-to-Top Vertical Flipper (GB COLORS <-> UID/Email) -->
+      <div class="ticker-brand-badge" id="tickerBrandBadge">
+        <div class="ticker-label desktop-only-label">GB COLORS</div>
+        <div class="mobile-flipper-box" id="mobileHeaderFlipper">
           <div class="flipper-track" id="flipperTrack">
             <div class="flipper-item flipper-brand"><span class="brand-text-grad">GB COLORS</span></div>
             <div class="flipper-item flipper-user"><span id="mHeaderUid" class="m-uid">UID: —</span><span id="mHeaderEmail" class="m-email">user@example.com</span></div>
+            <div class="flipper-item flipper-brand"><span class="brand-text-grad">GB COLORS</span></div>
           </div>
         </div>
       </div>
 
-      <div class="header-right-group">
+      <div class="ticker-track-container">
+        <div class="ticker-track" id="liveTickerTrack"></div>
+      </div>
+
+      <!-- Mobile Menu Button placed on far right of Row 1 -->
+      <button id="mobileMenuBtn" class="menu-hamburger-btn mobile-only-menu-btn" type="button" aria-label="Open Navigation Menu" title="Open Menu">☰</button>
+    </div>
+
+    <!-- ROW 2: CONTROLS BAR (On Desktop: Full Header. On Mobile: Left: DEMO/REAL, Right: Amount + Sound) -->
+    <header class="app-header">
+      <div class="header-left-group">
+        <button id="userMenuBtn" class="menu-hamburger-btn desktop-only-menu-btn" type="button" aria-label="Open Navigation Menu" title="Open Menu">☰</button>
+        <div class="header-user-profile desktop-only-profile" id="headerUserProfile">
+          <div class="hup-uid" id="headerUserUid">UID: —</div>
+          <div class="hup-email" id="headerUserEmail">user@example.com</div>
+        </div>
+
+        <!-- Mode Switcher Pill (On Mobile: Aligned to LEFT of Row 2) -->
         <div class="mode-switch-pill" id="modeSwitchPill" role="group" aria-label="Wallet Mode">
           <button id="modeDemoBtn" class="mode-btn active" type="button">DEMO</button>
           <button id="modeRealBtn" class="mode-btn" type="button">REAL</button>
         </div>
+      </div>
 
+      <!-- Controls on RIGHT of Row 2: Balance Amount & Volume/Sound Toggle Button -->
+      <div class="header-right-group">
         <div class="wallet-pill" id="headerWalletPill">
           <div class="wallet-meta">
             <span class="wallet-mode-cap" id="headerWalletLabel">DEMO WALLET</span>
@@ -161,7 +170,7 @@
 
         <button id="adminHeaderToggleBtn" class="header-action-pill admin-pill-btn" type="button" title="Admin Command Center" style="display:none;">🛡️ <span>Admin Tools</span></button>
 
-        <div class="notif-bell-wrapper" id="notifBellWrapper">
+        <div class="notif-bell-wrapper desktop-only-notif" id="notifBellWrapper">
           <button id="notifBellBtn" class="header-icon-btn" type="button" aria-label="Notifications" title="Notifications">
             🔔<span id="notifBellBadge" class="notif-badge-dot" style="display:none;">0</span>
           </button>
@@ -174,6 +183,7 @@
           </div>
         </div>
 
+        <!-- Sound / Volume Toggle Button -->
         <button id="soundToggleBtn" class="header-icon-btn" type="button" aria-label="Toggle Sound" title="Toggle Sound">🔇</button>
 
         <button id="adminHeaderLogoutBtn" class="btn-danger-outline btn-sm" type="button" style="display:none;" title="Sign Out">🚪 Sign Out</button>
@@ -1003,8 +1013,8 @@
   <!-- TOAST -->
   <div id="toast" class="toast-banner"></div>
 
-  <script src="vendor/gb-ws.js?v=20261115_02"></script>
-  <script src="config.js?v=20261115_02"></script>
-  <script src="app.js?v=20261115_02"></script>
+  <script src="vendor/gb-ws.js?v=20261115_03"></script>
+  <script src="config.js?v=20261115_03"></script>
+  <script src="app.js?v=20261115_03"></script>
 </body>
 </html>

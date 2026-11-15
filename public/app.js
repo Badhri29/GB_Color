@@ -948,17 +948,33 @@
     if ($('rulesPoolContainer')) $('rulesPoolContainer').innerHTML = currentRules.pool || DEFAULT_RULES.pool;
   }
 
-  // Mobile Header Flipper Ticker
+  // Mobile Header Flipper Ticker (Always moves strictly BOTTOM TO TOP)
   let headerFlipperInterval = null;
+  let currentFlipperStep = 0;
+  const FLIPPER_ITEM_HEIGHT = 28;
+
   function initMobileHeaderFlipper() {
     if (headerFlipperInterval) return;
     const track = $('flipperTrack');
     if (!track) return;
-    let showUser = false;
+
+    currentFlipperStep = 0;
+    track.style.transform = 'translateY(0px)';
+
     headerFlipperInterval = setInterval(() => {
-      showUser = !showUser;
-      track.style.transform = showUser ? 'translateY(-32px)' : 'translateY(0px)';
-    }, 3500);
+      currentFlipperStep++;
+      track.style.transition = 'transform 0.5s ease-in-out';
+      track.style.transform = `translateY(-${currentFlipperStep * FLIPPER_ITEM_HEIGHT}px)`;
+
+      // When reaching the cloned third item (index 2: GB COLORS), snap back to index 0 invisibly
+      if (currentFlipperStep === 2) {
+        setTimeout(() => {
+          track.style.transition = 'none';
+          currentFlipperStep = 0;
+          track.style.transform = 'translateY(0px)';
+        }, 550);
+      }
+    }, 3200);
   }
 
   let activeOrderPollerId = null;
@@ -2673,7 +2689,10 @@
     }
 
     // Side Drawer & Navigation
-    if ($('userMenuBtn')) $('userMenuBtn').addEventListener('click', openUserDrawer);
+    ['userMenuBtn', 'mobileMenuBtn'].forEach((btnId) => {
+      const btn = $(btnId);
+      if (btn) btn.addEventListener('click', openUserDrawer);
+    });
     if ($('closeUserDrawerBtn')) $('closeUserDrawerBtn').addEventListener('click', closeUserDrawer);
     if ($('userDrawerBackdrop')) $('userDrawerBackdrop').addEventListener('click', closeUserDrawer);
     if ($('brandHomeBtn')) $('brandHomeBtn').addEventListener('click', () => navigateToView('game'));
