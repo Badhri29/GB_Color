@@ -533,8 +533,10 @@ html, body {
     }
     .bet-btn.safe-btn,
     .bet-btn.pool-btn {
-        height: 100% !important;
-        min-height: 140px !important;
+        height: auto !important;
+        min-height: 65px !important;
+        max-height: 80px !important;
+        padding: 8px 12px !important;
     }
 }
 
@@ -1869,6 +1871,22 @@ html, body {
   font-weight: 800;
   font-size: 1rem;
   cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.wallet-plus-btn.demo-reset-btn {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #10b981 !important;
+  font-size: 1.15rem !important;
+  width: auto !important;
+  height: auto !important;
+  padding: 0 4px !important;
+  line-height: 1 !important;
+}
+.wallet-plus-btn.demo-reset-btn:hover {
+  background: transparent !important;
+  transform: rotate(45deg);
 }
 
 .header-action-pill {
@@ -2462,38 +2480,38 @@ html, body {
   cursor: not-allowed !important;
 }
 
-/* Winning Button Reveal Effect (Requirement 10) */
+/* Winning Button Reveal Effect (Requirement 10: Tightened glow to preserve button gaps) */
 .bet-btn.winning-highlight,
 .num-circle-btn.winning-highlight {
   filter: none !important;
   opacity: 1 !important;
   pointer-events: none !important;
-  transform: scale(1.08) !important;
-  z-index: 10 !important;
-  box-shadow: 0 0 25px rgba(16, 185, 129, 0.95), 0 0 0 3px #ffffff !important;
-  animation: winGlowPulse 0.6s infinite alternate ease-in-out !important;
+  transform: scale(1.02) !important;
+  z-index: 5 !important;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.75), 0 0 0 1.5px #ffffff !important;
+  animation: winGlowPulse 0.8s infinite alternate ease-in-out !important;
 }
 .bet-btn.color-red.winning-highlight,
 .num-circle-btn.n2.winning-highlight,
 .num-circle-btn.n4.winning-highlight,
 .num-circle-btn.n6.winning-highlight,
 .num-circle-btn.n8.winning-highlight {
-  box-shadow: 0 0 25px rgba(239, 68, 68, 0.95), 0 0 0 3px #ffffff !important;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.75), 0 0 0 1.5px #ffffff !important;
 }
 .bet-btn.color-violet.winning-highlight,
 .num-circle-btn.n0.winning-highlight,
 .num-circle-btn.n5.winning-highlight {
-  box-shadow: 0 0 25px rgba(139, 92, 246, 0.95), 0 0 0 3px #ffffff !important;
+  box-shadow: 0 0 12px rgba(139, 92, 246, 0.75), 0 0 0 1.5px #ffffff !important;
 }
 .size-box-btn.size-big.winning-highlight {
-  box-shadow: 0 0 25px rgba(245, 158, 11, 0.95), 0 0 0 3px #ffffff !important;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.75), 0 0 0 1.5px #ffffff !important;
 }
 .size-box-btn.size-small.winning-highlight {
-  box-shadow: 0 0 25px rgba(59, 130, 246, 0.95), 0 0 0 3px #ffffff !important;
+  box-shadow: 0 0 12px rgba(59, 130, 246, 0.75), 0 0 0 1.5px #ffffff !important;
 }
 @keyframes winGlowPulse {
-  from { transform: scale(1.04); }
-  to { transform: scale(1.09); }
+  from { transform: scale(1.01); }
+  to { transform: scale(1.025); }
 }
 
 /* Profile / Settings Grid */
@@ -4071,6 +4089,7 @@ body {
     height: 100% !important;
     display: flex !important;
     flex-direction: column !important;
+    justify-content: space-between !important;
     min-height: 0;
     padding: 10px 12px;
   }
@@ -4087,22 +4106,36 @@ body {
     max-height: none !important;
     display: flex !important;
     flex-direction: column !important;
+    justify-content: space-between !important;
     overflow: hidden;
   }
 
   #view-game .table-scroll-wrapper,
   .is-admin-session #view-game .table-scroll-wrapper {
-    flex: 1 1 0 !important;
-    min-height: 200px !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
     max-height: none !important;
     overflow-x: auto;
-    overflow-y: auto;
+    overflow-y: hidden;
+    display: flex !important;
+    flex-direction: column !important;
     -webkit-overflow-scrolling: touch;
   }
 
   #view-game .cards-feed-list {
     max-height: 380px;
     overflow-y: auto;
+  }
+
+  #view-game .records-table {
+    width: 100% !important;
+    height: 100% !important;
+    display: table !important;
+    border-collapse: collapse !important;
+  }
+
+  #view-game .records-table thead {
+    flex-shrink: 0;
   }
 
   #view-game .records-table thead th {
@@ -4112,10 +4145,31 @@ body {
     z-index: 2;
   }
 
+  #view-game .records-table tbody {
+    height: 100%;
+  }
+
+  #view-game .records-table tbody tr {
+    height: 10%;
+  }
+
   #view-game .records-table th,
   #view-game .records-table td {
-    padding: 5px 8px !important;
+    padding: 6px 8px !important;
     font-size: 0.8rem !important;
+  }
+
+  #view-game .pagination-bar {
+    margin-top: auto;
+    flex-shrink: 0;
+  }
+
+  .bet-btn.safe-btn,
+  .bet-btn.pool-btn {
+    height: auto !important;
+    min-height: 65px !important;
+    max-height: 80px !important;
+    padding: 8px 12px !important;
   }
 }
 
@@ -4241,8 +4295,9 @@ body {
 }
 
 .bet-btn.safe-btn {
-  padding: 24px 14px;
-  min-height: 120px;
+  padding: 12px 14px;
+  min-height: 70px;
+  max-height: 85px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -4283,8 +4338,9 @@ body {
 }
 
 .bet-btn.pool-btn {
-  padding: 24px 14px;
-  min-height: 120px;
+  padding: 12px 14px;
+  min-height: 70px;
+  max-height: 85px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -4482,39 +4538,300 @@ body {
   display: block !important;
 }
 
-@media (max-width: 768px) {
-  .game-mode-selector-bar {
+/* =========================================================
+   COMPREHENSIVE MOBILE AND DESKTOP POLISH (2026-11-15)
+   ========================================================= */
+
+/* Mobile Header Flipper Container (Hidden on Desktop) */
+.mobile-flipper-container {
+  display: none;
+  height: 32px;
+  overflow: hidden;
+  position: relative;
+  width: 140px;
+  min-width: 105px;
+  max-width: 155px;
+}
+.flipper-track {
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.flipper-item {
+  height: 32px;
+  line-height: 32px;
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.flipper-brand .brand-text-grad {
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  background: linear-gradient(135deg, #10b981, #3b82f6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.flipper-user {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  line-height: 1.15;
+}
+.flipper-user .m-uid {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #10b981;
+}
+.flipper-user .m-email {
+  font-size: 0.58rem;
+  color: rgba(255, 255, 255, 0.7);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 767px) {
+  /* 1. SINGLE ROW HEADER ON MOBILE */
+  .app-header {
     display: flex !important;
     flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
     flex-wrap: nowrap !important;
-    overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch;
-    gap: 8px !important;
-    padding-bottom: 4px;
-    margin-bottom: 12px;
-  }
-
-  .game-mode-btn {
-    flex: 1 1 0 !important;
-    min-width: 100px !important;
-    padding: 8px 8px !important;
+    padding: 6px 10px !important;
+    height: 48px !important;
+    min-height: 48px !important;
     gap: 6px !important;
-    border-radius: 10px !important;
+    overflow: hidden !important;
+  }
+  .header-left-group {
+    display: contents !important; /* Lets flipper be #1 and menu button be #99 on far right */
+  }
+  .header-user-profile {
+    display: none !important;
+  }
+  .mobile-flipper-container {
+    display: block !important;
+    order: 1 !important;
+    flex-shrink: 1 !important;
+  }
+  .header-right-group {
+    display: flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    order: 2 !important;
+    flex-shrink: 0 !important;
+  }
+  #userMenuBtn {
+    order: 3 !important;
+    margin-left: auto !important;
+    flex-shrink: 0 !important;
+    font-size: 1.1rem !important;
+    padding: 4px 6px !important;
+  }
+  .mode-switch-pill {
+    padding: 2px !important;
+    gap: 2px !important;
+  }
+  .mode-switch-pill .mode-btn {
+    padding: 3px 5px !important;
+    font-size: 0.65rem !important;
+  }
+  .wallet-pill {
+    padding: 3px 6px !important;
+    gap: 4px !important;
+  }
+  .wallet-meta .wallet-mode-cap {
+    display: none !important;
+  }
+  .wallet-meta .wallet-amount {
+    font-size: 0.76rem !important;
+  }
+  .header-icon-btn {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 0.85rem !important;
+    padding: 0 !important;
+  }
+  #notifBellWrapper {
+    display: none !important;
+  }
+  #adminHeaderToggleBtn {
+    padding: 3px 6px !important;
+    font-size: 0.68rem !important;
   }
 
+  /* 2. THREE MODES IN A SINGLE CLEAN LINE WITHOUT VERBOSE TEXT */
+  .game-mode-selector-bar {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 4px !important;
+    padding: 4px !important;
+    margin-bottom: 10px !important;
+    overflow: visible !important;
+  }
+  .game-mode-btn {
+    flex: none !important;
+    min-width: 0 !important;
+    padding: 6px 2px !important;
+    gap: 4px !important;
+    border-radius: 8px !important;
+    justify-content: center !important;
+    text-align: center !important;
+  }
   .game-mode-btn .gmb-icon {
-    font-size: 1.15rem !important;
+    font-size: 0.95rem !important;
   }
-
   .game-mode-btn .gmb-text strong {
-    font-size: 0.78rem !important;
+    font-size: 0.68rem !important;
     white-space: nowrap !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
   }
-
   .game-mode-btn .gmb-text small {
     display: none !important;
+  }
+
+  /* 3. HIDE ALL RULES/INFO BANNERS ON MOBILE IN ALL MODES */
+  .safe-info-banner,
+  .pool-info-banner {
+    display: none !important;
+  }
+
+  /* 4. CLEAN 2-COLUMN BUTTON GRID FOR SAFE SHIELD & ROYAL POOL ON MOBILE */
+  .safe-buttons-grid,
+  .pool-buttons-grid {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+  .bet-btn.safe-btn,
+  .bet-btn.pool-btn {
+    min-height: 60px !important;
+    max-height: 75px !important;
+    padding: 8px 6px !important;
+  }
+  .safe-btn-title,
+  .pool-btn-title {
+    font-size: 0.85rem !important;
+  }
+  .safe-payout-mult,
+  .pool-payout-mult {
+    font-size: 0.68rem !important;
+  }
+  .safe-protect-pill,
+  .pool-protect-pill {
+    font-size: 0.62rem !important;
+    padding: 2px 4px !important;
+    white-space: nowrap !important;
+  }
+
+  /* 5. PAYMENT CENTER MOBILE POLISH */
+  #view-payment .page-header-bar {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+    margin-bottom: 8px !important;
+  }
+  #view-payment .page-header-bar h2 {
+    font-size: 1.05rem !important;
+    margin: 0 !important;
+    white-space: nowrap !important;
+  }
+  #view-payment .page-header-bar .page-subtitle {
+    display: none !important;
+  }
+  #view-payment .page-header-bar .btn-secondary-nav {
+    padding: 5px 9px !important;
+    font-size: 0.72rem !important;
+    white-space: nowrap !important;
+  }
+
+  /* Exactly 3 stats in one single row on mobile (Real, Demo, Withdrawn) */
+  .pay-wallet-summary-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 6px !important;
+    margin-bottom: 10px !important;
+  }
+  .pay-wallet-summary-grid .pw-stat-card.accent-blue {
+    display: none !important; /* Total Recharged hidden on mobile per user request */
+  }
+  .pay-wallet-summary-grid .pw-stat-card {
+    padding: 6px 4px !important;
+    text-align: center !important;
+  }
+  .pay-wallet-summary-grid .pw-stat-card span {
+    font-size: 0.62rem !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+  .pay-wallet-summary-grid .pw-stat-card strong {
+    font-size: 0.82rem !important;
+  }
+
+  /* Stacked Form and Status on mobile */
+  .pay-split-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+  .pay-split-grid .pay-form-col {
+    order: 1 !important;
+    width: 100% !important;
+  }
+  .pay-split-grid .pay-status-col {
+    order: 2 !important;
+    width: 100% !important;
+  }
+
+  /* 6. PROFILE & PREFERENCES MOBILE POLISH */
+  .profile-hero-card {
+    padding: 14px 12px !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+  .profile-hero-left {
+    flex-direction: row !important;
+    gap: 10px !important;
+    align-items: center !important;
+  }
+  .profile-avatar-lg {
+    width: 44px !important;
+    height: 44px !important;
+    font-size: 1.2rem !important;
+  }
+  #profUsername {
+    font-size: 1rem !important;
+  }
+  #profEmail {
+    font-size: 0.75rem !important;
+  }
+  .profile-badges-row {
+    gap: 4px !important;
+    margin-top: 4px !important;
+    flex-wrap: wrap !important;
+  }
+  .profile-badges-row .status-pill {
+    font-size: 0.65rem !important;
+    padding: 2px 6px !important;
+  }
+  .profile-hero-actions {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+  .profile-settings-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
   }
 }
 

@@ -278,6 +278,28 @@ public class AdminController {
         return ResponseEntity.status(status).body(res);
     }
 
+    @GetMapping("/rules")
+    public ResponseEntity<Map<String, Object>> getRules() {
+        String json = gameLoopService.getRulesJson();
+        return ResponseEntity.ok(Map.of(
+                "success", true,
+                "rulesJson", json == null ? "" : json
+        ));
+    }
+
+    @PostMapping("/rules")
+    public ResponseEntity<Map<String, Object>> saveRules(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @RequestBody Map<String, Object> body
+    ) {
+        if (authService.resolveAdminSession(authHeader).isEmpty()) {
+            return ResponseEntity.status(403).body(FORBIDDEN_BODY);
+        }
+        String rules = body == null ? null : (String) body.get("rulesJson");
+        gameLoopService.updateRulesJson(rules);
+        return ResponseEntity.ok(Map.of("success", true, "message", "Rules updated successfully!"));
+    }
+
     private String readProtectedFile(String filename) {
         Path fsPath = Path.of("protected", filename);
         if (Files.exists(fsPath)) {

@@ -50,12 +50,12 @@
     try {
       const raw = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
       return {
-        sfx: raw.sfx !== false,
+        sfx: Boolean(raw.sfx), // Default OFF for all accounts
         bgm: Boolean(raw.bgm),
         vibrate: raw.vibrate !== false
       };
     } catch {
-      return { sfx: true, bgm: false, vibrate: true };
+      return { sfx: false, bgm: false, vibrate: true };
     }
   }
 
@@ -609,6 +609,8 @@
       renderPaymentStatuses();
     } else if (target === 'profile') {
       renderProfileView();
+    } else if (target === 'rules') {
+      loadRules();
     } else if (target === 'admin' && typeof window.switchAdminTab === 'function') {
       window.switchAdminTab(subOpt || 'admWithdrawTab');
     }
@@ -884,6 +886,79 @@
     const res = await apiFetch('/api/payment/config', { method: 'GET' });
     if (!res.ok || !res.data.success) return;
     applyPaymentConfigToUi(res.data);
+  }
+
+  // =========================================================
+  // GAME RULES DYNAMIC LOADER & ADMIN EDITOR
+  // =========================================================
+  const DEFAULT_RULES = {
+    classic: `<ul class="rules-list">
+      <li><strong>Green (1, 3, 7, 9):</strong> Pays <strong>2x</strong> your stake. If outcome is <strong>5</strong> (Green+Violet), pays <strong>1.5x</strong>.</li>
+      <li><strong>Red (2, 4, 6, 8):</strong> Pays <strong>2x</strong> your stake. If outcome is <strong>0</strong> (Red+Violet), pays <strong>1.5x</strong>.</li>
+      <li><strong>Violet (0, 5):</strong> Pays <strong>4.5x</strong> your stake whenever 0 or 5 lands.</li>
+      <li><strong>Exact Number (0–9):</strong> Pays <strong>9x</strong> your stake on exact match.</li>
+      <li><strong>Big (5–9) / Small (0–4):</strong> Pays <strong>2x</strong> your stake.</li>
+    </ul>`,
+    safe: `<ul class="rules-list">
+      <li><strong>Only 2 Colors:</strong> Bet on either <strong>Green</strong> or <strong>Red</strong>.</li>
+      <li><strong>1.20x Win Payout (+20% Pure Profit):</strong> E.g. ₹100 bet returns <strong>₹120</strong> on winning color!</li>
+      <li><strong>80% Loss Refund Protection:</strong> If the opposing color lands, platform withholds 20% and <strong>refunds 80% directly back to your balance</strong>! E.g. ₹100 bet returns ₹80 refund.</li>
+    </ul>`,
+    pool: `<ul class="rules-list">
+      <li><strong>Dynamic Profit Pool:</strong> Bet on either <strong>Green</strong> or <strong>Red</strong>.</li>
+      <li><strong>Proportional Win Share:</strong> Winners receive their full stake back plus their proportional share of 10% deducted from the losing pool!</li>
+      <li><strong>90% Loss Refund Protection:</strong> If your color loses, you receive a massive <strong>90% refund directly back to your balance</strong> (only 10% deducted into winners' pool)!</li>
+    </ul>`
+  };
+
+  let currentRules = { ...DEFAULT_RULES };
+
+  async function loadRules() {
+    try {
+      const cached = localStorage.getItem('gb_rules_cache');
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (parsed.classic) currentRules.classic = parsed.classic;
+          if (parsed.safe) currentRules.safe = parsed.safe;
+          if (parsed.pool) currentRules.pool = parsed.pool;
+        } catch (_) {}
+      }
+      renderRules();
+
+      const res = await apiFetch('/api/admin/rules', { method: 'GET' });
+      if (res && res.data && res.data.rulesJson) {
+        try {
+          const parsed = JSON.parse(res.data.rulesJson);
+          if (parsed.classic) currentRules.classic = parsed.classic;
+          if (parsed.safe) currentRules.safe = parsed.safe;
+          if (parsed.pool) currentRules.pool = parsed.pool;
+          localStorage.setItem('gb_rules_cache', JSON.stringify(currentRules));
+          renderRules();
+        } catch (_) {}
+      }
+    } catch (_) {
+      renderRules();
+    }
+  }
+
+  function renderRules() {
+    if ($('rulesClassicContainer')) $('rulesClassicContainer').innerHTML = currentRules.classic || DEFAULT_RULES.classic;
+    if ($('rulesSafeContainer')) $('rulesSafeContainer').innerHTML = currentRules.safe || DEFAULT_RULES.safe;
+    if ($('rulesPoolContainer')) $('rulesPoolContainer').innerHTML = currentRules.pool || DEFAULT_RULES.pool;
+  }
+
+  // Mobile Header Flipper Ticker
+  let headerFlipperInterval = null;
+  function initMobileHeaderFlipper() {
+    if (headerFlipperInterval) return;
+    const track = $('flipperTrack');
+    if (!track) return;
+    let showUser = false;
+    headerFlipperInterval = setInterval(() => {
+      showUser = !showUser;
+      track.style.transform = showUser ? 'translateY(-32px)' : 'translateY(0px)';
+    }, 3500);
   }
 
   let activeOrderPollerId = null;
@@ -1245,11 +1320,25 @@
         $('headerUserUid').textContent = `UID: ${currentUser.userId || '—'}`;
       }
     }
+    if ($('mHeaderUid')) {
+      if (isAdminSession) {
+        $('mHeaderUid').textContent = 'ADMIN';
+      } else {
+        $('mHeaderUid').textContent = currentUser.userId ? `UID: GB${currentUser.userId}` : 'GB COLORS';
+      }
+    }
     if ($('headerUserEmail')) {
       if (isAdminSession) {
         $('headerUserEmail').textContent = 'gbcolor@admin.com';
       } else {
         $('headerUserEmail').textContent = currentUser.email || currentUser.username || 'user@example.com';
+      }
+    }
+    if ($('mHeaderEmail')) {
+      if (isAdminSession) {
+        $('mHeaderEmail').textContent = 'gbcolor@admin.com';
+      } else {
+        $('mHeaderEmail').textContent = currentUser.email || currentUser.username || '';
       }
     }
 
@@ -2248,6 +2337,7 @@
     if ($('adminDrawerSection')) $('adminDrawerSection').style.display = isAdminSession ? '' : 'none';
     if ($('adminArenaShortcutBar')) $('adminArenaShortcutBar').style.display = isAdminSession ? '' : 'none';
     if ($('adminMonitorNotice')) $('adminMonitorNotice').style.display = isAdminSession ? 'flex' : 'none';
+    if ($('adminEditRulesBtn')) $('adminEditRulesBtn').style.display = isAdminSession ? 'inline-block' : 'none';
     if (!isAdminSession && $('adminDashLockPreview')) $('adminDashLockPreview').style.display = 'none';
 
     // Toggle view-only on betting buttons
@@ -3032,6 +3122,60 @@
         if ($('blockedAlertModal')) $('blockedAlertModal').style.display = 'none';
       });
     }
+
+    // Admin Rules Editor events
+    if ($('adminEditRulesBtn')) {
+      $('adminEditRulesBtn').addEventListener('click', () => {
+        const panel = $('adminRulesEditorPanel');
+        if (!panel) return;
+        const isShown = panel.style.display !== 'none';
+        if (isShown) {
+          panel.style.display = 'none';
+        } else {
+          panel.style.display = 'block';
+          if ($('editRulesClassic')) $('editRulesClassic').value = (currentRules.classic || DEFAULT_RULES.classic).trim();
+          if ($('editRulesSafe')) $('editRulesSafe').value = (currentRules.safe || DEFAULT_RULES.safe).trim();
+          if ($('editRulesPool')) $('editRulesPool').value = (currentRules.pool || DEFAULT_RULES.pool).trim();
+        }
+      });
+    }
+
+    if ($('adminCancelRulesBtn')) {
+      $('adminCancelRulesBtn').addEventListener('click', () => {
+        if ($('adminRulesEditorPanel')) $('adminRulesEditorPanel').style.display = 'none';
+      });
+    }
+
+    if ($('adminSaveRulesBtn')) {
+      $('adminSaveRulesBtn').addEventListener('click', async () => {
+        const classic = $('editRulesClassic') ? $('editRulesClassic').value.trim() : currentRules.classic;
+        const safe = $('editRulesSafe') ? $('editRulesSafe').value.trim() : currentRules.safe;
+        const pool = $('editRulesPool') ? $('editRulesPool').value.trim() : currentRules.pool;
+
+        currentRules = { classic, safe, pool };
+        localStorage.setItem('gb_rules_cache', JSON.stringify(currentRules));
+        renderRules();
+
+        try {
+          const res = await apiFetch('/api/admin/rules', {
+            method: 'POST',
+            body: JSON.stringify({ rulesJson: JSON.stringify(currentRules) })
+          });
+          if (res && res.data && res.data.success) {
+            showToast('Game Rules saved & updated for all players!', 'success');
+          } else {
+            showToast('Rules saved locally', 'info');
+          }
+        } catch (_) {
+          showToast('Rules saved locally', 'info');
+        }
+
+        if ($('adminRulesEditorPanel')) $('adminRulesEditorPanel').style.display = 'none';
+      });
+    }
+
+    // Initialize Mobile Header Flipper Ticker
+    initMobileHeaderFlipper();
 
     // Escape closes drawer/modals
     document.addEventListener('keydown', (e) => {

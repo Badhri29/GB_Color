@@ -1522,6 +1522,21 @@ public class GameLoopService {
         );
     }
 
+    public String getRulesJson() {
+        return txTemplate.execute(status -> {
+            PlatformSettingsEntity s = loadOrInitSettings();
+            return s.getRulesJson();
+        });
+    }
+
+    public void updateRulesJson(String rulesJson) {
+        txTemplate.executeWithoutResult(status -> {
+            PlatformSettingsEntity s = loadOrInitSettings();
+            s.setRulesJson(rulesJson);
+            settingsRepo.save(s);
+        });
+    }
+
     public String validateDepositAmount(Integer amount) {
         PlatformSettingsEntity s = loadOrInitSettings();
         return validateAmountRange(amount, s.getMinDepositAmount(), s.getMaxDepositAmount(), "deposit");

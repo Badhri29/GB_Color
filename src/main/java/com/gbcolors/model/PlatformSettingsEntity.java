@@ -75,6 +75,10 @@ public class PlatformSettingsEntity {
     @Column(name = "default_demo_balance", precision = 14, scale = 2)
     private BigDecimal defaultDemoBalance = new BigDecimal("1000.00");
 
+    @Lob
+    @Column(name = "rules_json", columnDefinition = "TEXT")
+    private String rulesJson;
+
     @Column(name = "admin_min_profit_percent")
     private Integer adminMinProfitPercent = 15;
 
@@ -199,6 +203,13 @@ public class PlatformSettingsEntity {
     }
     public void setDefaultDemoBalance(BigDecimal defaultDemoBalance) {
         this.defaultDemoBalance = defaultDemoBalance != null && defaultDemoBalance.compareTo(BigDecimal.ZERO) > 0 ? defaultDemoBalance : new BigDecimal("1000.00");
+    }
+
+    public String getRulesJson() {
+        return rulesJson;
+    }
+    public void setRulesJson(String rulesJson) {
+        this.rulesJson = rulesJson;
     }
 
     public int getAdminMinProfitPercent() {

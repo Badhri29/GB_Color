@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20261115_01" />
+  <link rel="stylesheet" href="style.css?v=20261115_02" />
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
@@ -136,6 +136,13 @@
           <div class="hup-uid" id="headerUserUid">UID: —</div>
           <div class="hup-email" id="headerUserEmail">user@example.com</div>
         </div>
+        <!-- MOBILE FLIPPER (GB COLORS <-> User UID/Email) -->
+        <div class="mobile-flipper-container" id="mobileHeaderFlipper">
+          <div class="flipper-track" id="flipperTrack">
+            <div class="flipper-item flipper-brand"><span class="brand-text-grad">GB COLORS</span></div>
+            <div class="flipper-item flipper-user"><span id="mHeaderUid" class="m-uid">UID: —</span><span id="mHeaderEmail" class="m-email">user@example.com</span></div>
+          </div>
+        </div>
       </div>
 
       <div class="header-right-group">
@@ -149,7 +156,7 @@
             <span class="wallet-mode-cap" id="headerWalletLabel">DEMO WALLET</span>
             <strong id="activeBalanceDisplay" class="wallet-amount">₹0.00</strong>
           </div>
-          <button id="headerRechargeBtn" class="wallet-plus-btn" type="button" title="Recharge / Payments">+</button>
+          <button id="headerRechargeBtn" class="wallet-plus-btn demo-reset-btn" type="button" title="Reset Demo Coins to Default">🔄</button>
         </div>
 
         <button id="adminHeaderToggleBtn" class="header-action-pill admin-pill-btn" type="button" title="Admin Command Center" style="display:none;">🛡️ <span>Admin Tools</span></button>
@@ -167,7 +174,7 @@
           </div>
         </div>
 
-        <button id="soundToggleBtn" class="header-icon-btn" type="button" aria-label="Toggle Sound" title="Toggle Sound">🔊</button>
+        <button id="soundToggleBtn" class="header-icon-btn" type="button" aria-label="Toggle Sound" title="Toggle Sound">🔇</button>
 
         <button id="adminHeaderLogoutBtn" class="btn-danger-outline btn-sm" type="button" style="display:none;" title="Sign Out">🚪 Sign Out</button>
       </div>
@@ -757,7 +764,6 @@
               <div class="profile-badges-row">
                 <span class="status-pill info" id="profUserId">UID: —</span>
                 <span class="status-pill good" id="profVerifiedBadge">✅ Verified Email</span>
-                <span class="status-pill amber" id="profVipBadge">VIP 1</span>
                 <span class="status-pill good" id="profStatusBadge">ACTIVE</span>
               </div>
             </div>
@@ -796,7 +802,7 @@
                 <strong>🔊 Sound Effects (Clicks, Countdown, Wins)</strong>
                 <small>Play synthesized audio cues during betting and round reveals</small>
               </div>
-              <label class="switch-toggle"><input type="checkbox" id="settingSfx" checked /><span class="slider-round"></span></label>
+              <label class="switch-toggle"><input type="checkbox" id="settingSfx" /><span class="slider-round"></span></label>
             </div>
 
             <div class="setting-toggle-row">
@@ -829,35 +835,69 @@
             <h2>📘 Game Rules &amp; Payouts</h2>
             <p class="page-subtitle">Transparent payout rules for all 3 game modes</p>
           </div>
-          <button type="button" class="btn-secondary-nav" data-nav="game">← Back to Dashboard</button>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button type="button" id="adminEditRulesBtn" class="btn-primary-pill" style="display:none;">✏️ Edit Rules</button>
+            <button type="button" class="btn-secondary-nav" data-nav="game">← Back to Dashboard</button>
+          </div>
+        </div>
+
+        <!-- ADMIN RULES EDITOR CONTAINER -->
+        <div id="adminRulesEditorPanel" class="payment-card" style="display:none;margin-bottom:18px;border:1px solid #10b981;background:rgba(16,185,129,0.06);">
+          <div class="pay-card-head" style="margin-bottom:12px;">
+            <h3 style="color:#10b981;">✏️ Admin Rules Editor</h3>
+            <div style="display:flex;gap:8px;">
+              <button type="button" id="adminSaveRulesBtn" class="btn-primary-glow btn-sm">💾 Save Rules</button>
+              <button type="button" id="adminCancelRulesBtn" class="btn-secondary-outline btn-sm">✕ Cancel</button>
+            </div>
+          </div>
+          <div class="rules-edit-fields" style="display:flex;flex-direction:column;gap:14px;">
+            <div>
+              <label for="editRulesClassic" style="font-weight:700;font-size:0.85rem;color:#10b981;margin-bottom:4px;display:block;">🎮 Mode 1: Classic Win Go Rules (HTML/Text)</label>
+              <textarea id="editRulesClassic" rows="6" class="big-touch-field" style="width:100%;font-size:0.85rem;font-family:inherit;"></textarea>
+            </div>
+            <div>
+              <label for="editRulesSafe" style="font-weight:700;font-size:0.85rem;color:#3b82f6;margin-bottom:4px;display:block;">🛡️ Mode 2: Safe Shield (80/20) Rules (HTML/Text)</label>
+              <textarea id="editRulesSafe" rows="5" class="big-touch-field" style="width:100%;font-size:0.85rem;font-family:inherit;"></textarea>
+            </div>
+            <div>
+              <label for="editRulesPool" style="font-weight:700;font-size:0.85rem;color:#f59e0b;margin-bottom:4px;display:block;">👑 Mode 3: Royal Pool (90/10) Rules (HTML/Text)</label>
+              <textarea id="editRulesPool" rows="5" class="big-touch-field" style="width:100%;font-size:0.85rem;font-family:inherit;"></textarea>
+            </div>
+          </div>
         </div>
 
         <div class="payment-grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
           <div class="payment-card">
             <h3>🎮 Mode 1: Classic Win Go</h3>
-            <ul class="rules-list">
-              <li><strong>Green (1, 3, 7, 9):</strong> Pays <strong>2x</strong> your stake. If outcome is <strong>5</strong> (Green+Violet), pays <strong>1.5x</strong>.</li>
-              <li><strong>Red (2, 4, 6, 8):</strong> Pays <strong>2x</strong> your stake. If outcome is <strong>0</strong> (Red+Violet), pays <strong>1.5x</strong>.</li>
-              <li><strong>Violet (0, 5):</strong> Pays <strong>4.5x</strong> your stake whenever 0 or 5 lands.</li>
-              <li><strong>Exact Number (0–9):</strong> Pays <strong>9x</strong> your stake on exact match.</li>
-              <li><strong>Big (5–9) / Small (0–4):</strong> Pays <strong>2x</strong> your stake.</li>
-            </ul>
+            <div id="rulesClassicContainer">
+              <ul class="rules-list">
+                <li><strong>Green (1, 3, 7, 9):</strong> Pays <strong>2x</strong> your stake. If outcome is <strong>5</strong> (Green+Violet), pays <strong>1.5x</strong>.</li>
+                <li><strong>Red (2, 4, 6, 8):</strong> Pays <strong>2x</strong> your stake. If outcome is <strong>0</strong> (Red+Violet), pays <strong>1.5x</strong>.</li>
+                <li><strong>Violet (0, 5):</strong> Pays <strong>4.5x</strong> your stake whenever 0 or 5 lands.</li>
+                <li><strong>Exact Number (0–9):</strong> Pays <strong>9x</strong> your stake on exact match.</li>
+                <li><strong>Big (5–9) / Small (0–4):</strong> Pays <strong>2x</strong> your stake.</li>
+              </ul>
+            </div>
           </div>
           <div class="payment-card">
             <h3>🛡️ Mode 2: Safe Shield (80/20)</h3>
-            <ul class="rules-list">
-              <li><strong>Only 2 Colors:</strong> Bet on either <strong>Green</strong> or <strong>Red</strong>.</li>
-              <li><strong>1.20x Win Payout (+20% Pure Profit):</strong> E.g. ₹100 bet returns <strong>₹120</strong> on winning color!</li>
-              <li><strong>80% Loss Refund Protection:</strong> If the opposing color lands, platform withholds 20% and <strong>refunds 80% directly back to your balance</strong>! E.g. ₹100 bet returns ₹80 refund.</li>
-            </ul>
+            <div id="rulesSafeContainer">
+              <ul class="rules-list">
+                <li><strong>Only 2 Colors:</strong> Bet on either <strong>Green</strong> or <strong>Red</strong>.</li>
+                <li><strong>1.20x Win Payout (+20% Pure Profit):</strong> E.g. ₹100 bet returns <strong>₹120</strong> on winning color!</li>
+                <li><strong>80% Loss Refund Protection:</strong> If the opposing color lands, platform withholds 20% and <strong>refunds 80% directly back to your balance</strong>! E.g. ₹100 bet returns ₹80 refund.</li>
+              </ul>
+            </div>
           </div>
           <div class="payment-card">
             <h3>👑 Mode 3: Royal Pool (90/10)</h3>
-            <ul class="rules-list">
-              <li><strong>Dynamic Profit Pool:</strong> Bet on either <strong>Green</strong> or <strong>Red</strong>.</li>
-              <li><strong>Proportional Win Share:</strong> Winners receive their full stake back plus their proportional share of 10% deducted from the losing pool!</li>
-              <li><strong>90% Loss Refund Protection:</strong> If your color loses, you receive a massive <strong>90% refund directly back to your balance</strong> (only 10% deducted into winners' pool)!</li>
-            </ul>
+            <div id="rulesPoolContainer">
+              <ul class="rules-list">
+                <li><strong>Dynamic Profit Pool:</strong> Bet on either <strong>Green</strong> or <strong>Red</strong>.</li>
+                <li><strong>Proportional Win Share:</strong> Winners receive their full stake back plus their proportional share of 10% deducted from the losing pool!</li>
+                <li><strong>90% Loss Refund Protection:</strong> If your color loses, you receive a massive <strong>90% refund directly back to your balance</strong> (only 10% deducted into winners' pool)!</li>
+              </ul>
+            </div>
           </div>
         </div>
       </section>
@@ -963,8 +1003,8 @@
   <!-- TOAST -->
   <div id="toast" class="toast-banner"></div>
 
-  <script src="vendor/gb-ws.js?v=20261115_01"></script>
-  <script src="config.js?v=20261115_01"></script>
-  <script src="app.js?v=20261115_01"></script>
+  <script src="vendor/gb-ws.js?v=20261115_02"></script>
+  <script src="config.js?v=20261115_02"></script>
+  <script src="app.js?v=20261115_02"></script>
 </body>
 </html>
