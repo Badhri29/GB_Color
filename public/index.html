@@ -10,7 +10,93 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="style.css?v=20261115_06" />
+  <link rel="stylesheet" href="style.css?v=20261116_04" />
+  <style>
+    /* Direct override: Ensure number rows are tall, circles never touch, and left amount is vertically centered */
+    .round-numbers-list {
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 8px !important;
+      width: 100% !important;
+    }
+    .num-round-item {
+      height: 48px !important;
+      min-height: 48px !important;
+      max-height: 48px !important;
+      padding: 0 12px !important;
+      border-radius: 12px !important;
+      box-sizing: border-box !important;
+      align-items: center !important;
+      display: grid !important;
+      grid-template-columns: 1fr auto 1fr !important;
+      background: rgba(255, 255, 255, 0.04) !important;
+      border: 1px solid rgba(255, 255, 255, 0.07) !important;
+      overflow: visible !important;
+    }
+    .num-circle-btn {
+      width: 32px !important;
+      min-width: 32px !important;
+      max-width: 32px !important;
+      height: 32px !important;
+      min-height: 32px !important;
+      max-height: 32px !important;
+      padding: 0 !important;
+      box-sizing: border-box !important;
+      line-height: 28px !important;
+      border-radius: 50% !important;
+      border: 2px solid rgba(255, 255, 255, 0.2) !important;
+      flex-shrink: 0 !important;
+      margin: 0 auto !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+    }
+    .num-side-amount {
+      display: flex !important;
+      align-items: center !important;
+      height: 100% !important;
+      line-height: 1 !important;
+      font-size: 0.82rem !important;
+      font-weight: 700 !important;
+      min-width: 44px;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    .num-side-amount.total-amt {
+      justify-content: flex-start !important;
+      text-align: left !important;
+      color: #94a3b8 !important;
+    }
+    .num-side-amount.user-amt {
+      justify-content: flex-end !important;
+      text-align: right !important;
+      color: #38bdf8 !important;
+      font-weight: 800 !important;
+    }
+    @media (min-width: 1024px) {
+      .round-numbers-list {
+        gap: 9px !important;
+      }
+      .num-round-item {
+        height: 52px !important;
+        min-height: 52px !important;
+        max-height: 52px !important;
+        padding: 0 14px !important;
+      }
+      .num-circle-btn {
+        width: 34px !important;
+        min-width: 34px !important;
+        max-width: 34px !important;
+        height: 34px !important;
+        min-height: 34px !important;
+        max-height: 34px !important;
+        line-height: 30px !important;
+      }
+      .num-side-amount {
+        font-size: 0.85rem !important;
+      }
+    }
+  </style>
   <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 </head>
 <body>
